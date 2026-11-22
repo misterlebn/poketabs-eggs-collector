@@ -92,6 +92,7 @@ h3{margin:0 0 8px;font-size:16px;display:flex;align-items:center;gap:10px}
 .pmon{background:#fff;border:2px solid var(--ink);border-radius:8px;padding:4px;text-align:center;font-size:11px;display:flex;flex-direction:column;align-items:center}
 .pstats{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}.pstats span{background:#fff;border:2px solid var(--ink);border-radius:8px;padding:3px 8px;font-size:13px}
 .ttlpick{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}.ttlpick button{padding:4px 6px}.ttlpick button.sel{outline:3px solid #f0a020}
+.favb{position:absolute;left:4px;top:26px;background:#fff;border:2px solid var(--ink);border-radius:8px;padding:0 5px;font-size:15px;line-height:22px;box-shadow:none;cursor:pointer;z-index:2}.favb.on{background:#fff3b0}
 .achgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px}
 .ach{display:flex;gap:10px;align-items:center;background:#fff;border:3px solid var(--ink);border-radius:12px;padding:8px;opacity:.75}
 .ach.ok{opacity:1;background:#fff8d8;border-color:#b8860b}
@@ -212,7 +213,7 @@ body.bfull .roster{flex:none;padding:6px 2px}
    POKETABS EGGS COLLECTOR  (V00.01.00)
    Réglages rapides : objet T ci-dessous (durées en secondes, chances en 0..1)
    ===================================================================== */
-const VERSION='V00.11.00';
+const VERSION='V00.12.00';
 const T={
   breed:45,        // durée de base d'une ponte (s)
   hatch:75,        // durée de base d'éclosion (s), modulée par l'espèce (stats totales et rareté)
@@ -320,7 +321,7 @@ const SAVEKEY='poketabs-eggs-collector-v1';
 let SAVE;
 function newSave(){return{v:1,coins:250,mons:[],eggs:[],nests:[{lvl:1,a:null,b:null,t0:0,dur:0,egg:null}],incs:[{lvl:1,slots:[]}],balls:[{lvl:1,mons:[]}],best:0,army:4,boosts:{},items:{mirror:0},dex:{},st:{},ach:{},tuto:0,uid:1,last:Date.now(),name:'',created:Date.now()}}
 function loadSave(){try{const r=localStorage.getItem(SAVEKEY);if(r){const s=Object.assign(newSave(),JSON.parse(r));fixSave(s);return s}}catch(e){}return newSave()}
-function fixSave(s){s.st=s.st||{};s.ach=s.ach||{};(s.mons||[]).forEach(m=>{if(m.sx===undefined)m.sx=rollSex(m.n)});(s.eggs||[]).forEach(e=>{if(e.sx===undefined)e.sx=rollSex(e.n)});(s.incs||[]).forEach(c=>c.slots.forEach(x=>{if(x.egg.sx===undefined)x.egg.sx=rollSex(x.egg.n)}));(s.nests||[]).forEach(n=>{const A=s.mons.find(m=>m.u===n.a),B=s.mons.find(m=>m.u===n.b);if(n.b!=='solo'&&A&&B&&!canBreed(A,B)){n.a=n.b=null;n.t0=0}})}
+function fixSave(s){if(s.capLvl===undefined){let l=0;while(capOf(l)<(s.mons||[]).length)l++;s.capLvl=l}s.st=s.st||{};s.ach=s.ach||{};(s.mons||[]).forEach(m=>{if(m.sx===undefined)m.sx=rollSex(m.n)});(s.eggs||[]).forEach(e=>{if(e.sx===undefined)e.sx=rollSex(e.n)});(s.incs||[]).forEach(c=>c.slots.forEach(x=>{if(x.egg.sx===undefined)x.egg.sx=rollSex(x.egg.n)}));(s.nests||[]).forEach(n=>{const A=s.mons.find(m=>m.u===n.a),B=s.mons.find(m=>m.u===n.b);if(n.b!=='solo'&&A&&B&&!canBreed(A,B)){n.a=n.b=null;n.t0=0}})}
 function saveJson(){return JSON.stringify(SAVE)}
 function saveGame(){try{localStorage.setItem(SAVEKEY,saveJson())}catch(e){}if(CLOUD.user)cloudPush(false)}
 const mon=u=>SAVE.mons.find(m=>m.u===u);
@@ -423,7 +424,7 @@ function renderNursery(){
    <div class="wall">
      ${bo}</div>
    <div class="floor">
-    <div class="zone"><h3>Salle de jeu <span class="muted">Les Pokémon libres se promènent ici. Clique sur l'un d'eux pour voir sa fiche.</span></h3><div class="playfield" id="playfield"></div></div>
+    <div class="zone"><h3>Salle de jeu <span class="biome" id="capN">Pokémon : ${SAVE.mons.length}/${monCap()}</span> <span class="muted">Tes favoris ⭐ et tes Pokémon libres les plus forts se promènent ici (${SHOW_MAX} au maximum). Clique sur l'un d'eux pour voir sa fiche.</span></h3><div class="playfield" id="playfield"></div></div>
     <div class="zone"><h3>Nids <button class="sm go" data-act="collectAll" ${anyNest?'':'disabled'}>Tout récupérer</button></h3><div class="row">${SAVE.nests.map(nestHTML).join('')}</div></div>
     <div class="zone"><h3>Incubateurs <button class="sm go" data-act="hatchAll" ${anyReady?'':'disabled'}>Tout faire éclore</button>${SAVE.items.autofill?`<button class="sm" data-act="fillAll" ${SAVE.eggs.length?'':'disabled'}>Tout remplir</button>`:''}</h3><div class="row">${SAVE.incs.map(incHTML).join('')}</div></div>
     <div class="zone"><h3>Entraînement <span class="muted">Un Pokémon à l'entraînement ne peut pas se reproduire ni combattre.</span></h3><div class="row">${SAVE.balls.map(ballHTML).join('')}</div></div>
@@ -435,7 +436,7 @@ function renderNursery(){
 const WALK={},WS=56;
 const PDECO=[['bowl0',.03,.70,40],['bowl2',.09,.80,40],['foodbag',.015,.20,32],['plant_big',.955,.08,40],['tower',.90,.02,60],['bowl3',.95,.80,40]];
 function buildWalkers(){const pf=$('playfield');if(!pf)return;const W=Math.max(200,pf.clientWidth-WS),H=Math.max(100,pf.clientHeight-WS);
-  const free=freeMons().slice(0,40),keep=new Set(free.map(m=>m.u));for(const k in WALK)if(!keep.has(+k))delete WALK[k];
+  const free=shownMons(),keep=new Set(free.map(m=>m.u));for(const k in WALK)if(!keep.has(+k))delete WALK[k];
   pf.innerHTML=PDECO.map(([f,x,y,w])=>`<img class="pdeco" src="assets/${f}.png" style="left:${x*100}%;top:${y*100}%;width:${w}px;z-index:${10+Math.round(y*H)}" alt="">`).join('')
     +free.map(m=>`<div class="walker" id="wk${m.u}" data-act="monInfo" data-u="${m.u}" title="${esc(DEX[m.n].name)} Nv${m.lv}">${sprHTML(m.n,m.sh,WS,true)}</div>`).join('')
     +(free.length?'':'<span class="muted" style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%)">Aucun Pokémon libre pour le moment.</span>');
@@ -456,9 +457,16 @@ function liveNursery(){
 }
 /* --- actions nid --- */
 function freeMons(){return SAVE.mons.filter(m=>!monStatus(m.u))}
+/* capacité : 30, 50, 100, 150, 200… Pokémon (achats « Agrandir la nurserie ») */
+const SHOW_MAX=30;
+const capOf=l=>l<=0?30:l===1?50:100+50*(l-2);
+const monCap=()=>capOf(SAVE.capLvl||0);
+const monsFull=()=>SAVE.mons.length>=monCap();
+/* Pokémon affichés dans la salle de jeu : favoris d'abord, puis les plus forts, 30 au maximum */
+function shownMons(){return freeMons().sort((a,b)=>(b.fav?1:0)-(a.fav?1:0)||pc(b)-pc(a)).slice(0,SHOW_MAX)}
 function monCard(m,opt={}){const d=DEX[m.n],s=stats(m),st=monStatus(m.u);
   return `<div class="card ${opt.pick?'pick':''} ${opt.busy?'busy':''} ${opt.sel?'sel':''}" ${opt.act?`data-act="${opt.act}" data-u="${m.u}"`:''}>
-    ${m.sh?'<span class="sh">★ Shiny</span>':''}<span class="tag">${statusTxt(st)}</span>${m.pk?'<span class="pkb" title="Pokérus : stats +5 %, XP ×1,5, transmis aux descendants">POKÉRUS</span>':''}
+    ${!opt.pick&&!opt.act?`<button class="favb ${m.fav?'on':''}" data-act="fav" data-u="${m.u}" title="${m.fav?'Retirer des favoris':'Ajouter aux favoris (toujours affiché dans la nurserie)'}">${m.fav?'⭐':'☆'}</button>`:m.fav?'<span class="favb on">⭐</span>':''}${m.sh?'<span class="sh">★ Shiny</span>':''}<span class="tag">${statusTxt(st)}</span>${m.pk?'<span class="pkb" title="Pokérus : stats +5 %, XP ×1,5, transmis aux descendants">POKÉRUS</span>':''}
     ${sprHTML(m.n,m.sh,64)}<span class="nm">${esc(d.name)} ${sxH(m)}</span>${tyHTML(d)}
     <span>Nv ${m.lv} · PC ${pc(m)}${m.mut===1?' · <span class="mut">Muté</span>':''}${m.sh?' · <span class="mut">Super mutation</span>':''}</span>
     <div class="bar xp" style="height:6px;margin:0"><i style="width:${m.lv>=100?100:Math.floor(m.xp/need(m.lv)*100)}%"></i></div>
@@ -501,10 +509,11 @@ function openInc(i){
    ${SAVE.eggs.length>1&&c.slots.length<cap?`<p><button data-act="incFill" data-i="${i}">Remplir automatiquement</button></p>`:''}`);
 }
 function incAdd(i,k,quiet){const c=SAVE.incs[i];if(c.slots.length>=INC_CAP[c.lvl])return;const e=SAVE.eggs.splice(k,1)[0];if(!e)return;c.slots.push({egg:e,t0:Date.now(),dur:hatchDur(c,e)});dirty=true;if(SAVE.tuto===3)setTip("L'œuf couve. Quand il bouge, clique sur l'incubateur pour le faire éclore.");if(!quiet){saveGame();openInc(i)}}
-function hatchOne(i,k){const c=SAVE.incs[i],s=c.slots[k];if(!s||Date.now()<s.t0+s.dur)return null;c.slots.splice(k,1);const e=s.egg;
+function hatchOne(i,k){const c=SAVE.incs[i],s=c.slots[k];if(!s||Date.now()<s.t0+s.dur)return null;if(monsFull()){fullMsg();return null}c.slots.splice(k,1);const e=s.egg;
   if(!e.sh&&c.lvl>=6&&rnd()<T.sh0*(c.lvl-4)){e.sh=true;e.lv+=T.mutLv;e.bst=pick(BST_K)}
   if(e.sh&&!e.bst)e.bst=pick(BST_K);
   const m=addMon({n:e.n,sx:e.sx===undefined?rollSex(e.n):e.sx,lv:e.lv,g:e.g,sh:e.sh,mut:e.mut,bst:e.bst||null,pk:!!e.pk});m.pkNew=!!e.pkNew;const st=SAVE.st;st.hatch=(st.hatch||0)+1;if(m.mut===1)st.mut=(st.mut||0)+1;if(m.sh)st.sh=(st.sh||0)+1;if(m.pk&&m.pkNew)st.pk=(st.pk||0)+1;if(m.sh&&m.pk)st.triple=(st.triple||0)+1;const ev=checkEvo(m,true);return{m,e,ev}}
+function fullMsg(){const t=Date.now();if(t-(fullMsg.t||0)<1500)return;fullMsg.t=t;toast(`📦 Nurserie pleine (${SAVE.mons.length}/${monCap()}) : relâche des Pokémon ou agrandis la nurserie dans la Boutique.`)}
 function hatchAll(only){const res=[];SAVE.incs.forEach((c,i)=>{if(only!==undefined&&only!==i)return;for(let k=c.slots.length-1;k>=0;k--){const r=hatchOne(i,k);if(r)res.push(r)}});if(res.length)showHatch(res);dirty=true;saveGame()}
 function showHatch(res){
   openModal(`<h2>${res.length>1?res.length+' œufs ont éclos !':'Un œuf a éclos !'}</h2><div class="hatch">${res.map(r=>{let x='';if(r.m.sh)x+=`<div class="banner s">✨ SUPER MUTATION SHINY ✨<br>+${T.mutLv} niveaux · ${BST_N[r.m.bst]||''} +25 %</div>`;if(r.m.mut===1)x+=`<div class="banner m">🧬 MUTATION +${T.mutLv} niveaux</div>`;if(r.m.pk&&r.e.pkNew)x+='<div class="banner pk">🦠 POKÉRUS ! Transmis à tous ses descendants</div>';else if(r.m.pk)x+='<div class="muted">🦠 Pokérus hérité des parents</div>';if(r.ev)x+=`<div class="muted">Il a évolué en sortant de l'œuf !</div>`;return monCard(r.m,{extra:x})}).join('')}</div>`);
@@ -528,9 +537,9 @@ function openBall(i){
 let teamSort='pc';
 function renderTeam(){
   const L=SAVE.mons.slice();
-  const f={pc:(a,b)=>pc(b)-pc(a),lv:(a,b)=>b.lv-a.lv,dex:(a,b)=>a.n-b.n||b.lv-a.lv,new:(a,b)=>b.born-a.born}[teamSort];L.sort(f);
-  $('tab-team').innerHTML=`<div class="panel"><h3>Mes Pokémon (${L.length})
-   <select id="teamSort">${[['pc','Puissance (PC)'],['lv','Niveau'],['dex','N° Pokédex'],['new','Plus récents']].map(([k,t])=>`<option value="${k}" ${k===teamSort?'selected':''}>${t}</option>`).join('')}</select></h3>
+  const f={fav:(a,b)=>(b.fav?1:0)-(a.fav?1:0)||pc(b)-pc(a),pc:(a,b)=>pc(b)-pc(a),lv:(a,b)=>b.lv-a.lv,dex:(a,b)=>a.n-b.n||b.lv-a.lv,new:(a,b)=>b.born-a.born}[teamSort];L.sort(f);
+  $('tab-team').innerHTML=`<div class="panel"><h3>Mes Pokémon (${L.length}/${monCap()}) <span class="muted">⭐ = favori, toujours affiché dans la nurserie</span>
+   <select id="teamSort">${[['pc','Puissance (PC)'],['fav','Favoris d\'abord'],['lv','Niveau'],['dex','N° Pokédex'],['new','Plus récents']].map(([k,t])=>`<option value="${k}" ${k===teamSort?'selected':''}>${t}</option>`).join('')}</select></h3>
    <div class="grid">${L.map(m=>monCard(m,{busy:false,extra:monStatus(m.u)?'':`<button class="sm" data-act="release" data-u="${m.u}">Relâcher (+${relVal(m)} pièces)</button>`})).join('')}</div></div>`;
   $('teamSort').onchange=e=>{teamSort=e.target.value;renderTeam()};
 }
@@ -551,6 +560,7 @@ const SHOP=[
  {id:'autofill',name:'Remplissage automatique',desc:'Débloque le bouton « Tout remplir » : place d\'un coup les œufs du sac dans tous les incubateurs. Disponible dès le 2e incubateur.',ic:'assets/incubators.png#3',price:()=>1500,max:()=>!!SAVE.items.autofill||SAVE.incs.length<2,buy:()=>{SAVE.items.autofill=1}},
  {id:'ball',name:'Nouveau punching-ball',desc:'Entraîne plus de Pokémon (max 4).',ic:'assets/post0.png',price:()=>Math.round(350*Math.pow(2.4,SAVE.balls.length-1)),max:()=>SAVE.balls.length>=4,buy:()=>SAVE.balls.push({lvl:1,mons:[]})},
  {id:'ballUp',name:'Améliorer un punching-ball',desc:'+50 % d\'XP par seconde et plus de places.',ic:'assets/tower.png',price:()=>{const b=lowBall();return b?Math.round(220*Math.pow(2.1,b.lvl)):0},max:()=>!lowBall(),buy:()=>{lowBall().lvl++}},
+ {id:'cap',name:'Agrandir la nurserie',desc:()=>`Plus de Pokémon : ${monCap()} → ${capOf((SAVE.capLvl||0)+1)}.`,ic:'assets/nest3.png',price:()=>Math.round(600*Math.pow(1.9,SAVE.capLvl||0)),buy:()=>{SAVE.capLvl=(SAVE.capLvl||0)+1}},
  {id:'army',name:'Place dans l\'armée',desc:'Un Pokémon de plus sur le terrain (max 14).',ic:'sprites/Graphics/Items/MACHOBRACE.png',price:()=>Math.round(400*Math.pow(1.7,SAVE.army-4)),max:()=>SAVE.army>=14,buy:()=>SAVE.army++},
  {h:'Objets et boosts (temporaires)'},
  {id:'love',name:'Encens d\'amour',desc:'Pontes 2 fois plus rapides pendant 5 min (nouvelles pontes).',ic:'sprites/Graphics/Items/LUCKINCENSE.png',price:()=>250,buy:()=>addBoost('love',5)},
@@ -567,7 +577,7 @@ function renderShop(){
   let h='',open=false;
   SHOP.forEach((it,i)=>{if(it.h){if(open)h+='</div>';h+=`<h3 style="margin:16px 0 8px">${it.h}</h3><div class="shop">`;open=true;return}
     const mx=it.max&&it.max(),p=it.price();const extra=it.id==='mirror'?` (tu en as ${SAVE.items.mirror})`:boostOn(it.id)?` · actif encore ${fmtT(SAVE.boosts[it.id]-Date.now())}`:'';
-    h+=`<div class="item"><div class="ic">${icHTML(it.ic)}</div><div class="tx"><b>${it.name}</b>${it.desc}${extra}</div><button class="go" data-act="buy" data-i="${i}" ${mx||SAVE.coins<p?'disabled':''}>${mx?(it.id==='autofill'&&!SAVE.items.autofill?'2e incubateur requis':it.id==='autofill'?'Débloqué':'Max'):`<span class="price">${COIN}${fmt(p)}</span>`}</button></div>`});
+    h+=`<div class="item"><div class="ic">${icHTML(it.ic)}</div><div class="tx"><b>${it.name}</b>${typeof it.desc==='function'?it.desc():it.desc}${extra}</div><button class="go" data-act="buy" data-i="${i}" ${mx||SAVE.coins<p?'disabled':''}>${mx?(it.id==='autofill'&&!SAVE.items.autofill?'2e incubateur requis':it.id==='autofill'?'Débloqué':'Max'):`<span class="price">${COIN}${fmt(p)}</span>`}</button></div>`});
   if(open)h+='</div>';
   h+=dealsHTML();
   h+=`<h3 style="margin:22px 0 8px">Marché aux œufs (${EGG_SPECIES.length} espèces) <input id="eggQ" placeholder="Rechercher un Pokémon ou un n°" value="${esc(marketQ)}" style="font:inherit;padding:4px 8px;border:2px solid var(--ink);border-radius:8px"> <select id="eggT" style="font:inherit"><option value="">Tous les types</option>${Object.keys(TNAME).map(t=>`<option value="${t}" ${t===marketT?'selected':''}>${TNAME[t]}</option>`).join('')}</select></h3><div class="market" id="market"></div>`;
@@ -1009,6 +1019,7 @@ const ACT={
   release:(t)=>{const m=mon(+t.dataset.u);if(!m)return;openModal(`<h2>Relâcher ${esc(DEX[m.n].name)} ?</h2><p>Tu gagnes ${relVal(m)} pièces. Ce choix est définitif.</p><div class="flexr"><button class="go" data-act="releaseOk" data-u="${m.u}">Relâcher</button><button data-act="closeModal">Annuler</button></div>`)},
   releaseOk:(t)=>{const u=+t.dataset.u,m=mon(u);if(!m||monStatus(u))return;SAVE.coins+=relVal(m);SAVE.mons=SAVE.mons.filter(x=>x.u!==u);closeModal();dirty=true;saveGame();renderTeam();renderTop()},
   buy:(t)=>buy(+t.dataset.i),buyEgg:(t)=>buyEgg(+t.dataset.n),buyDeal:(t)=>buyDeal(+t.dataset.i),
+  fav:(t)=>{const m=mon(+t.dataset.u);if(!m)return;m.fav=!m.fav;dirty=true;saveGame();if(!$('modal').hidden)ACT.monInfo(t);if(cur==='team')renderTeam();if(cur==='nursery')buildWalkers()},
   monInfo:(t)=>{const m=mon(+t.dataset.u);if(m)openModal(`<h2>${esc(DEX[m.n].name)}</h2><div class="flexr">${monCard(m)}</div>`)},
   dexInfo:(t)=>dexInfo(+t.dataset.n),
   rsel:(t)=>{const u=+t.dataset.u;if(monStatus(u)){toast('Ce Pokémon est occupé (nid ou entraînement).');return}battleSel=u;renderRoster()},

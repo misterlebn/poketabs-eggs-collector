@@ -1,4 +1,4 @@
-POKETABS EGGS COLLECTOR - GUIDE RAPIDE (V00.10.00)
+POKETABS EGGS COLLECTOR - GUIDE RAPIDE (V00.11.00)
 
 1. AVANT DE LANCER LE JEU (une seule fois)
    Double-clique sur INSTALLER_SPRITES.bat.
@@ -36,3 +36,13 @@ POKETABS EGGS COLLECTOR - GUIDE RAPIDE (V00.10.00)
 5. METTRE EN LIGNE
    GitHub : nouveau dépôt, envoie index.html, assets et sprites, puis Settings > Pages.
    Jeu privé entre amis : les sprites Pokémon ne doivent pas servir à une version publique.
+
+CLASSEMENT EN LIGNE (V00.11.00)
+   Chaque joueur connecté publie un profil public dans la collection Firestore « profiles » (pseudo, titre, tableau, Pokédex, succès, ses 60 meilleurs Pokémon).
+   Règle à ajouter dans Firebase > Firestore Database > Règles, à côté de la règle « saves » :
+     match /profiles/{uid} {
+       allow read: if true;
+       allow write: if request.auth != null && request.auth.uid == uid;
+     }
+   TITLES   titres débloqués par les succès (onglet Succès : pseudo et titre affiché)
+   LEGEND_ORDER   boss légendaires du plus faible (tableau 10) au plus fort (tableau 240) ; FINAL_BOSS = Arceus au tableau 250
