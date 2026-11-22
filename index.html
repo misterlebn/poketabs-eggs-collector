@@ -93,6 +93,9 @@ h3{margin:0 0 8px;font-size:16px;display:flex;align-items:center;gap:10px}
 .pstats{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}.pstats span{background:#fff;border:2px solid var(--ink);border-radius:8px;padding:3px 8px;font-size:13px}
 .ttlpick{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}.ttlpick button{padding:4px 6px}.ttlpick button.sel{outline:3px solid #f0a020}
 .favb{position:absolute;left:4px;top:26px;background:#fff;border:2px solid var(--ink);border-radius:8px;padding:0 5px;font-size:15px;line-height:22px;box-shadow:none;cursor:pointer;z-index:2}.favb.on{background:#fff3b0}
+.selbar{position:sticky;top:64px;z-index:20;display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:8px 0}
+.dash{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:8px;margin:8px 0}.dash div{background:#fff;border:3px solid var(--ink);border-radius:10px;padding:8px;text-align:center}.dash b{display:block;font-size:22px}.dash span{font-size:12px;color:#7a6a58}
+.setrow{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:8px 0;border-bottom:2px dashed #e0d2bc}.setrow label{min-width:220px;font-weight:700}
 .achgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px}
 .ach{display:flex;gap:10px;align-items:center;background:#fff;border:3px solid var(--ink);border-radius:12px;padding:8px;opacity:.75}
 .ach.ok{opacity:1;background:#fff8d8;border-color:#b8860b}
@@ -187,7 +190,8 @@ body.bfull .roster{flex:none;padding:6px 2px}
     <button data-tab="dex">Pokédex</button>
     <button data-tab="ach">Succès</button>
     <button data-tab="rank">Classement</button>
-    <button data-act="cloud" id="cloudBtn">☁ Compte</button>
+    <button data-tab="profile" id="cloudBtn">👤 Profil</button>
+    <button data-tab="settings" title="Réglages">⚙</button>
   </nav>
 </header>
 <main>
@@ -202,6 +206,8 @@ body.bfull .roster{flex:none;padding:6px 2px}
   <section id="tab-dex" hidden></section>
   <section id="tab-ach" hidden></section>
   <section id="tab-rank" hidden></section>
+  <section id="tab-profile" hidden></section>
+  <section id="tab-settings" hidden></section>
 </main>
 <div id="modal" hidden><div class="mbox"><button class="x sm" data-act="closeModal">✕</button><div id="mbody"></div></div></div>
 <div id="toasts"></div>
@@ -213,7 +219,7 @@ body.bfull .roster{flex:none;padding:6px 2px}
    POKETABS EGGS COLLECTOR  (V00.01.00)
    Réglages rapides : objet T ci-dessous (durées en secondes, chances en 0..1)
    ===================================================================== */
-const VERSION='V00.12.00';
+const VERSION='V00.15.00';
 const T={
   breed:45,        // durée de base d'une ponte (s)
   hatch:75,        // durée de base d'éclosion (s), modulée par l'espèce (stats totales et rareté)
@@ -307,7 +313,11 @@ const LEGEND=new Set([144,145,146,150,151,243,244,245,249,250,251,377,378,379,38
 const MYTHIC=new Set([150,151,249,250,382,383,384,483,484,487,493,643,644,646,800]);
 function eggPrice(n){const d=DEX[n];if(n===132)return 400;if(MYTHIC.has(n))return 80000;if(LEGEND.has(n))return 40000;return [120,250,800,3000][d.rar]||800}
 function eggLevel(n){const d=DEX[n];return LEGEND.has(n)?20:d.rar>=2?10:5}
-function canBreed(a,b){if(!a||!b||a.u===b.u)return false;if(a.n===132&&b.n===132)return false;if(a.n===132||b.n===132)return true;if(!a.sx||!b.sx||a.sx===b.sx)return false;return family(a.n)===family(b.n)}
+function canBreed(a,b){if(!a||!b||a.u===b.u)return false;if(a.n===132&&b.n===132)return false;if(a.n===132||b.n===132)return true;if(!a.sx||!b.sx||a.sx===b.sx)return false;if(family(a.n)===family(b.n))return true;return shareType(a.n,b.n)}
+/* deux espèces différentes peuvent se reproduire si elles ont un type en commun */
+function typesOf(n){const d=DEX[n];return [d.t1,d.t2].filter(Boolean)}
+function shareType(x,y){const ty=typesOf(y);return typesOf(x).some(t=>ty.includes(t))}
+const WEIRD_P=0.05;
 
 /* ---------- statistiques ---------- */
 const BST_K=['hp','atk','def','spa','spd'],BST_N={hp:'PV',atk:'Attaque',def:'Défense',spa:'Att. Spé',spd:'Vitesse'};
@@ -334,7 +344,7 @@ function addMon(o){const m=Object.assign({u:SAVE.uid++,xp:0,mut:0,sh:false,born:
 function randGenes(a,b){const g={};GK.forEach(k=>g[k]=ri(a,b));return g}
 
 /* ---------- niveaux et évolution ---------- */
-function gainXP(m,x){if(m.lv>=100)return;m.xp+=x*(m.pk?T.pkXp:1);let up=false;while(m.lv<100&&m.xp>=need(m.lv)){m.xp-=need(m.lv);m.lv++;up=true}if(up){dirty=true;checkEvo(m)}}
+function gainXP(m,x){m.xp+=x*(m.pk?T.pkXp:1);let up=false;while(m.xp>=need(m.lv)){m.xp-=need(m.lv);m.lv++;up=true}if(up){dirty=true;checkEvo(m)}}
 function checkEvo(m,quiet){let ev=null;for(let k=0;k<4;k++){const t=evoOpts(m);if(!t.length)break;const old=DEX[m.n].name;m.n=pick(t)[0];SAVE.st.evo=(SAVE.st.evo||0)+1;dexOwn(m.n,m.sh);ev=[old,DEX[m.n].name]}if(ev&&!quiet)toast(`✨ ${ev[0]} évolue en <b>${ev[1]}</b> !`);if(ev)dirty=true;return ev}
 
 /* ---------- œufs ---------- */
@@ -342,6 +352,10 @@ function makeEgg(A,B,nestLvl){
   const non=[A,B].filter(m=>m.n!==132);
   const mom=non.find(m=>m.sx==='F')||non[0];
   let sp=mom?baseOf(mom.n):132;if(NIDO.has(sp))sp=rnd()<.5?29:32;
+  /* union de deux espèces différentes : 5 % de chance qu'une autre espèce du même type sorte de l'œuf */
+  let weird=null;if(non.length===2&&family(A.n)!==family(B.n)&&rnd()<WEIRD_P){const dad=non.find(m=>m!==mom);const ty=typesOf(A.n).filter(t=>typesOf(B.n).includes(t));
+    const P=EGG_SPECIES.filter(x=>x!==132&&!LEGEND.has(x)&&baseOf(x)===x&&family(x)!==family(A.n)&&family(x)!==family(B.n)&&typesOf(x).some(t=>ty.includes(t)));
+    if(P.length){sp=pick(P);weird={f:DEX[dad.n].name,m:DEX[mom.n].name}}}
   /* niveau entre (le plus faible - 2) et (le plus fort + 2), plus probable vers le milieu */
   const lo=Math.min(A.lv,B.lv)-2,hi=Math.max(A.lv,B.lv)+2;let lv=Math.round(lo+(hi-lo)*(rnd()+rnd())/2);
   const g={};GK.forEach(k=>g[k]=clamp(Math.round((A.g[k]+B.g[k])/2+ri(-2,3)),0,31));
@@ -352,7 +366,7 @@ function makeEgg(A,B,nestLvl){
   /* trois tirages indépendants : mutation, super mutation (shiny) et Pokérus */
   const sh=rnd()<ps;let bst=null;if(sh){if(!mut)lv+=T.mutLv;mut=0;bst=pick(BST_K)}/* la super mutation absorbe la mutation classique : +5 niveaux au total */
   const pkIn=!!(A.pk||B.pk),pk=pkIn||rnd()<T.pkr;
-  return{id:SAVE.uid++,n:sp,sx:rollSex(sp),lv:clamp(lv,1,100),g,sh,mut,bst,pk,pkNew:pk&&!pkIn,src:'nid'}
+  return{id:SAVE.uid++,n:sp,sx:rollSex(sp),lv:Math.max(1,lv),g,sh,mut,bst,pk,pkNew:pk&&!pkIn,src:'nid',weird}
 }
 function shopEgg(tier){
   const rars=tier==='c'?[0,1]:tier==='r'?[2]:[3];
@@ -361,6 +375,7 @@ function shopEgg(tier){
   const sh=rnd()<T.sh0;
   return{id:SAVE.uid++,n:d.n,lv:lv+(sh?T.mutLv:0),g:randGenes(tier==='l'?12:0,tier==='c'?12:20),sh,mut:0,bst:sh?pick(BST_K):null,src:'boutique'}
 }
+function legendEgg(){const L=EGG_SPECIES.filter(x=>LEGEND.has(x));const n=pick(L);const e=eggOf(n);e.src='arceus';e.g=randGenes(20,31);return e}
 function superEgg(){const P=EGG_SPECIES.filter(x=>DEX[x].rar>=2&&!LEGEND.has(x));const n=pick(P);const sh=rnd()<T.sh0*3;return{id:SAVE.uid++,n,sx:rollSex(n),lv:10+(sh?T.mutLv:0),g:randGenes(15,31),sh,mut:0,bst:sh?pick(BST_K):null,src:'super'}}
 function eggOf(n){const sh=rnd()<T.sh0;return{id:SAVE.uid++,n,lv:eggLevel(n)+(sh?T.mutLv:0),g:randGenes(LEGEND.has(n)?12:0,LEGEND.has(n)?24:14),sh,mut:0,bst:sh?pick(BST_K):null,src:'boutique'}}
 const breedRar=(A,B)=>Math.max(DEX[A.n].rar===9?0:DEX[A.n].rar,DEX[B.n].rar===9?0:DEX[B.n].rar);
@@ -377,6 +392,7 @@ const NEST_IMG=['nest1','nest0','nest2','nest3','nest3'];
 /* ---------- boucle de temps (fonctionne aussi hors-ligne) ---------- */
 let dirty=true,achT=0;
 function tick(){
+  if(typeof updateMusic==='function')updateMusic();
   const now=Date.now();const dt=clamp((now-SAVE.last)/1000,0,T.offlineMax);SAVE.last=now;
   SAVE.balls.forEach(b=>b.mons.forEach(u=>{const m=mon(u);if(m)gainXP(m,ballRate(b)*dt)}));
   SAVE.nests.forEach(n=>{if(n.a&&n.b&&!n.egg&&n.t0&&now>=n.t0+n.dur){const A=mon(n.a),B=n.b==='solo'?A:mon(n.b);if(A&&B){n.egg=makeEgg(A,B,n.lvl);dirty=true;if(SAVE.tuto===1)setTuto(2)}}});
@@ -424,7 +440,7 @@ function renderNursery(){
    <div class="wall">
      ${bo}</div>
    <div class="floor">
-    <div class="zone"><h3>Salle de jeu <span class="biome" id="capN">Pokémon : ${SAVE.mons.length}/${monCap()}</span> <span class="muted">Tes favoris ⭐ et tes Pokémon libres les plus forts se promènent ici (${SHOW_MAX} au maximum). Clique sur l'un d'eux pour voir sa fiche.</span></h3><div class="playfield" id="playfield"></div></div>
+    ${(SAVE.pend||[]).length?`<div class="zone"><h3>📦 Nurserie pleine : ${SAVE.pend.length} bébé${SAVE.pend.length>1?'s':''} en attente <button class="sm go" data-act="openFull">Faire de la place</button></h3></div>`:''}<div class="zone"><h3>Salle de jeu <span class="biome" id="capN">Pokémon : ${SAVE.mons.length}/${monCap()}</span> <span class="muted">Tes favoris ⭐ et tes Pokémon libres les plus forts se promènent ici (${SHOW_MAX} au maximum). Clique sur l'un d'eux pour voir sa fiche.</span></h3><div class="playfield" id="playfield"></div></div>
     <div class="zone"><h3>Nids <button class="sm go" data-act="collectAll" ${anyNest?'':'disabled'}>Tout récupérer</button></h3><div class="row">${SAVE.nests.map(nestHTML).join('')}</div></div>
     <div class="zone"><h3>Incubateurs <button class="sm go" data-act="hatchAll" ${anyReady?'':'disabled'}>Tout faire éclore</button>${SAVE.items.autofill?`<button class="sm" data-act="fillAll" ${SAVE.eggs.length?'':'disabled'}>Tout remplir</button>`:''}</h3><div class="row">${SAVE.incs.map(incHTML).join('')}</div></div>
     <div class="zone"><h3>Entraînement <span class="muted">Un Pokémon à l'entraînement ne peut pas se reproduire ni combattre.</span></h3><div class="row">${SAVE.balls.map(ballHTML).join('')}</div></div>
@@ -458,18 +474,18 @@ function liveNursery(){
 /* --- actions nid --- */
 function freeMons(){return SAVE.mons.filter(m=>!monStatus(m.u))}
 /* capacité : 30, 50, 100, 150, 200… Pokémon (achats « Agrandir la nurserie ») */
-const SHOW_MAX=30;
+let SHOW_MAX=30;
 const capOf=l=>l<=0?30:l===1?50:100+50*(l-2);
 const monCap=()=>capOf(SAVE.capLvl||0);
 const monsFull=()=>SAVE.mons.length>=monCap();
 /* Pokémon affichés dans la salle de jeu : favoris d'abord, puis les plus forts, 30 au maximum */
-function shownMons(){return freeMons().sort((a,b)=>(b.fav?1:0)-(a.fav?1:0)||pc(b)-pc(a)).slice(0,SHOW_MAX)}
+function shownMons(){SHOW_MAX=(typeof OPT!=='undefined'&&OPT.show)||30;return freeMons().sort((a,b)=>(b.fav?1:0)-(a.fav?1:0)||pc(b)-pc(a)).slice(0,SHOW_MAX)}
 function monCard(m,opt={}){const d=DEX[m.n],s=stats(m),st=monStatus(m.u);
   return `<div class="card ${opt.pick?'pick':''} ${opt.busy?'busy':''} ${opt.sel?'sel':''}" ${opt.act?`data-act="${opt.act}" data-u="${m.u}"`:''}>
     ${!opt.pick&&!opt.act?`<button class="favb ${m.fav?'on':''}" data-act="fav" data-u="${m.u}" title="${m.fav?'Retirer des favoris':'Ajouter aux favoris (toujours affiché dans la nurserie)'}">${m.fav?'⭐':'☆'}</button>`:m.fav?'<span class="favb on">⭐</span>':''}${m.sh?'<span class="sh">★ Shiny</span>':''}<span class="tag">${statusTxt(st)}</span>${m.pk?'<span class="pkb" title="Pokérus : stats +5 %, XP ×1,5, transmis aux descendants">POKÉRUS</span>':''}
     ${sprHTML(m.n,m.sh,64)}<span class="nm">${esc(d.name)} ${sxH(m)}</span>${tyHTML(d)}
     <span>Nv ${m.lv} · PC ${pc(m)}${m.mut===1?' · <span class="mut">Muté</span>':''}${m.sh?' · <span class="mut">Super mutation</span>':''}</span>
-    <div class="bar xp" style="height:6px;margin:0"><i style="width:${m.lv>=100?100:Math.floor(m.xp/need(m.lv)*100)}%"></i></div>
+    <div class="bar xp" style="height:6px;margin:0"><i style="width:${Math.floor(m.xp/need(m.lv)*100)}%"></i></div>
     ${m.bst?`<span class="mut">Boost ${BST_N[m.bst]} +25 %</span>`:''}
     <div class="genes">${GK.map(k=>`<span>${GN[k]}</span><b><i style="width:${m.g[k]/31*100}%"></i></b>`).join('')}</div>
     ${opt.extra||''}</div>`}
@@ -492,7 +508,7 @@ function pickParent(){
   const ok=m=>!monStatus(m.u)&&(!A||canBreed(A,m));
   list.sort((x,y)=>ok(y)-ok(x)||pc(y)-pc(x));
   openModal(`<h2>${A?'Choisis le 2ᵉ parent pour '+esc(DEX[A.n].name):'Choisis le 1ᵉʳ parent'}</h2>
-   <p class="muted">Il faut un mâle ♂ et une femelle ♀ de la même famille. Métamorph peut se reproduire avec n'importe quel Pokémon, même sans sexe. Le bébé est de l'espèce de la mère.</p>
+   <p class="muted">Il faut un mâle ♂ et une femelle ♀ de la même famille, ou de deux espèces qui ont un type en commun. Métamorph peut se reproduire avec n'importe quel Pokémon, même sans sexe. Le bébé est de l'espèce de la mère (sauf rares surprises entre espèces différentes…).</p>
    ${A&&SAVE.items.mirror>0?`<p><button data-act="solo">🧬 Utiliser un Gène miroir (${SAVE.items.mirror}) : reproduire ${esc(DEX[A.n].name)} seul</button></p>`:''}
    <div class="grid">${list.map(m=>monCard(m,{pick:ok(m),busy:!ok(m),act:ok(m)?'pickMon':''})).join('')||'<p>Aucun Pokémon disponible.</p>'}</div>`);
 }
@@ -509,14 +525,25 @@ function openInc(i){
    ${SAVE.eggs.length>1&&c.slots.length<cap?`<p><button data-act="incFill" data-i="${i}">Remplir automatiquement</button></p>`:''}`);
 }
 function incAdd(i,k,quiet){const c=SAVE.incs[i];if(c.slots.length>=INC_CAP[c.lvl])return;const e=SAVE.eggs.splice(k,1)[0];if(!e)return;c.slots.push({egg:e,t0:Date.now(),dur:hatchDur(c,e)});dirty=true;if(SAVE.tuto===3)setTip("L'œuf couve. Quand il bouge, clique sur l'incubateur pour le faire éclore.");if(!quiet){saveGame();openInc(i)}}
-function hatchOne(i,k){const c=SAVE.incs[i],s=c.slots[k];if(!s||Date.now()<s.t0+s.dur)return null;if(monsFull()){fullMsg();return null}c.slots.splice(k,1);const e=s.egg;
+function hatchOne(i,k){const c=SAVE.incs[i],s=c.slots[k];if(!s||Date.now()<s.t0+s.dur)return null;if((SAVE.pend||[]).length){fullMsg();return null}c.slots.splice(k,1);const e=s.egg;
   if(!e.sh&&c.lvl>=6&&rnd()<T.sh0*(c.lvl-4)){e.sh=true;e.lv+=T.mutLv;e.bst=pick(BST_K)}
   if(e.sh&&!e.bst)e.bst=pick(BST_K);
-  const m=addMon({n:e.n,sx:e.sx===undefined?rollSex(e.n):e.sx,lv:e.lv,g:e.g,sh:e.sh,mut:e.mut,bst:e.bst||null,pk:!!e.pk});m.pkNew=!!e.pkNew;const st=SAVE.st;st.hatch=(st.hatch||0)+1;if(m.mut===1)st.mut=(st.mut||0)+1;if(m.sh)st.sh=(st.sh||0)+1;if(m.pk&&m.pkNew)st.pk=(st.pk||0)+1;if(m.sh&&m.pk)st.triple=(st.triple||0)+1;const ev=checkEvo(m,true);return{m,e,ev}}
-function fullMsg(){const t=Date.now();if(t-(fullMsg.t||0)<1500)return;fullMsg.t=t;toast(`📦 Nurserie pleine (${SAVE.mons.length}/${monCap()}) : relâche des Pokémon ou agrandis la nurserie dans la Boutique.`)}
+  const mo={n:e.n,sx:e.sx===undefined?rollSex(e.n):e.sx,lv:e.lv,g:e.g,sh:e.sh,mut:e.mut,bst:e.bst||null,pk:!!e.pk};const m=monsFull()?pendMon(mo):addMon(mo);m.pkNew=!!e.pkNew;const st=SAVE.st;st.hatch=(st.hatch||0)+1;if(m.mut===1)st.mut=(st.mut||0)+1;if(m.sh)st.sh=(st.sh||0)+1;if(m.pk&&m.pkNew)st.pk=(st.pk||0)+1;if(m.sh&&m.pk)st.triple=(st.triple||0)+1;const ev=checkEvo(m,true);return{m,e,ev}}
+function pendMon(o){const m=Object.assign({u:SAVE.uid++,xp:0,mut:0,sh:false,born:Date.now()},o);if(m.sx===undefined)m.sx=rollSex(m.n);dexOwn(m.n,m.sh);(SAVE.pend=SAVE.pend||[]).push(m);return m}
+/* fenêtre « Nurserie pleine » : vendre le nouveau-né, ou vendre un Pokémon déjà acquis pour lui faire de la place */
+function openFull(){const p=(SAVE.pend||[])[0];if(!p){closeModal();return}
+  const L=SAVE.mons.slice().sort((a,b)=>(a.fav?1:0)-(b.fav?1:0)||pc(a)-pc(b));
+  openModal(`<h2>📦 Nurserie pleine (${SAVE.mons.length}/${monCap()})</h2>
+   <p>Pour garder ce bébé, vends un de tes Pokémon. Sinon, vends le bébé.${SAVE.pend.length>1?` <b>${SAVE.pend.length} bébés attendent.</b>`:''} Tu peux aussi agrandir la nurserie dans la Boutique.</p>
+   <div class="flexr">${monCard(p,{act:'x',extra:`<button class="sm" data-act="sellPend">Vendre le bébé (+${relVal(p)} pièces)</button>${monsFull()?'':`<button class="sm go" data-act="keepPend">Le garder</button>`}`})}</div>
+   <h3 style="margin-top:12px">Ou vendre un Pokémon déjà acquis <span class="muted">(les moins forts d'abord ; ceux au nid ou à l'entraînement ne peuvent pas être vendus)</span></h3>
+   <div class="grid">${L.map(m=>monCard(m,{busy:!!monStatus(m.u),extra:monStatus(m.u)?'':`<button class="sm" data-act="sellForPend" data-u="${m.u}">Vendre (+${relVal(m)} pièces)</button>`})).join('')}</div>`)}
+function pendAccept(){const p=SAVE.pend.shift();SAVE.mons.push(p);toast(`${esc(DEX[p.n].name)} rejoint ta nurserie !`)}
+function pendAfter(){dirty=true;saveGame();renderTop();if(cur==='nursery')renderNursery();if(cur==='team')renderTeam();if((SAVE.pend||[]).length)openFull();else closeModal()}
+function fullMsg(){const t=Date.now();if(t-(fullMsg.t||0)<1500)return;fullMsg.t=t;toast(`📦 Nurserie pleine : un bébé attend une place. Vends-le ou vends un autre Pokémon avant de faire éclore d'autres œufs.`);openFull()}
 function hatchAll(only){const res=[];SAVE.incs.forEach((c,i)=>{if(only!==undefined&&only!==i)return;for(let k=c.slots.length-1;k>=0;k--){const r=hatchOne(i,k);if(r)res.push(r)}});if(res.length)showHatch(res);dirty=true;saveGame()}
-function showHatch(res){
-  openModal(`<h2>${res.length>1?res.length+' œufs ont éclos !':'Un œuf a éclos !'}</h2><div class="hatch">${res.map(r=>{let x='';if(r.m.sh)x+=`<div class="banner s">✨ SUPER MUTATION SHINY ✨<br>+${T.mutLv} niveaux · ${BST_N[r.m.bst]||''} +25 %</div>`;if(r.m.mut===1)x+=`<div class="banner m">🧬 MUTATION +${T.mutLv} niveaux</div>`;if(r.m.pk&&r.e.pkNew)x+='<div class="banner pk">🦠 POKÉRUS ! Transmis à tous ses descendants</div>';else if(r.m.pk)x+='<div class="muted">🦠 Pokérus hérité des parents</div>';if(r.ev)x+=`<div class="muted">Il a évolué en sortant de l'œuf !</div>`;return monCard(r.m,{extra:x})}).join('')}</div>`);
+function showHatch(res){if(res.some(r=>r.m.sh||r.m.mut===1||r.e.weird))jingle('mutation');
+  openModal(`<h2>${res.length>1?res.length+' œufs ont éclos !':'Un œuf a éclos !'}</h2><div class="hatch">${res.map(r=>{let x='';if(r.m.sh)x+=`<div class="banner s">✨ SUPER MUTATION SHINY ✨<br>+${T.mutLv} niveaux · ${BST_N[r.m.bst]||''} +25 %</div>`;if(r.m.mut===1)x+=`<div class="banner m">🧬 MUTATION +${T.mutLv} niveaux</div>`;if(r.m.pk&&r.e.pkNew)x+='<div class="banner pk">🦠 POKÉRUS ! Transmis à tous ses descendants</div>';else if(r.m.pk)x+='<div class="muted">🦠 Pokérus hérité des parents</div>';if(r.e.weird)x+=`<div class="banner pk">🤔 Tiens, comme c'est étrange ! Un ${esc(DEX[r.m.n].name)} est sorti de l'œuf de l'union entre ${esc(r.e.weird.f)} et ${esc(r.e.weird.m)}. Ce n'était pourtant pas censé se produire…</div>`;if(r.ev)x+=`<div class="muted">Il a évolué en sortant de l'œuf !</div>`;return monCard(r.m,{extra:x})}).join('')}</div>${(SAVE.pend||[]).length?`<div class="banner s" style="margin-top:10px">📦 Nurserie pleine : ${SAVE.pend.length>1?SAVE.pend.length+' bébés attendent':'un bébé attend'} une place.<br><button class="go" data-act="openFull">Faire de la place</button></div>`:''}`);
   if(SAVE.tuto>=1&&SAVE.tuto<=4)setTuto(5);
 }
 /* --- actions entraînement --- */
@@ -537,13 +564,23 @@ function openBall(i){
 let teamSort='pc';
 function renderTeam(){
   const L=SAVE.mons.slice();
-  const f={fav:(a,b)=>(b.fav?1:0)-(a.fav?1:0)||pc(b)-pc(a),pc:(a,b)=>pc(b)-pc(a),lv:(a,b)=>b.lv-a.lv,dex:(a,b)=>a.n-b.n||b.lv-a.lv,new:(a,b)=>b.born-a.born}[teamSort];L.sort(f);
+  const f={pcA:(a,b)=>pc(a)-pc(b),lvA:(a,b)=>a.lv-b.lv,fav:(a,b)=>(b.fav?1:0)-(a.fav?1:0)||pc(b)-pc(a),pc:(a,b)=>pc(b)-pc(a),lv:(a,b)=>b.lv-a.lv,dex:(a,b)=>a.n-b.n||b.lv-a.lv,new:(a,b)=>b.born-a.born}[teamSort];L.sort(f);
   $('tab-team').innerHTML=`<div class="panel"><h3>Mes Pokémon (${L.length}/${monCap()}) <span class="muted">⭐ = favori, toujours affiché dans la nurserie</span>
-   <select id="teamSort">${[['pc','Puissance (PC)'],['fav','Favoris d\'abord'],['lv','Niveau'],['dex','N° Pokédex'],['new','Plus récents']].map(([k,t])=>`<option value="${k}" ${k===teamSort?'selected':''}>${t}</option>`).join('')}</select></h3>
-   <div class="grid">${L.map(m=>monCard(m,{busy:false,extra:monStatus(m.u)?'':`<button class="sm" data-act="release" data-u="${m.u}">Relâcher (+${relVal(m)} pièces)</button>`})).join('')}</div></div>`;
+   <select id="teamSort">${[['pc','Puissance (PC) décroissante'],['pcA','Puissance (PC) croissante'],['fav','Favoris d\'abord'],['lv','Niveau décroissant'],['lvA','Niveau croissant'],['dex','N° Pokédex'],['new','Plus récents']].map(([k,t])=>`<option value="${k}" ${k===teamSort?'selected':''}>${t}</option>`).join('')}</select></h3>
+   ${teamSelHTML()}
+   <div class="grid">${L.map(m=>teamSel?monCard(m,{act:monStatus(m.u)?null:'tsel',sel:teamSel.has(m.u),busy:!!monStatus(m.u),extra:monStatus(m.u)?'<span class="muted">Occupé</span>':`<span class="muted">${teamSel.has(m.u)?'✅ sélectionné':'Clique pour sélectionner'}</span>`}):monCard(m,{busy:false,extra:monStatus(m.u)?'':`<button class="sm" data-act="release" data-u="${m.u}">Relâcher (+${relVal(m)} pièces)</button>`})).join('')}</div></div>`;
   $('teamSort').onchange=e=>{teamSort=e.target.value;renderTeam()};
 }
 const relVal=m=>Math.max(5,Math.round(m.lv*4*(m.sh?5:1)));
+/* sélection multiple pour relâcher plusieurs Pokémon d'un coup */
+let teamSel=null;
+function teamSelHTML(){if(!teamSel)return `<div class="flexr" style="margin:8px 0"><button class="sm" data-act="tselOn">☑ Sélectionner plusieurs Pokémon</button></div>`;
+  const L=[...teamSel].map(mon).filter(Boolean),tot=L.reduce((a,m)=>a+relVal(m),0),fav=L.filter(m=>m.fav).length;
+  return `<div class="panel selbar"><b>${L.length} sélectionné${L.length>1?'s':''}</b> · +${fmt(tot)} pièces${fav?` · <span style="color:#c0392b">dont ${fav} favori${fav>1?'s':''}</span>`:''}
+   <button class="sm" data-act="tselAll">Tout sélectionner (sauf favoris)</button><button class="sm" data-act="tselWeak">Les 10 plus faibles</button><button class="sm" data-act="tselNone">Tout désélectionner</button>
+   <button class="go sm" data-act="tselRelease" ${L.length?'':'disabled'}>Relâcher la sélection</button><button class="sm" data-act="tselOff">Annuler</button></div>`}
+function teamSelRelease(){const L=[...teamSel].map(mon).filter(m=>m&&!monStatus(m.u));if(!L.length)return;const tot=L.reduce((a,m)=>a+relVal(m),0);const us=new Set(L.map(m=>m.u));
+  SAVE.coins+=tot;SAVE.mons=SAVE.mons.filter(m=>!us.has(m.u));teamSel=null;closeModal();toast(`${L.length} Pokémon relâchés (+${fmt(tot)} pièces)`);dirty=true;saveGame();renderTop();renderTeam()}
 
 /* =====================================================================
    BOUTIQUE
@@ -649,23 +686,35 @@ const BIOMES=[
  {name:'Jardin des saules',g:['#88c070','#7cb464','#94cc7c'],sh:'#c8c090',liq:'#5ab0c8',liq2:'#3a94ac',trees:[[1,1,0],[2,1,0]],dens:.05,types:['eau','plante','fee'],fl:['#ffffff','#a0d0ff']},
  {name:'Gouffre de glace',g:['#d6e6f2','#cadcea','#e2eefa'],sh:'#a8bccc',liq:'#3a6a9a',liq2:'#24507e',trees:[[8,0,2],[7,0,2]],dens:.03,types:['glace','dragon','acier'],fl:['#ffffff']}];
 BIOMES.forEach((b,i)=>b.hab=i);
+/* Ordre de l'aventure : chaque biome a son légendaire (boss du tableau 10), choisi pour coller au biome.
+   Les biomes sont rangés pour que les légendaires soient de plus en plus forts :
+   rang 1 (total officiel 580 : oiseaux, bêtes, Regi), rang 2 (600 : fabuleux et Latias/Latios), rang 3 (680 : grands légendaires).
+   Les 9 plus forts restants sont dans la Vallée des légendes ; Arceus est le dernier boss. */
+const BIOME_PLAN=[
+ ['Plaines',243],['Banquise',378],['Canyon',379],['Toundra gelée',144],['Marais brumeux',245],['Désert ardent',377],['Montagnes',145],['Volcan',146],['Savane',244],
+ ['Cerisaie',380],['Jardin des saules',488],['Prairie fleurie',648],['Falaises de cristal',381],['Ruines de Mew',151],['Forêt profonde',251],['Forêt ancienne',385],['Jungle',649],['Forêt de champignons',491],['Grotte',800],['Mesa',386],
+ ['Forêt automnale',250],['Récif corallien',249],['Cimetière',487],['Gouffre de glace',646]];
+BIOMES.splice(0,BIOMES.length,...BIOME_PLAN.map(([nm,lg])=>{const b=BIOMES.find(x=>x.name===nm);b.legend=lg;return b}));
 /* 25e biome : la Route Victoire (tous les types, Pokémon les plus forts), puis la Vallée des légendes (5 derniers tableaux, légendaires) */
 BIOMES.push({name:'Route Victoire',g:['#8a8a7a','#7e7e70','#969686'],sh:'#a8a090',liq:'#4a7ab0',liq2:'#36609a',trees:[[0,0,2],[0,1,2]],dens:.04,types:[],fl:['#d8d0b0'],hab:-1,victory:1});
 const VALLEY={name:'Vallée des légendes',g:['#6a5a9a','#60508e','#7464a6'],sh:'#4a3e78',liq:'#3ad0e8',liq2:'#20a8d0',trees:[[6,0,2],[8,1,0]],dens:.04,types:[],fl:['#ffe27a','#ffffff'],hab:-1,valley:1};
-const PER_BIOME=10,MAXST=BIOMES.length*PER_BIOME;
-const biomeOf=st=>st>MAXST-5?VALLEY:BIOMES[Math.floor((st-1)/PER_BIOME)%BIOMES.length];
+/* Temple d'Arceus : le tout dernier tableau (dalles de marbre, colonnes, cercle d'or) */
+const TEMPLE={name:"Temple d'Arceus",g:['#ebe4d2','#e0d8c4','#f4eee0'],sh:'#cfc29e',liq:'#f2cc52',liq2:'#d9aa2c',trees:[],dens:0,types:[],fl:['#f2cc52'],hab:-1,valley:1,temple:1};
+const PER_BIOME=40,MAXST=BIOMES.length*PER_BIOME;
+const biomeOf=st=>st===MAXST?TEMPLE:st>MAXST-5?VALLEY:BIOMES[Math.floor((st-1)/PER_BIOME)%BIOMES.length];
 const bstOf=n=>{const d=DEX[n];return d.hp+d.atk+d.def+d.spd+d.spa};
 /* Pokémon de la Route Victoire : formes finales non légendaires les plus fortes (les 45 meilleures stats totales) */
 const VICTORY_POOL=[...AVAIL].filter(n=>DEX[n]&&!evoTargets(n).length&&!LEGEND.has(n)&&n!==132).sort((a,b)=>bstOf(b)-bstOf(a)).slice(0,45);
 /* légendaires du plus faible au plus fort (hors Arceus) : boss des 24 biomes dans l'ordre, puis les plus forts dans la Vallée ; Arceus est le dernier boss (tableau 250) */
 const FINAL_BOSS=493;
 const LEGEND_ORDER=[...LEGEND].filter(n=>DEX[n]&&n!==FINAL_BOSS).sort((a,b)=>bstOf(a)-bstOf(b)||a-b);
-const LEGEND_POOL=LEGEND_ORDER.slice(-9);
-const legendBoss=stage=>LEGEND_ORDER[Math.min(LEGEND_ORDER.length-1,Math.floor(stage/PER_BIOME)-1)];
+const LEGEND_POOL=LEGEND_ORDER.filter(n=>!BIOMES.some(b=>b.legend===n));
+const legendBoss=stage=>biomeOf(stage).legend||LEGEND_ORDER[0];
 const bestLevel=()=>Math.max(5,...SAVE.mons.map(m=>m.lv));
 function finalForm(n,R){for(let k=0;k<4;k++){const t=evoTargets(n);if(!t.length)break;n=t[Math.floor(R()*t.length)]}return n}
 /* niveau ennemi : de 2 au tableau 1 jusqu'à 100 au tableau 240 ; en mode Maître, niveau du meilleur Pokémon du joueur */
-function enemyLv(stage){return SAVE.cycle?Math.min(100,bestLevel()):clamp(Math.round(3+97*Math.pow((stage-1)/(MAXST-1),.6)),3,100)}
+/* niveau des ennemis sans plafond : ~17 au tableau 10, ~62 au 100, ~107 au 250, ~250 au 1000 */
+function enemyLv(stage){return SAVE.cycle?bestLevel():Math.max(3,Math.round(3+3.4*Math.pow(stage,.62)))}
 const IMG={};function img(src){if(!IMG[src]){const i=new Image();i.onload=()=>i.ok=1;i.onerror=()=>i.bad=1;i.src=src;IMG[src]=i}return IMG[src]}
 function noiseFn(seed){const R=rng(seed);const P=new Float32Array(64*64).map(()=>R());const v=(x,y)=>P[((y&63)*64)+(x&63)];
   return(x,y)=>{const xi=Math.floor(x),yi=Math.floor(y),xf=x-xi,yf=y-yi,sx=xf*xf*(3-2*xf),sy=yf*yf*(3-2*yf);const a=v(xi,yi),b=v(xi+1,yi),c=v(xi,yi+1),d=v(xi+1,yi+1);return a+(b-a)*sx+(c-a)*sy+(a-b-c+d)*sx*sy}}
@@ -673,18 +722,49 @@ function genMap(stage){
   const R=rng(stage*9973+17),bi=biomeOf(stage);
   const liq=new Uint8Array(GW*GH),tree=new Uint8Array(GW*GH),bridge=new Uint8Array(GW*GH);
   const I=(x,y)=>y*GW+x;
-  const river=stage>1&&R()<.8;
+  /* environ 1 tableau sur 10 (hors boss et début) : passage bloqué voulu, il faut des Pokémon nageurs, Feu (lave) ou volants */
+  const RB=rng(stage*7717+3);const CHASM=['Montagnes','Canyon','Falaises de cristal','Grotte','Gouffre de glace','Mesa'];
+  const BLK=stage>10&&stage%5!==0&&!bi.temple&&!bi.valley&&RB()<.1?(CHASM.includes(bi.name)?'vide':bi.lava?'lave':'eau'):null;
+  const voidc=new Uint8Array(GW*GH);
+  if(BLK==='vide'){let x=13+RB()*5;for(let y=0;y<GH;y++){x=clamp(x+(RB()-.5)*1.2,12,GW-14);for(let k=0;k<3;k++)voidc[I(Math.round(x)+k,y)]=1}}
+  const river=BLK==='eau'||BLK==='lave'?true:BLK?false:stage>1&&!bi.temple&&R()<.8;
   if(river){let x=12+R()*6;const w=R()<.35?3:2;for(let y=0;y<GH;y++){x=clamp(x+(R()-.5)*1.4,11,GW-14);for(let k=0;k<w;k++)liq[I(Math.round(x)+k,y)]=1}
-    const nb=1+Math.floor(R()*3),rows=[];for(let tr=0;rows.length<nb&&tr<60;tr++){const r=2+Math.floor(R()*(GH-4));if(rows.every(q=>Math.abs(q-r)>3))rows.push(r)}
+    const nb=BLK?0:1+Math.floor(R()*3),rows=[];for(let tr=0;rows.length<nb&&tr<60;tr++){const r=2+Math.floor(R()*(GH-4));if(rows.every(q=>Math.abs(q-r)>3))rows.push(r)}
     rows.forEach(r=>{for(let x2=0;x2<GW;x2++)if(liq[I(x2,r)])bridge[I(x2,r)]=1})}
-  const ponds=Math.floor(R()*(river?2:3));
+  const ponds=bi.temple||BLK?0:Math.floor(R()*(river?2:3));
   for(let p=0;p<ponds;p++){const cx=11+Math.floor(R()*10),cy=2+Math.floor(R()*(GH-4)),rx=1+R()*1.6,ry=1+R()*1.2;for(let y=0;y<GH;y++)for(let x=0;x<GW;x++){if(((x-cx)/rx)**2+((y-cy)/ry)**2<=1)liq[I(x,y)]=1}}
+  /* un pont traverse toute l'étendue d'eau de sa ligne (rivière + mare collée), sinon il serait infranchissable à pied */
+  const spanBridge=y=>{for(let x=0;x<GW;x++)if(bridge[I(x,y)]){let a=x;while(a>0&&liq[I(a-1,y)])a--;let b=x;while(b<GW-1&&liq[I(b+1,y)])b++;for(let k=a;k<=b;k++)bridge[I(k,y)]=1}};
+  for(let y=0;y<GH;y++)spanBridge(y);
   for(let i=0;i<GW*GH;i++)if(bridge[i])liq[i]=1;
   const nearB=(x,y)=>{for(let dy=-1;dy<=1;dy++)for(let dx=-2;dx<=2;dx++){const xx=x+dx,yy=y+dy;if(xx>=0&&yy>=0&&xx<GW&&yy<GH&&bridge[I(xx,yy)])return true}return false};
   const nearLiq=(x,y)=>{for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){const xx=x+dx,yy=y+dy;if(xx>=0&&yy>=0&&xx<GW&&yy<GH&&liq[I(xx,yy)])return true}return false};
   const trees=[];
-  for(let y=2;y<GH;y++)for(let x=1;x<GW-1;x++){const zone=x<=PZ||x>=EZ;const p=bi.dens*(zone?.35:1);if(R()<p){const v=bi.trees[Math.floor(R()*bi.trees.length)];if(v[2]===2&&y<3)continue;if(!nearLiq(x,y)&&!nearB(x,y)&&trees.every(t=>Math.max(Math.abs(t.x-x),Math.abs(t.y-y))>=2)){tree[I(x,y)]=1;trees.push({x,y,v})}}}
-  const M={stage,bi,liq,tree,bridge,trees,seed:stage*31+5};M.cv=drawTerrain(M);return M;
+  for(let y=2;y<GH;y++)for(let x=1;x<GW-1;x++){const zone=x<=PZ||x>=EZ;const p=bi.dens*(zone?.35:1);if(R()<p){const v=bi.trees[Math.floor(R()*bi.trees.length)];if(v[2]===2&&y<3)continue;if(!nearLiq(x,y)&&!nearB(x,y)&&!voidc[I(x,y)]&&!(x>0&&voidc[I(x-1,y)])&&!voidc[I(x+1,y)]&&trees.every(t=>Math.max(Math.abs(t.x-x),Math.abs(t.y-y))>=2)){tree[I(x,y)]=1;trees.push({x,y,v})}}}
+  /* vérifie qu'un Pokémon terrestre peut aller de la zone du joueur à celle des ennemis ; sinon ajoute un pont */
+  const walk=i=>!tree[i]&&(!liq[i]||bridge[i]);
+  const reach=()=>{const seen=new Uint8Array(GW*GH),q=[];for(let y=0;y<GH;y++){const i=I(1,y);if(walk(i)){seen[i]=1;q.push(i)}}
+    for(let h=0;h<q.length;h++){const i=q[h],x=i%GW,y=(i/GW)|0;if(x>=EZ)return true;for(const[dx,dy]of[[1,0],[-1,0],[0,1],[0,-1]]){const nx=x+dx,ny=y+dy;if(nx<0||ny<0||nx>=GW||ny>=GH)continue;const j=I(nx,ny);if(!seen[j]&&walk(j)){seen[j]=1;q.push(j)}}}return false};
+  for(let t=0;!BLK&&t<6&&!reach();t++){let best=-1,bc=1e9;for(let y=2;y<GH-2;y++){let c=0;for(let x=0;x<GW;x++)if(liq[I(x,y)]&&!bridge[I(x,y)])c++;if(tree.slice(I(0,y),I(0,y)+GW).some(v=>v))c+=50;if(c&&c<bc){bc=c;best=y}}
+    if(best<0)break;for(let x=0;x<GW;x++)if(liq[I(x,best)])bridge[I(x,best)]=1}
+  const M={stage,bi,liq,tree,bridge,trees,voidc,blk:BLK,seed:stage*31+5};M.cv=drawTerrain(M);return M;
+}
+function drawTemple(x){
+  /* dalles */
+  x.strokeStyle='rgba(120,100,60,.22)';x.lineWidth=1;
+  for(let ty=0;ty<GH;ty++)for(let tx=0;tx<GW;tx++){const o=(ty%2)*TW/2;x.strokeRect(tx*TW+o+.5,ty*TW+.5,TW,TW)}
+  /* allée centrale dorée et cercle sacré */
+  const cx=CW/2,cy=CH/2;x.fillStyle='rgba(242,204,82,.18)';x.fillRect(0,cy-TW,CW,TW*2);
+  for(let r=0;r<3;r++){x.strokeStyle=r===1?'rgba(217,170,44,.9)':'rgba(242,204,82,.6)';x.lineWidth=r===1?5:3;x.beginPath();x.arc(cx,cy,TW*(2.4+r*.9),0,7);x.stroke()}
+  for(let k=0;k<12;k++){const a=k*Math.PI/6;x.fillStyle='#d9aa2c';x.beginPath();x.arc(cx+Math.cos(a)*TW*3.3,cy+Math.sin(a)*TW*3.3,4,0,7);x.fill()}
+  /* colonnes en haut et en bas */
+  const col=(px,py)=>{x.fillStyle='rgba(0,0,0,.18)';x.fillRect(px-11,py+36,30,8);
+    x.fillStyle='#cfc29e';x.fillRect(px-13,py+30,30,8);x.fillRect(px-13,py-6,30,7);
+    const g=x.createLinearGradient(px-9,0,px+13,0);g.addColorStop(0,'#fffaf0');g.addColorStop(.6,'#e6dcc4');g.addColorStop(1,'#b8ab88');x.fillStyle=g;x.fillRect(px-9,py,22,30);
+    x.fillStyle='#d9aa2c';x.fillRect(px-13,py-9,30,3)};
+  for(let i=0;i<8;i++){const px=60+i*(CW-120)/7;col(px,10);col(px,CH-52)}
+  /* marches d'entrée de chaque côté */
+  for(let k=0;k<3;k++){x.fillStyle=k%2?'#ddd3bc':'#cfc29e';x.fillRect(k*8,cy-TW*1.5,8,TW*3);x.fillRect(CW-8-k*8,cy-TW*1.5,8,TW*3)}
 }
 function drawTerrain(M){
   const cv=document.createElement('canvas');cv.width=CW;cv.height=CH;const x=cv.getContext('2d');const bi=M.bi;
@@ -703,6 +783,11 @@ function drawTerrain(M){
     for(let dy=0;dy<2;dy++)for(let dx=0;dx<2;dx++){const o=((py+dy)*CW+px+dx)*4;D[o]=c[0];D[o+1]=c[1];D[o+2]=c[2];D[o+3]=255}
   }
   x.putImageData(im,0,0);
+  if(bi.temple){drawTemple(x);return cv}
+  /* crevasse (vide) */
+  if(M.voidc&&M.blk==='vide'){for(let i=0;i<GW*GH;i++)if(M.voidc[i]){const tx=i%GW,ty=(i/GW)|0;x.fillStyle='#120e18';x.fillRect(tx*TW,ty*TW,TW,TW);
+    if(!M.voidc[i-1]){x.fillStyle='rgba(0,0,0,.45)';x.fillRect(tx*TW,ty*TW,5,TW);x.fillStyle='#6a5a48';x.fillRect(tx*TW-3,ty*TW,3,TW)}
+    if(!M.voidc[i+1]){x.fillStyle='#4a3e32';x.fillRect(tx*TW+TW-6,ty*TW,6,TW);x.fillStyle='#8a7a62';x.fillRect(tx*TW+TW,ty*TW,3,TW)}}}
   /* reflets dans le liquide */
   const R=rng(M.seed+3);x.fillStyle='rgba(255,255,255,.35)';
   for(let i=0;i<GW*GH;i++)if(M.liq[i]&&!M.bridge[i]&&R()<.35){const tx=i%GW,ty=Math.floor(i/GW);x.fillRect(tx*TW+4+R()*14|0,ty*TW+6+R()*16|0,6,2)}
@@ -720,7 +805,7 @@ function drawTerrain(M){
 }
 /* --- passabilité et champs de déplacement --- */
 function unitMode(d,bi){const ty=[d.t1,d.t2];if(ty.includes('vol')||d.t1==='spectre')return 'fly';if(bi.lava?ty.includes('feu'):ty.includes('eau'))return 'swim';return 'ground'}
-function passable(M,i,mode){if(mode==='fly')return true;if(M.tree[i])return false;if(M.liq[i]&&!M.bridge[i])return mode==='swim';return true}
+function passable(M,i,mode){if(mode==='fly')return true;if(M.voidc&&M.voidc[i])return false;if(M.tree[i])return false;if(M.liq[i]&&!M.bridge[i])return mode==='swim';return true}
 function buildField(M,sources,mode){const F=new Float32Array(GW*GH).fill(Infinity);const q=[];sources.forEach(i=>{if(F[i]!==0){F[i]=0;q.push(i)}});
   for(let h=0;h<q.length;h++){const i=q[h],x=i%GW,y=(i/GW)|0;for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){if(!dx&&!dy)continue;const nx=x+dx,ny=y+dy;if(nx<0||ny<0||nx>=GW||ny>=GH)continue;const j=ny*GW+nx;if(!passable(M,j,mode))continue;if(dx&&dy&&(!passable(M,y*GW+nx,mode)||!passable(M,ny*GW+x,mode)))continue;const c=F[i]+(dx&&dy?1.414:1);if(c<F[j]){F[j]=c;q.push(j)}}}return F}
 /* --- génération de l'armée ennemie --- */
@@ -735,24 +820,24 @@ function genEnemies(stage,M){
   if(pool.length<3)pool=base.filter(d=>d.rar<=Math.max(rarCap,2)&&(inHab(d)||bi.types.includes(d.t1)||bi.types.includes(d.t2)));
   if(pool.length<3)pool=base.filter(d=>d.rar<=2);
   const list=[];
-  if(bi.victory||bi.valley){const P=bi.valley?LEGEND_POOL:VICTORY_POOL;for(let k=0;k<(bi.valley?Math.min(cnt,8):cnt);k++){const l=clamp(lv+Math.floor(R()*3)-1,1,100);list.push({n:P[Math.floor(R()*P.length)],lv:l,g:randGenesR(R,20,31),sh:false})}
-    if(stage%5===0){const P2=bi.valley?[FINAL_BOSS]:VICTORY_POOL.slice(0,8);list[0]={n:P2[Math.floor(R()*P2.length)],lv:Math.min(100,lv+3),g:randGenesR(R,25,31),sh:R()<.1,boss:1}}
+  if(bi.victory||bi.valley){const P=bi.valley?LEGEND_POOL:VICTORY_POOL;for(let k=0;k<(bi.valley?Math.min(cnt,8):cnt);k++){const l=Math.max(1,lv+Math.floor(R()*3)-1);list.push({n:P[Math.floor(R()*P.length)],lv:l,g:randGenesR(R,20,31),sh:false})}
+    if(stage%5===0){const P2=bi.valley?[FINAL_BOSS]:VICTORY_POOL.slice(0,8);list[0]={n:P2[Math.floor(R()*P2.length)],lv:lv+3,g:randGenesR(R,25,31),sh:R()<.1,boss:1}}
     return list}
-  for(let k=0;k<cnt;k++){const b=pool[Math.floor(R()*pool.length)].n,l=clamp(lv+Math.floor(R()*3)-1,1,100);list.push({n:cyc?finalForm(b,R):evolveTo(b,l,R),lv:l,g:randGenesR(R,gmin,gmax),sh:false})}
+  for(let k=0;k<cnt;k++){const b=pool[Math.floor(R()*pool.length)].n,l=Math.max(1,lv+Math.floor(R()*3)-1);list.push({n:cyc?finalForm(b,R):evolveTo(b,l,R),lv:l,g:randGenesR(R,gmin,gmax),sh:false})}
   if(stage%5===0){const legend=stage%PER_BIOME===0;const ok=d=>legend?LEGEND.has(d.n)&&d.n!==150:d.rar>=2&&!LEGEND.has(d.n)&&d.n!==132;let bp=EGG_SPECIES.map(n=>DEX[n]).filter(d=>ok(d)&&inHab(d));if(!bp.length)bp=EGG_SPECIES.map(n=>DEX[n]).filter(d=>ok(d)&&(bi.types.includes(d.t1)||bi.types.includes(d.t2)));if(!bp.length)bp=EGG_SPECIES.map(n=>DEX[n]).filter(ok);
-    const b=legend?legendBoss(stage):bp[Math.floor(R()*bp.length)].n,l=Math.min(100,lv+3);list[0]={n:legend?b:cyc?finalForm(b,R):evolveTo(b,l+6,R),lv:l,g:randGenesR(R,10,31),sh:R()<.1,boss:1}}
+    const b=legend?legendBoss(stage):bp[Math.floor(R()*bp.length)].n,l=lv+3;list[0]={n:legend?b:cyc?finalForm(b,R):evolveTo(b,l+6,R),lv:l,g:randGenesR(R,10,31),sh:R()<.1,boss:1}}
   return list;
 }
 function randGenesR(R,a,b){const g={};GK.forEach(k=>g[k]=a+Math.floor(R()*(b-a+1)));return g}
 /* --- état du combat --- */
-let B=null,battleSel=null,bSpeed=1;
+let B=null,battleSel=null,bSpeed=1;/* bSpeed reprend le réglage au début de chaque combat */
 function setupStage(st){
   st=clamp(st,1,Math.min(MAXST,SAVE.best+1));const M=genMap(st);
   const E=genEnemies(st,M);
   const free=[];for(let y=1;y<GH-1;y++)for(let x=EZ+1;x<GW-1;x++)free.push([x,y]);
   const R=rng(st*77+3);
   const units=E.map(e=>{const d=DEX[e.n],mode=unitMode(d,M.bi);let k=0,p;do{p=free.splice(Math.floor(R()*free.length),1)[0];k++}while(p&&!passable(M,p[1]*GW+p[0],mode)&&k<50);dexSee(e.n);return mkUnit(e,1,p[0]*TW+TW/2,p[1]*TW+TW/2,M)});
-  B={stage:st,M,units,proj:[],fx:[],phase:'place',placed:[],t:0,fieldT:0,F:null,res:null};
+  bSpeed=(typeof OPT!=='undefined'&&OPT.speed)||1;B={stage:st,M,units,proj:[],fx:[],phase:'place',placed:[],t:0,fieldT:0,F:null,res:null};
   battleSel=null;renderBattleHead();renderRoster();
 }
 function mkUnit(m,team,x,y,M){const s=stats(m),d=DEX[m.n];const boss=!!m.boss;
@@ -760,9 +845,9 @@ function mkUnit(m,team,x,y,M){const s=stats(m),d=DEX[m.n];const boss=!!m.boss;
 function renderBattleHead(){
   if(!B)return;const bi=B.M.bi,used=B.placed.length;
   $('bhead').innerHTML=`<button class="sm" data-act="bfull" title="Plein écran">${document.body.classList.contains('bfull')?'⤡ Quitter':'⤢ Plein écran'}</button><button class="sm" data-act="stPrev" ${B.stage<=1||B.phase==='fight'?'disabled':''}>◀</button><span class="title">${SAVE.cycle?'Maître '+(SAVE.cycle>1?SAVE.cycle+' ':'')+'· ':''}Tableau ${B.stage}/${MAXST}${B.stage%PER_BIOME===0?' · BOSS LÉGENDAIRE':B.stage%5===0?' · BOSS':''}</span><button class="sm" data-act="stNext" ${B.stage>SAVE.best||B.stage>=MAXST||B.phase==='fight'?'disabled':''}>▶</button>
-   <span class="biome">${bi.valley?'Vallée des légendes · '+(B.stage-MAXST+5)+'/5':bi.victory?'Route Victoire · '+((B.stage-1)%PER_BIOME+1)+'/5':'Biome '+(Math.floor((B.stage-1)/PER_BIOME)+1)+'/'+(BIOMES.length-1)+' : '+bi.name+' · '+((B.stage-1)%PER_BIOME+1)+'/'+PER_BIOME}</span><span class="biome">Ennemis : ${B.units.filter(u=>u.team).length} · Nv ≈ ${enemyLv(B.stage)}</span>
+   <span class="biome">${bi.temple?"Temple d'Arceus · combat final":bi.valley?'Vallée des légendes · '+(B.stage-MAXST+5)+'/5':bi.victory?'Route Victoire · '+((B.stage-1)%PER_BIOME+1)+'/'+(PER_BIOME-5):'Biome '+(Math.floor((B.stage-1)/PER_BIOME)+1)+'/'+(BIOMES.length-1)+' : '+bi.name+' · '+((B.stage-1)%PER_BIOME+1)+'/'+PER_BIOME}</span>${B.M.blk?`<span class="biome" style="background:#ffd98a">⚠ ${B.M.blk==='vide'?'Crevasse : seuls les volants passent':B.M.blk==='lave'?'Lave sans pont : Pokémon Feu ou volants':'Rivière sans pont : nageurs ou volants'}</span>`:''}<span class="biome">Ennemis : ${B.units.filter(u=>u.team).length} · Nv ≈ ${enemyLv(B.stage)}</span>
    ${B.phase==='place'?`<span>Armée : <b>${used}/${SAVE.army}</b></span><button class="sm" data-act="autoPlace">Placement auto</button><button class="sm" data-act="clearPlace">Vider</button><button class="go" data-act="fight" ${used?'':'disabled'}>⚔ Combat !</button>`:''}
-   ${B.phase==='fight'?`<button class="sm" data-act="speed">Vitesse ×${bSpeed}</button><button class="sm" data-act="flee">Abandonner</button>`:''}`;
+   <button class="sm ${AUTO?'go':''}" data-act="autoRun" title="Rejoue automatiquement les tableaux suivants avec la même armée, jusqu'à une défaite">🔁 Auto ${AUTO?'ON':'OFF'}</button>${B.phase==='fight'?`<button class="sm" data-act="speed">Vitesse ×${bSpeed}</button><button class="sm" data-act="flee">Abandonner</button>`:''}`;
 }
 function renderRoster(){
   if(!B)return;const L=SAVE.mons.slice().sort((a,b)=>pc(b)-pc(a));
@@ -788,7 +873,7 @@ function placeAt(px,py){
   renderBattleHead();renderRoster();
 }
 function autoPlace(){
-  B.placed=[];const L=freeMons().sort((a,b)=>pc(b)-pc(a)).slice(0,SAVE.army);
+  B.placed=[];const cross=m=>{if(!B.M.blk)return 0;const md=unitMode(DEX[m.n],B.M.bi);return md==='fly'||(B.M.blk!=='vide'&&md==='swim')?0:1};const L=freeMons().sort((a,b)=>cross(a)-cross(b)||pc(b)-pc(a)).slice(0,SAVE.army);
   const spots=[];for(let x=PZ-1;x>=1;x--)for(let y=2;y<GH-2;y++)spots.push([x,y]);
   spots.sort((a,b)=>(b[0]-a[0])*3+(Math.abs(a[1]-GH/2)-Math.abs(b[1]-GH/2))/2);
   L.forEach(m=>{const md=unitMode(DEX[m.n],B.M.bi);const melee=!(RANGED.has(DEX[m.n].t1)||DEX[m.n].spa>DEX[m.n].atk+15);
@@ -796,8 +881,19 @@ function autoPlace(){
     if(s)B.placed.push({u:m.u,x:s[0]*TW+TW/2,y:s[1]*TW+TW/2})});
   renderBattleHead();renderRoster();
 }
+let AUTO=false,AUTO_LAST=[];
+/* tableau suivant en mode Auto : mêmes Pokémon, mêmes places (une nouvelle place si l'ancienne n'est plus possible) */
+function autoNextSame(){B.stage--;autoNext()}
+function autoNext(){if(!AUTO||!B||B.phase!=='end')return;if(!$('modal').hidden)closeModal();setupStage(B.stage+1);
+  const used=new Set();B.placed=[];
+  for(const p of AUTO_LAST){const m=mon(p.u);if(!m||monStatus(p.u))continue;const md=unitMode(DEX[m.n],B.M.bi);let tx=Math.floor(p.x/TW),ty=Math.floor(p.y/TW);
+    const ok=(x,y)=>x>=1&&x<=PZ&&y>=0&&y<GH&&passable(B.M,y*GW+x,md)&&!used.has(y*GW+x);
+    if(!ok(tx,ty)){let f=null;for(let r=1;r<8&&!f;r++)for(let dy=-r;dy<=r&&!f;dy++)for(let dx=-r;dx<=r&&!f;dx++)if(ok(tx+dx,ty+dy))f=[tx+dx,ty+dy];if(!f)continue;[tx,ty]=f}
+    used.add(ty*GW+tx);B.placed.push({u:m.u,x:tx*TW+TW/2,y:ty*TW+TW/2})}
+  if(!B.placed.length){AUTO=false;renderBattleHead();toast('🔁 Auto arrêté : plus de Pokémon disponible');return}
+  renderBattleHead();renderRoster();startFight()}
 function startFight(){
-  if(!B.placed.length)return;
+  if(!B.placed.length)return;AUTO_LAST=B.placed.map(p=>({u:p.u,x:p.x,y:p.y}));
   B.placed=B.placed.filter(p=>{const m=mon(p.u);return m&&!monStatus(p.u)});
   B.units=B.units.filter(u=>u.team===1);
   B.placed.forEach(p=>B.units.push(mkUnit(mon(p.u),0,p.x,p.y,B.M)));
@@ -838,15 +934,17 @@ function endFight(win){
   let coins=0,egg=null,xp=0;
   if(win){coins=Math.round((30+st*20)*(st%5===0?2.5:1)*(first?1:.5));SAVE.coins+=coins;if(first){SAVE.best=st;SAVE.maxBest=Math.max(SAVE.maxBest||0,st+(SAVE.cycle||0)*MAXST)}SAVE.st.wins=(SAVE.st.wins||0)+1;if(B.units.some(u=>u.boss))SAVE.st.boss=(SAVE.st.boss||0)+1;
     /* récompense de boss : œuf niveau 5 (boss de mi-biome) ou super œuf rare niveau 10 (boss de fin de biome) */
-    const boss=B.units.find(u=>u.boss);if(boss){egg=st%PER_BIOME===0?superEgg():(()=>{const n=LEGEND.has(boss.n)?pick(EGG_SPECIES.filter(x=>DEX[x].rar===2&&!LEGEND.has(x))):baseOf(boss.n);const sh=rnd()<T.sh0;return{id:SAVE.uid++,n,sx:rollSex(n),lv:5+(sh?T.mutLv:0),g:randGenes(5,20),sh,mut:0,bst:sh?pick(BST_K):null,src:'boss'}})();SAVE.eggs.push(egg);dexSee(egg.n)}
+    const boss=B.units.find(u=>u.boss);if(boss){egg=st===MAXST&&first?legendEgg():st%10===0?superEgg():(()=>{const n=LEGEND.has(boss.n)?pick(EGG_SPECIES.filter(x=>DEX[x].rar===2&&!LEGEND.has(x))):baseOf(boss.n);const sh=rnd()<T.sh0;return{id:SAVE.uid++,n,sx:rollSex(n),lv:5+(sh?T.mutLv:0),g:randGenes(5,20),sh,mut:0,bst:sh?pick(BST_K):null,src:'boss'}})();SAVE.eggs.push(egg);dexSee(egg.n)}
     if(SAVE.tuto>=5&&SAVE.tuto<6)setTuto(6)}
-  xp=Math.round(15+st*(win?14:5));B.placed.forEach(p=>{const m=mon(p.u);if(m)gainXP(m,xp)});
+  xp=win?Math.round(15+st*14):0;B.placed.forEach(p=>{const m=mon(p.u);if(m)gainXP(m,xp)});
+  if(win&&B.units.some(u=>u.boss&&u.team===1))jingle(B.units.some(u=>u.boss&&u.team===1&&LEGEND.has(u.n))?'victoire_legendaire':'victoire_boss');
+  if(AUTO){if(win&&st<MAXST)setTimeout(autoNext,1400);else{AUTO=false;if(!win)setTimeout(()=>toast('🔁 Auto arrêté : défaite'),200)}}
   B.res={win,coins,egg,xp};dirty=true;saveGame();renderTop();renderBattleHead();
   openModal(`<h2>${win?'🏆 Victoire !':'💥 Défaite...'}</h2>
    <p>Tableau ${st} · ${B.M.bi.name}</p>
    ${win?`<p class="price">${COIN} +${fmt(coins)} pièces${first?'':' (rejouer rapporte moitié moins)'}</p>`:'<p>Fais se reproduire tes Pokémon pour des bébés plus forts, entraîne-les, ou change ton placement.</p>'}
-   <p>+${xp} XP pour chaque Pokémon de ton armée.</p>
-   ${egg?`<p>${eggH(egg.n,48)} ${egg.src==='super'?'<b>Super œuf rare</b> (niveau 10) :':'Le boss a laissé un œuf niveau 5 :'} <b>${esc(DEX[egg.n].name)}</b> !</p>`:''}
+   ${win?'':'<p class="muted">Pas d\'XP en cas de défaite.</p>'}<p ${win?'':'hidden'}>+${xp} XP pour chaque Pokémon de ton armée.</p>
+   ${egg?`<p>${eggH(egg.n,48)} ${egg.src==='arceus'?'<b>Arceus t\'offre un œuf légendaire :</b>':egg.src==='super'?'<b>Super œuf rare</b> (niveau 10) :':'Le boss a laissé un œuf niveau 5 :'} <b>${esc(DEX[egg.n].name)}</b> !</p>`:''}
    ${win&&first&&st>=MAXST?`<div class="banner s" style="margin:8px 0">🌍 Tu es arrivé au bout de l'aventure ! Tu as traversé les ${BIOMES.length-1} biomes du continent, la Route Victoire et la Vallée des légendes.</div><p>Tu peux recommencer les tableaux en <b>mode Maître</b> : tous les Pokémon ennemis sont entièrement évolués et au niveau de ton meilleur Pokémon (Nv ${bestLevel()}).</p><div class="flexr"><button class="go" data-act="newCycle">Recommencer en mode Maître</button><button data-act="closeModal">Plus tard</button></div>`:''}
    <div class="flexr">${win&&st<MAXST?`<button class="go" data-act="nextStage">Tableau suivant ▶</button>`:''}<button data-act="retry">${win?'Rejouer ce tableau':'Réessayer'}</button></div>`);
 }
@@ -882,7 +980,7 @@ function drawBattle(){
   if(B.phase==='place'&&!B.placed.length){x.font='bold 16px sans-serif';x.textAlign='center';x.lineWidth=4;x.strokeStyle='#2a1a12';x.fillStyle='#fff';const s='Choisis un Pokémon en bas, puis clique dans la zone bleue';x.strokeText(s,CW/2,26);x.fillText(s,CW/2,26)}
 }
 let lastF=performance.now();
-function frame(now){const dt=Math.min(.05,(now-lastF)/1000);lastF=now;if(cur==='nursery')stepWalkers(dt);if(cur==='battle'&&B){if(B.phase==='fight'){for(let k=0;k<bSpeed;k++)stepBattle(dt);}drawBattle()}requestAnimationFrame(frame)}
+function frame(now){const dt=Math.min(.05,(now-lastF)/1000);lastF=now;if(cur==='nursery')stepWalkers(dt);if(cur==='battle'&&B){if(B.phase==='fight'){for(let k=0;k<bSpeed&&B.phase==='fight';k++)stepBattle(dt);}drawBattle()}requestAnimationFrame(frame)}
 
 /* =====================================================================
    SUCCÈS  [id, nom, description, récompense en pièces, fonction -> valeur actuelle, objectif]
@@ -915,8 +1013,9 @@ const ACH=[
  ['b25','Conquérant','Terminer le tableau 25',1500,()=>SAVE.maxBest||SAVE.best,25],
  ['b50','Champion','Terminer le tableau 50',5000,()=>SAVE.maxBest||SAVE.best,50],
  ['b100','Explorateur','Terminer le tableau 100',8000,()=>SAVE.maxBest||SAVE.best,100],
- ['b240','Tour du continent','Traverser les 24 biomes (tableau 240)',30000,()=>SAVE.maxBest||SAVE.best,240],
- ['b250','Légende vivante','Vaincre la Vallée des légendes (tableau 250)',50000,()=>SAVE.maxBest||SAVE.best,250],
+ ['b240','Tour du continent','Traverser les 24 biomes (tableau 960)',30000,()=>SAVE.maxBest||SAVE.best,960],
+ ['b500','Mi-parcours','Terminer le tableau 500',20000,()=>SAVE.maxBest||SAVE.best,500],
+ ['b250','Légende vivante','Vaincre Arceus dans son temple (tableau 1000)',50000,()=>SAVE.maxBest||SAVE.best,1000],
  ['bm1','Maître du continent','Terminer un tableau en mode Maître',5000,()=>SAVE.cycle&&SAVE.best?1:0,1],
  ['w50','Vétéran','Gagner 50 combats',800,()=>stv('wins'),50],
  ['k1','Chasseur de boss','Vaincre un boss',300,()=>stv('boss'),1],
@@ -938,7 +1037,7 @@ const TITLES=[['','Dresseur',0],
  ['s1','Chasseur de chromas',2],['s5','Collectionneur brillant',3],['p1','Patient zéro',2],['t1','Jackpot vivant',4],
  ['e1','Évolutionniste',0],['e25','Professeur',2],['e100','Darwin',3],
  ['d25','Petit Pokédex',0],['d50','Collectionneur',1],['d100','Encyclopédie',2],['d200','Pokédex vivant',3],['d400','Attrapez-les tous',4],
- ['b5','Aventurier',0],['b10','Explorateur des Plaines',1],['b25','Conquérant',1],['b50','Champion',2],['b100','Grand explorateur',2],['b240','Tour du continent',3],['b250','Légende vivante',4],['bm1','Maître du continent',4],
+ ['b5','Aventurier',0],['b10','Explorateur des Plaines',1],['b25','Conquérant',1],['b50','Champion',2],['b100','Grand explorateur',2],['b500','Mi-parcours',3],['b240','Tour du continent',3],['b250','Légende vivante',4],['bm1','Maître du continent',4],
  ['w50','Vétéran',1],['k1','Chasseur de boss',1],['k10','Tueur de boss',3],['l1','Ami des légendes',3],
  ['v50','Costaud',1],['v100','Niveau 100',3],['n4','Nourrice',1],['n8','Pouponnière géante',2],['a10','Général',2],['c50','Grande famille',1]];
 const titleOf=name=>TITLES.find(t=>t[1]===name)||TITLES[0];
@@ -946,8 +1045,8 @@ const titleOk=t=>!t[0]||!!SAVE.ach[t[0]];
 const achDesc=id=>((ACH.find(a=>a[0]===id)||[])[2])||'';
 const ttlHTML=name=>{const t=titleOf(name);return `<span class="ttl c${t[2]}">${esc(t[1])}</span>`};
 function myPseudo(){return (SAVE.pseudo||(CLOUD.user&&(CLOUD.user.displayName||'').split(' ')[0])||'Dresseur').slice(0,16)}
-function setPseudo(){const v=prompt('Ton pseudo (16 caractères max) :',myPseudo());if(v===null)return;const c=v.replace(/[<>"&]/g,'').trim().slice(0,16);if(!c)return;SAVE.pseudo=c;dirty=true;saveGame();if(CLOUD.user)profilePush();RANK.list=null;renderAch()}
-function setTitle(name){const t=titleOf(name);if(!titleOk(t))return;SAVE.title=t[1];dirty=true;saveGame();if(CLOUD.user)profilePush();RANK.list=null;renderAch()}
+function setPseudo(){const v=prompt('Ton pseudo (16 caractères max) :',myPseudo());if(v===null)return;const c=v.replace(/[<>"&]/g,'').trim().slice(0,16);if(!c)return;SAVE.pseudo=c;dirty=true;saveGame();if(CLOUD.user)profilePush();RANK.list=null;if(cur==='profile')renderProfile();renderCloud()}
+function setTitle(name){const t=titleOf(name);if(!titleOk(t))return;SAVE.title=t[1];dirty=true;saveGame();if(CLOUD.user)profilePush();RANK.list=null;if(cur==='profile')renderProfile()}
 function titlePickerHTML(){const cur=titleOf(SAVE.title||'Dresseur')[1];const ok=TITLES.filter(titleOk).length;
   return `<div class="panel" style="margin-bottom:12px"><h3>Profil</h3><p>Pseudo : <b>${esc(myPseudo())}</b> <button class="sm" data-act="setPseudo">Modifier</button> · Titre affiché : ${ttlHTML(cur)}</p>
   <p class="muted">Chaque succès débloque un titre. Il s'affiche devant ton pseudo dans le classement. (${ok}/${TITLES.length} titres)</p>
@@ -974,7 +1073,7 @@ function renderRank(){const el=$('tab-rank');
   else if(!RANK.list.length)body='<p>Aucun joueur pour l\'instant.</p>';
   else body=`<table class="rank"><tr><th>#</th><th>Joueur</th><th>Progression</th><th>Pokédex</th><th>Succès</th></tr>${RANK.list.map((p,i)=>`<tr class="${p.uid===me?'me':''}"><td class="n">${i<3?['🥇','🥈','🥉'][i]:i+1}</td><td>${ttlHTML(p.title)}<button class="pl" data-act="showProfile" data-i="${i}">${esc(p.name||'?')}</button></td><td>${progTxt(p)}</td><td>${p.dex||0}</td><td>${p.ach||0}</td></tr>`).join('')}</table>`;
   el.innerHTML=`<div class="panel"><h3>Classement des dresseurs <button class="sm" data-act="rankReload">Actualiser</button></h3>
-   ${CLOUD.user?`<p class="muted">Tu apparais sous le nom ${ttlHTML(SAVE.title||'Dresseur')}<b>${esc(myPseudo())}</b> (pseudo et titre modifiables dans l'onglet Succès). Clique sur un pseudo pour voir son profil.</p>`:`<p>Connecte-toi avec Google (bouton ☁ Compte) pour apparaître au classement.</p>`}
+   ${CLOUD.user?`<p class="muted">Tu apparais sous le nom ${ttlHTML(SAVE.title||'Dresseur')}<b>${esc(myPseudo())}</b> (pseudo et titre modifiables dans l'onglet Profil). Clique sur un pseudo pour voir son profil.</p>`:`<p>Connecte-toi avec Google (onglet 👤 Profil) pour apparaître au classement.</p>`}
    ${body}</div>`}
 function showProfile(i){const p=RANK.list&&RANK.list[i];if(!p)return;
   const mons=(p.mons||[]).filter(m=>DEX[m.n]);
@@ -983,15 +1082,15 @@ function showProfile(i){const p=RANK.list&&RANK.list[i];if(!p)return;
    <h3>Ses Pokémon${(p.nmons||0)>mons.length?` (les ${mons.length} plus forts)`:''}</h3>
    <div class="pmons">${mons.map(m=>`<div class="pmon">${sprHTML(m.n,!!m.sh,48,true)}<b>${m.sh?'✨':''}${esc(DEX[m.n].name)}${m.sx==='M'?' ♂':m.sx==='F'?' ♀':''}</b><span>Nv ${m.lv}${m.mu?' · muté':''}${m.pk?' · Pokérus':''}</span></div>`).join('')||'<p>Aucun Pokémon.</p>'}</div>`)}
 function renderAch(){const n=ACH.filter(a=>SAVE.ach[a[0]]).length;
-  $('tab-ach').innerHTML=titlePickerHTML()+`<div class="panel"><h3>Succès · ${n}/${ACH.length}</h3><div class="achgrid">${ACH.map(([id,nm,ds,rw,f,goal])=>{const ok=!!SAVE.ach[id];let v=0;try{v=f()}catch(e){}v=Math.min(v,goal);
+  $('tab-ach').innerHTML=`<div class="panel"><h3>Succès · ${n}/${ACH.length}</h3><div class="achgrid">${ACH.map(([id,nm,ds,rw,f,goal])=>{const ok=!!SAVE.ach[id];let v=0;try{v=f()}catch(e){}v=Math.min(v,goal);
     return `<div class="ach ${ok?'ok':''}"><div class="ai">${ok?'🏆':'🔒'}</div><div class="at"><b>${esc(nm)}</b><span>${esc(ds)}</span><div class="bar" style="height:7px"><i style="width:${v/goal*100}%"></i></div><span class="muted">${ok?'Débloqué':fmt(v)+' / '+fmt(goal)} · <span class="price">${COIN}${fmt(rw)}</span></span></div></div>`}).join('')}</div></div>`}
 
 /* =====================================================================
    INTERFACE GÉNÉRALE
    ===================================================================== */
 let cur='nursery';
-function showTab(t){cur=t;document.querySelectorAll('nav button[data-tab]').forEach(b=>b.classList.toggle('on',b.dataset.tab===t));['nursery','team','battle','shop','dex','ach','rank'].forEach(k=>$('tab-'+k).hidden=k!==t);
-  if(t==='nursery')renderNursery();if(t==='team')renderTeam();if(t==='shop')renderShop();if(t==='dex')renderDex();if(t==='ach')renderAch();if(t==='rank')renderRank();if(t==='battle'){if(!B||B.phase==='end')setupStage(Math.min(SAVE.best+1,B&&B.phase==='end'?B.stage:SAVE.best+1));else{renderBattleHead();renderRoster()}}}
+function showTab(t){cur=t;document.querySelectorAll('nav button[data-tab]').forEach(b=>b.classList.toggle('on',b.dataset.tab===t));['nursery','team','battle','shop','dex','ach','rank','profile','settings'].forEach(k=>$('tab-'+k).hidden=k!==t);
+  if(t==='nursery')renderNursery();if(t==='team')renderTeam();if(t==='shop')renderShop();if(t==='dex')renderDex();if(t==='ach')renderAch();if(t==='rank')renderRank();if(t==='profile')renderProfile();if(t==='settings')renderSettings();if(t!=='team')teamSel=null;updateMusic();if(t==='battle'){if(!B||B.phase==='end')setupStage(Math.min(SAVE.best+1,B&&B.phase==='end'?B.stage:SAVE.best+1));else{renderBattleHead();renderRoster()}}}
 function renderTop(){$('coins').textContent=fmt(SAVE.coins);$('eggN').textContent=SAVE.eggs.length+SAVE.incs.reduce((s,c)=>s+c.slots.length,0);$('stN').textContent=(SAVE.cycle?'Maître · ':'')+Math.min(MAXST,SAVE.best+1)}
 function openModal(h){const b=$('mbody');delete b.dataset.cloud;b.innerHTML=h;$('modal').hidden=false;const x=document.querySelector('#modal .x');if(x)x.style.display=''}
 function closeModal(){$('modal').hidden=true;pickState=null}
@@ -1020,12 +1119,33 @@ const ACT={
   releaseOk:(t)=>{const u=+t.dataset.u,m=mon(u);if(!m||monStatus(u))return;SAVE.coins+=relVal(m);SAVE.mons=SAVE.mons.filter(x=>x.u!==u);closeModal();dirty=true;saveGame();renderTeam();renderTop()},
   buy:(t)=>buy(+t.dataset.i),buyEgg:(t)=>buyEgg(+t.dataset.n),buyDeal:(t)=>buyDeal(+t.dataset.i),
   fav:(t)=>{const m=mon(+t.dataset.u);if(!m)return;m.fav=!m.fav;dirty=true;saveGame();if(!$('modal').hidden)ACT.monInfo(t);if(cur==='team')renderTeam();if(cur==='nursery')buildWalkers()},
+  openFull:()=>openFull(),
+  tselOn:()=>{teamSel=new Set();renderTeam()},tselOff:()=>{teamSel=null;renderTeam()},
+  tsel:(t)=>{const u=+t.dataset.u;if(!teamSel)return;teamSel.has(u)?teamSel.delete(u):teamSel.add(u);const y=scrollY;renderTeam();scrollTo(0,y)},
+  tselAll:()=>{SAVE.mons.forEach(m=>{if(!m.fav&&!monStatus(m.u))teamSel.add(m.u)});renderTeam()},
+  tselNone:()=>{teamSel=new Set();renderTeam()},
+  tselWeak:()=>{SAVE.mons.filter(m=>!m.fav&&!monStatus(m.u)).sort((a,b)=>pc(a)-pc(b)).slice(0,10).forEach(m=>teamSel.add(m.u));renderTeam()},
+  tselRelease:()=>{const L=[...teamSel].map(mon).filter(m=>m&&!monStatus(m.u));if(!L.length)return;const tot=L.reduce((a,m)=>a+relVal(m),0),fav=L.filter(m=>m.fav).length,shn=L.filter(m=>m.sh).length;
+    openModal(`<h2>Relâcher ${L.length} Pokémon ?</h2><p>Tu gagnes ${fmt(tot)} pièces. Ce choix est définitif.</p>${fav||shn?`<p style="color:#c0392b"><b>Attention :</b> ${fav?fav+' favori'+(fav>1?'s':''):''}${fav&&shn?' et ':''}${shn?shn+' shiny':''} dans la sélection.</p>`:''}<div class="pmons">${L.slice(0,40).map(m=>`<div class="pmon">${sprHTML(m.n,m.sh,40,true)}<span>${esc(DEX[m.n].name)} Nv ${m.lv}</span></div>`).join('')}</div><div class="flexr" style="margin-top:10px"><button class="go" data-act="tselReleaseOk">Relâcher</button><button data-act="closeModal">Annuler</button></div>`)},
+  tselReleaseOk:()=>teamSelRelease(),
+  optMusic:()=>{OPT.music=!OPT.music;saveOpt();MUS.ok=true;updateMusic();renderSettings()},
+  optJingles:()=>{OPT.jingles=!OPT.jingles;saveOpt();renderSettings()},
+  optShow:(t)=>{OPT.show=+t.dataset.v;saveOpt();renderSettings()},
+  optSpeed:(t)=>{OPT.speed=+t.dataset.v;saveOpt();renderSettings()},
+  optExport:()=>{const b=new Blob([saveJson()],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='poketabs-sauvegarde-'+new Date().toISOString().slice(0,10)+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000)},
+  optImportOk:()=>{if(!optImportData)return;SAVE=Object.assign(newSave(),optImportData);fixSave(SAVE);optImportData=null;dirty=true;saveGame();closeModal();renderTop();showTab('nursery');toast('Partie importée')},
+  optReset:()=>openModal(`<h2>Effacer ta partie ?</h2><p>Tous tes Pokémon, œufs, pièces et ta progression seront perdus. ${CLOUD.user?'La sauvegarde en ligne sera aussi remplacée.':''}</p><p><b>Cette action est définitive.</b></p><div class="flexr"><button style="background:#f6c9c0" data-act="optResetOk">Oui, tout effacer</button><button data-act="closeModal">Annuler</button></div>`),
+  optResetOk:()=>{SAVE=newSave();SAVE.last=Date.now();dirty=true;try{localStorage.setItem(SAVEKEY,saveJson())}catch(e){}if(CLOUD.user)cloudPush(true);closeModal();B=null;renderTop();showTab('nursery');starterModal()},
+  sellPend:()=>{const p=(SAVE.pend||[]).shift();if(!p)return;SAVE.coins+=relVal(p);toast(`Bébé ${esc(DEX[p.n].name)} vendu (+${relVal(p)} pièces)`);pendAfter()},
+  keepPend:()=>{if(!(SAVE.pend||[]).length||monsFull())return;pendAccept();pendAfter()},
+  sellForPend:(t)=>{const u=+t.dataset.u,m=mon(u);if(!m||monStatus(u)||!(SAVE.pend||[]).length)return;SAVE.coins+=relVal(m);SAVE.mons=SAVE.mons.filter(x=>x.u!==u);toast(`${esc(DEX[m.n].name)} vendu (+${relVal(m)} pièces)`);if(!monsFull())pendAccept();pendAfter()},
   monInfo:(t)=>{const m=mon(+t.dataset.u);if(m)openModal(`<h2>${esc(DEX[m.n].name)}</h2><div class="flexr">${monCard(m)}</div>`)},
   dexInfo:(t)=>dexInfo(+t.dataset.n),
   rsel:(t)=>{const u=+t.dataset.u;if(monStatus(u)){toast('Ce Pokémon est occupé (nid ou entraînement).');return}battleSel=u;renderRoster()},
   autoPlace:()=>autoPlace(),clearPlace:()=>{B.placed=[];renderBattleHead();renderRoster()},
   bfull:()=>toggleBattleFull(),
-  fight:()=>startFight(),speed:()=>{bSpeed=bSpeed===1?2:bSpeed===2?4:1;renderBattleHead()},flee:()=>endFight(false),
+  fight:()=>startFight(),
+  autoRun:()=>{AUTO=!AUTO;if(AUTO&&B){if(B.phase==='place'){if(!B.placed.length){if(AUTO_LAST.length){B.phase='end';autoNextSame()}else autoPlace()}if(B.phase==='place'&&B.placed.length)startFight()}else if(B.phase==='end'&&B.res&&B.res.win)autoNext()}renderBattleHead()},speed:()=>{bSpeed=bSpeed===1?2:bSpeed===2?4:1;renderBattleHead()},flee:()=>endFight(false),
   stPrev:()=>setupStage(B.stage-1),stNext:()=>setupStage(B.stage+1),
   nextStage:()=>{closeModal();setupStage(B.stage+1)},
   newCycle:()=>{SAVE.cycle=(SAVE.cycle||0)+1;SAVE.best=0;closeModal();saveGame();toast(`🔥 Mode Maître ${SAVE.cycle>1?SAVE.cycle:''} : les ennemis sont au niveau de ton meilleur Pokémon !`);setupStage(1);renderTop()},retry:()=>{closeModal();const keep=B.placed;setupStage(B.stage);B.placed=keep.filter(p=>mon(p.u)&&!monStatus(p.u));renderBattleHead();renderRoster()},
@@ -1055,8 +1175,60 @@ async function cloudPull(){if(!CLOUD.user)return;CLOUD.busy=true;try{const d=awa
 async function cloudPush(now){if(!CLOUD.user||!CLOUD.db)return;clearTimeout(CLOUD.timer);const go=async()=>{try{await CLOUD.db.collection('saves').doc(CLOUD.user.uid).set({data:saveJson(),name:(CLOUD.user.displayName||'').split(' ')[0].slice(0,14),updated:firebase.firestore.FieldValue.serverTimestamp()});CLOUD.err='';profilePush()}catch(e){CLOUD.err='Erreur de sauvegarde'}};if(now)return go();CLOUD.timer=setTimeout(go,5000)}
 async function cloudSignIn(){if(!CLOUD.auth)return;const p=new firebase.auth.GoogleAuthProvider();p.setCustomParameters({prompt:'select_account'});try{await CLOUD.auth.signInWithPopup(p)}catch(e){if(e&&/popup|iframe|operation-not-supported/.test(e.code||''))CLOUD.auth.signInWithRedirect(p)}}
 async function cloudSignOut(){if(!CLOUD.auth)return;try{await cloudPush(true)}catch(e){}await CLOUD.auth.signOut()}
-function renderCloud(){$('cloudBtn').textContent=CLOUD.user?'☁ '+(CLOUD.user.displayName||'Compte').split(' ')[0]:'☁ Compte';if(!$('modal').hidden&&$('mbody').dataset.cloud)openCloud()}
+function renderCloud(){$('cloudBtn').textContent='👤 '+myPseudo();if(cur==='profile')renderProfile();if(!$('modal').hidden&&$('mbody').dataset.cloud)openCloud()}
 function openCloud(){openModal(`<h2>Compte et sauvegarde</h2>${!cloudReady()?'<p>La connexion Google sera activée dès que le projet Firebase du jeu sera créé.</p><p>En attendant, ta partie est sauvegardée automatiquement dans ce navigateur.</p>':CLOUD.user?`<p>Connecté en tant que <b>${esc(CLOUD.user.displayName||CLOUD.user.email||'')}</b>. Ta partie est sauvegardée en ligne.</p><button data-act="signOut">Se déconnecter</button>`:'<p>Connecte-toi pour retrouver ta partie sur tous tes appareils.</p><button class="go" data-act="signIn">Se connecter avec Google</button>'}${CLOUD.err?'<p style="color:#c0392b">'+CLOUD.err+'</p>':''}<p class="muted">${VERSION}</p>`);$('mbody').dataset.cloud=1}
+
+
+/* =====================================================================
+   PROFIL (tableau de bord) ET RÉGLAGES
+   ===================================================================== */
+function renderProfile(){const st=SAVE.st,sh=SAVE.mons.filter(m=>m.sh).length,mu=SAVE.mons.filter(m=>m.mut).length,pk=SAVE.mons.filter(m=>m.pk).length;
+  const top=SAVE.mons.slice().sort((a,b)=>pc(b)-pc(a)).slice(0,6);const nA=Object.keys(SAVE.ach).length;
+  const myRank=RANK.list&&CLOUD.user?RANK.list.findIndex(p=>p.uid===CLOUD.user.uid):-1;
+  const D=[[progTxt(SAVE),'Progression'],['Tableau '+(SAVE.maxBest||SAVE.best||0),'Record'],[fmt(SAVE.coins),'Pièces'],[SAVE.mons.length+'/'+monCap(),'Pokémon'],[SAVE.eggs.length,'Œufs dans le sac'],[ownN()+'/'+EGG_SPECIES.length,'Pokédex (possédés)'],
+   [nA+'/'+ACH.length,'Succès'],[TITLES.filter(titleOk).length+'/'+TITLES.length,'Titres'],[sh,'Shiny possédés'],[mu,'Mutés possédés'],[pk,'Avec Pokérus'],[fmt(st.hatch||0),'Œufs éclos'],[fmt(st.wins||0),'Combats gagnés'],[fmt(st.boss||0),'Boss vaincus'],[fmt(st.evo||0),'Évolutions'],[myRank>=0?'n° '+(myRank+1):'–','Classement']];
+  $('tab-profile').innerHTML=`<div class="panel" style="margin-bottom:12px"><h3>Tableau de bord</h3><div class="dash">${D.map(([v,l])=>`<div><b>${v}</b><span>${l}</span></div>`).join('')}</div>
+   <h3 style="margin-top:10px">Tes Pokémon les plus forts</h3><div class="pmons">${top.map(m=>`<div class="pmon">${sprHTML(m.n,m.sh,48,true)}<b>${m.sh?'✨':''}${esc(DEX[m.n].name)}</b><span>Nv ${m.lv} · PC ${pc(m)}</span></div>`).join('')}</div></div>
+   ${titlePickerHTML()}<div class="panel"><h3>Compte</h3>${!cloudReady()?'<p>La connexion Google marche sur la version en ligne du jeu. Ta partie est sauvegardée dans ce navigateur.</p>':CLOUD.user?`<p>Connecté avec Google : <b>${esc(CLOUD.user.displayName||CLOUD.user.email||'')}</b>. Ta partie est sauvegardée en ligne et tu apparais au classement.</p><button class="sm" data-act="signOut">Se déconnecter</button>`:'<p>Connecte-toi pour sauvegarder ta partie en ligne et apparaître au classement.</p><button class="go" data-act="signIn">Se connecter avec Google</button>'}${CLOUD.err?'<p style="color:#c0392b">'+CLOUD.err+'</p>':''}<p class="muted">${VERSION}</p></div>`}
+
+/* réglages propres à cet appareil (localStorage) */
+const OPTKEY='pte_options';
+const OPT=Object.assign({music:true,vol:50,jingles:true,show:30,speed:1},(()=>{try{return JSON.parse(localStorage.getItem(OPTKEY)||'{}')}catch(e){return {}}})());
+function saveOpt(){try{localStorage.setItem(OPTKEY,JSON.stringify(OPT))}catch(e){}}
+function renderSettings(){
+  $('tab-settings').innerHTML=`<div class="panel"><h3>⚙ Réglages</h3>
+   <div class="setrow"><label>Musique</label><button class="sm ${OPT.music?'go':''}" data-act="optMusic">${OPT.music?'Activée':'Coupée'}</button></div>
+   <div class="setrow"><label>Volume de la musique : <span id="volV">${OPT.vol}</span> %</label><input type="range" min="0" max="100" step="5" value="${OPT.vol}" id="optVol"></div>
+   <div class="setrow"><label>Jingles (victoire de boss, shiny, mutation)</label><button class="sm ${OPT.jingles?'go':''}" data-act="optJingles">${OPT.jingles?'Activés':'Coupés'}</button></div>
+   <div class="setrow"><label>Pokémon affichés dans la salle de jeu</label>${[10,20,30].map(v=>`<button class="sm ${OPT.show===v?'go':''}" data-act="optShow" data-v="${v}">${v}</button>`).join('')}<span class="muted">Moins de Pokémon = jeu plus fluide.</span></div>
+   <div class="setrow"><label>Vitesse de combat par défaut</label>${[1,2,4].map(v=>`<button class="sm ${OPT.speed===v?'go':''}" data-act="optSpeed" data-v="${v}">×${v}</button>`).join('')}</div>
+   <h3 style="margin-top:14px">Sauvegarde</h3>
+   <div class="setrow"><label>Exporter ma partie</label><button class="sm" data-act="optExport">Télécharger un fichier</button></div>
+   <div class="setrow"><label>Importer une partie</label><input type="file" accept=".json,application/json" id="optImport"></div>
+   <div class="setrow"><label>Recommencer à zéro</label><button class="sm" data-act="optReset" style="background:#f6c9c0">Effacer ma partie…</button></div>
+   <p class="muted">Les réglages sont gardés sur cet appareil. ${VERSION}</p></div>`;
+  $('optVol').oninput=e=>{OPT.vol=+e.target.value;$('volV').textContent=OPT.vol;saveOpt();if(MUS.a)MUS.a.volume=OPT.vol/100};
+  $('optImport').onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{const o=JSON.parse(r.result);if(!o||!Array.isArray(o.mons))throw 0;openModal(`<h2>Importer cette partie ?</h2><p>${o.mons.length} Pokémon · tableau ${o.best||0}. Ta partie actuelle sera remplacée.</p><div class="flexr"><button class="go" data-act="optImportOk">Importer</button><button data-act="closeModal">Annuler</button></div>`);optImportData=o}catch(err){toast('Fichier de sauvegarde invalide')}};r.readAsText(f)}}
+let optImportData=null;
+
+/* ---------- musique (fichiers du dossier sons/, repris de Métamorph) ---------- */
+const MUS={a:null,key:null,cache:{},ok:false,jingle:null};
+const TAB_MUS={nursery:'ile',team:'labo',shop:'boutique',dex:'pokedex',ach:'classement',rank:'classement',profile:'menus',settings:'menus'};
+const BIOME_MUS={'Plaines':'plaine','Prairie fleurie':'plaine','Cerisaie':'plaine','Savane':'plaine','Jardin des saules':'plaine',
+ 'Forêt profonde':'foret','Forêt ancienne':'foret','Forêt automnale':'foret','Forêt de champignons':'foret','Jungle':'foret',
+ 'Désert ardent':'desert','Mesa':'desert','Canyon':'desert','Toundra gelée':'neige','Banquise':'neige','Gouffre de glace':'neige',
+ 'Volcan':'volcan','Récif corallien':'ocean','Marais brumeux':'brouillard','Montagnes':'brouillard','Falaises de cristal':'brouillard',
+ 'Cimetière':'nuit','Grotte':'nuit','Ruines de Mew':'nuit','Route Victoire':'jouer'};
+function musWanted(){if(!SAVE.mons.length)return 'opening';if(cur!=='battle')return TAB_MUS[cur]||'ile';if(!B)return 'plaine';const bi=B.M.bi;
+  if(B.phase==='fight'){const bo=B.units.find(u=>u.boss&&u.team===1);if(bo)return LEGEND.has(bo.n)?'combat_mewtwo':'combat_boss'}
+  if(bi.temple||bi.valley)return 'arene_champion';return BIOME_MUS[bi.name]||'plaine'}
+function musAudio(k,loop){let a=MUS.cache[k];if(!a){a=new Audio('sons/'+k+'.mp3');a.preload='auto';MUS.cache[k]=a}a.loop=loop;return a}
+function updateMusic(){if(!MUS.ok||MUS.jingle)return;if(!OPT.music){if(MUS.a)MUS.a.pause();MUS.key=null;return}
+  const k=musWanted();if(k===MUS.key&&MUS.a&&!MUS.a.paused)return;if(MUS.a&&k!==MUS.key){MUS.a.pause();MUS.a.currentTime=0}
+  MUS.key=k;MUS.a=musAudio(k,true);MUS.a.volume=OPT.vol/100;MUS.a.play().catch(()=>{})}
+function jingle(k){if(!MUS.ok||!OPT.jingles)return;if(MUS.a)MUS.a.pause();const j=musAudio(k,false);j.currentTime=0;j.volume=Math.min(1,OPT.vol/100+.1);MUS.jingle=j;
+  const end=()=>{if(MUS.jingle===j){MUS.jingle=null;MUS.key=null;updateMusic()}};j.onended=end;j.onerror=end;setTimeout(end,9000);j.play().catch(end)}
+addEventListener('pointerdown',()=>{if(!MUS.ok){MUS.ok=true;updateMusic()}},{capture:true});
 
 /* ---------- démarrage ---------- */
 SAVE=loadSave();

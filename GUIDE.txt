@@ -1,4 +1,4 @@
-POKETABS EGGS COLLECTOR - GUIDE RAPIDE (V00.11.00)
+POKETABS EGGS COLLECTOR - GUIDE RAPIDE (V00.14.00)
 
 1. AVANT DE LANCER LE JEU (une seule fois)
    Double-clique sur INSTALLER_SPRITES.bat.
@@ -46,3 +46,15 @@ CLASSEMENT EN LIGNE (V00.11.00)
      }
    TITLES   titres débloqués par les succès (onglet Succès : pseudo et titre affiché)
    LEGEND_ORDER   boss légendaires du plus faible (tableau 10) au plus fort (tableau 240) ; FINAL_BOSS = Arceus au tableau 250
+
+NURSERIE (V00.12.00)
+   capOf(), monCap()   nombre max de Pokémon : 30, 50, 100, 150, 200… (achat « Agrandir la nurserie », prix 600 × 1,9^niveau)
+                       nurserie pleine : les œufs prêts restent dans l'incubateur
+   SHOW_MAX, shownMons()   30 Pokémon affichés dans la salle de jeu : favoris (m.fav, bouton étoile) puis les plus forts
+
+V00.14.00
+   sons/              musiques reprises de Métamorph (MUS, TAB_MUS, BIOME_MUS, jingle()) ; elles démarrent au premier clic
+   OPT (pte_options)  réglages de l'appareil : musique, volume, jingles, Pokémon affichés, vitesse de combat
+   canBreed/shareType deux espèces différentes avec un type commun peuvent se reproduire ; WEIRD_P = 5 % qu'une autre espèce du même type sorte de l'œuf
+   teamSel            sélection multiple dans l'onglet Pokémon pour relâcher plusieurs Pokémon
+   renderProfile      onglet Profil : tableau de bord, pseudo, titre, compte ; renderSettings : onglet Réglages
