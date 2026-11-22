@@ -200,7 +200,7 @@ body.bfull .roster{flex:none;padding:6px 2px}
    POKETABS EGGS COLLECTOR  (V00.01.00)
    Réglages rapides : objet T ci-dessous (durées en secondes, chances en 0..1)
    ===================================================================== */
-const VERSION='V00.10.00';
+const VERSION='V00.10.01';
 const T={
   breed:45,        // durée de base d'une ponte (s)
   hatch:75,        // durée de base d'éclosion (s), modulée par l'espèce (stats totales et rareté)
@@ -649,7 +649,7 @@ function genMap(stage){
   const I=(x,y)=>y*GW+x;
   const river=stage>1&&R()<.8;
   if(river){let x=12+R()*6;const w=R()<.35?3:2;for(let y=0;y<GH;y++){x=clamp(x+(R()-.5)*1.4,11,GW-14);for(let k=0;k<w;k++)liq[I(Math.round(x)+k,y)]=1}
-    const nb=1+Math.floor(R()*3),rows=[];while(rows.length<nb){const r=2+Math.floor(R()*(GH-4));if(rows.every(q=>Math.abs(q-r)>3))rows.push(r)}
+    const nb=1+Math.floor(R()*3),rows=[];for(let tr=0;rows.length<nb&&tr<60;tr++){const r=2+Math.floor(R()*(GH-4));if(rows.every(q=>Math.abs(q-r)>3))rows.push(r)}
     rows.forEach(r=>{for(let x2=0;x2<GW;x2++)if(liq[I(x2,r)])bridge[I(x2,r)]=1})}
   const ponds=Math.floor(R()*(river?2:3));
   for(let p=0;p<ponds;p++){const cx=11+Math.floor(R()*10),cy=2+Math.floor(R()*(GH-4)),rx=1+R()*1.6,ry=1+R()*1.2;for(let y=0;y<GH;y++)for(let x=0;x<GW;x++){if(((x-cx)/rx)**2+((y-cy)/ry)**2<=1)liq[I(x,y)]=1}}
