@@ -1,0 +1,844 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PokeTabs Eggs Collector</title>
+<style>
+:root{--ink:#4a2f22;--paper:#fff8ee;--cream:#f6e9d8;--gold:#f2b632;--blue:#5f9be8;--red:#e0604f;--green:#5fb86a;--pink:#ef8fb6;--shadow:0 3px 0 #4a2f22}
+*{box-sizing:border-box}
+body{margin:0;background:#e9d6bf;color:var(--ink);font:600 14px/1.35 "Trebuchet MS",Verdana,sans-serif}
+img{image-rendering:pixelated}
+button{font:inherit;color:var(--ink);background:#fff;border:3px solid var(--ink);border-radius:10px;padding:5px 10px;cursor:pointer;box-shadow:var(--shadow)}
+button:hover{background:#fff3c9}
+button:active{transform:translateY(2px);box-shadow:0 1px 0 var(--ink)}
+button:disabled{opacity:.45;cursor:not-allowed;transform:none}
+button.go{background:var(--gold)}
+button.sm{padding:2px 7px;font-size:12px;border-width:2px;border-radius:8px;box-shadow:0 2px 0 var(--ink)}
+header{display:flex;flex-wrap:wrap;align-items:center;gap:10px 18px;padding:10px 16px;background:var(--paper);border-bottom:4px solid var(--ink);position:sticky;top:0;z-index:20}
+.logo{font:900 22px/1 "Trebuchet MS",sans-serif;letter-spacing:1px;color:var(--red);text-shadow:2px 2px 0 var(--ink)}
+.logo span{display:block;font-size:12px;color:var(--blue);letter-spacing:3px;text-shadow:1px 1px 0 var(--ink)}
+.stats{display:flex;gap:14px;font-size:15px}
+.stats img{width:22px;height:22px;vertical-align:-5px}
+nav{display:flex;gap:6px;flex-wrap:wrap;margin-left:auto}
+nav button.on{background:var(--gold)}
+main{max-width:1180px;margin:0 auto;padding:14px}
+section[hidden]{display:none}
+h3{margin:0 0 8px;font-size:16px;display:flex;align-items:center;gap:10px}
+.panel{background:var(--paper);border:4px solid var(--ink);border-radius:14px;padding:12px;box-shadow:0 5px 0 var(--ink)}
+/* ---------- nurserie ---------- */
+.room{border:4px solid var(--ink);border-radius:16px;overflow:hidden;box-shadow:0 6px 0 var(--ink)}
+.wall{height:120px;background:linear-gradient(#f9e3d3,#f3cfba);border-bottom:6px solid #c99a7a;position:relative}
+.wall .deco{position:absolute;bottom:0}
+.floor{background:repeating-linear-gradient(90deg,#d7a874 0 58px,#cf9e69 58px 60px),#d7a874;padding:14px;display:grid;gap:14px}
+.zone{background:rgba(255,248,238,.88);border:3px solid var(--ink);border-radius:12px;padding:10px}
+.row{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end}
+.st{position:relative;width:170px;min-height:180px;background:rgba(255,255,255,.55);border:3px dashed #b88a63;border-radius:12px;padding:6px;text-align:center;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:flex-end}
+.st:hover{border-color:var(--ink);background:#fff}
+.st .lvl{position:absolute;top:4px;left:6px;font-size:11px;background:var(--ink);color:#fff;border-radius:6px;padding:1px 6px}
+.st .cap{font-size:11px;min-height:28px;margin-top:4px}
+.bar{width:100%;height:9px;border:2px solid var(--ink);border-radius:6px;background:#fff;overflow:hidden;margin-top:4px}
+.bar i{display:block;height:100%;width:0;background:var(--green)}
+.bar.xp i{background:var(--blue)}
+.nest .base{width:140px}
+.nest .pair{position:absolute;bottom:58px;display:flex;gap:0;z-index:2}
+.egg{display:inline-block;position:relative;overflow:hidden;flex:none;vertical-align:middle}
+.egg img{position:absolute;max-width:none}
+.egg .ck{position:absolute;left:0;top:0;width:100%;height:100%;background:url(sprites/Graphics/Battlers/Eggs/000_cracks.png) no-repeat;image-rendering:pixelated}
+.egg-ico{position:absolute;cursor:pointer;top:6px;width:46px;z-index:3;animation:bob 1s ease-in-out infinite;filter:drop-shadow(0 0 6px #fff7a8)}
+.egg-ico::after{content:""}
+@keyframes bob{50%{transform:translateY(-7px)}}
+.readyTag{position:absolute;top:2px;right:6px;font-size:11px;background:var(--gold);border:2px solid var(--ink);border-radius:8px;padding:0 5px}
+.spr{display:inline-block;overflow:hidden;position:relative;flex:none}
+.spr img{position:absolute;left:0;top:0;animation:walk .8s steps(4) infinite}
+.spr.still img{animation:none}
+.spr.miss{background:radial-gradient(circle,#ccc 40%,transparent 42%)}
+.spr.miss img{display:none}
+@keyframes walk{to{left:var(--w)}}
+.inc .base{width:84px;height:135px;background:url(assets/incubators.png) no-repeat;background-size:672px 135px;position:relative}
+.inc .eggs{position:absolute;left:11px;right:11px;bottom:22px;display:flex;flex-wrap:wrap-reverse;justify-content:center;gap:1px}
+.egg.ok{animation:wig .5s ease-in-out infinite}
+@keyframes wig{25%{transform:rotate(-12deg)}75%{transform:rotate(12deg)}}
+.ball .base{height:96px}
+.ball .trainees{display:flex;gap:2px;position:absolute;bottom:58px}
+.ball .trainees .spr{animation:punch .45s ease-in-out infinite alternate}
+@keyframes punch{to{transform:translateX(6px)}}
+.eggbag{display:flex;flex-wrap:wrap;gap:6px}
+.eggchip{display:flex;flex-direction:column;align-items:center;width:64px;font-size:10px;background:#fff;border:2px solid var(--ink);border-radius:8px;padding:3px}
+
+/* ---------- cartes ---------- */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(176px,1fr));gap:10px}
+.card{background:#fff;border:3px solid var(--ink);border-radius:12px;padding:8px;position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:12px}
+.card.pick{cursor:pointer}
+.card.pick:hover{background:#fff3c9}
+.card.busy{opacity:.55}
+.card.sel{outline:4px solid var(--gold)}
+.card .nm{font-size:14px}
+.card .sh{position:absolute;top:4px;right:6px;color:#e8a400}
+.card .tag{position:absolute;top:4px;left:6px;font-size:10px;background:#eee;border-radius:6px;padding:0 5px}
+.types{display:flex;gap:3px}
+.ty{font-size:10px;color:#fff;border-radius:6px;padding:0 6px;text-shadow:1px 1px 0 rgba(0,0,0,.35)}
+.genes{display:grid;grid-template-columns:auto 1fr;gap:1px 5px;width:100%;font-size:10px;align-items:center}
+.genes b{display:block;height:5px;background:#eee;border-radius:3px;overflow:hidden}
+.genes b i{display:block;height:100%;background:var(--pink)}
+.mut{color:#c03cff}
+/* ---------- combat ---------- */
+.bhead{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px}
+.bhead .title{font-size:18px}
+.biome{font-size:12px;background:#fff;border:2px solid var(--ink);border-radius:8px;padding:2px 8px}
+#bcv{width:100%;max-width:1152px;border:4px solid var(--ink);border-radius:12px;display:block;background:#7cc46a;image-rendering:pixelated;cursor:crosshair}
+.roster{display:flex;gap:8px;overflow-x:auto;padding:10px 2px}
+.rcard{flex:none;width:92px;background:#fff;border:3px solid var(--ink);border-radius:10px;padding:4px;text-align:center;font-size:11px;cursor:pointer}
+.rcard.sel{background:var(--gold)}
+.rcard.on{opacity:.4}
+.rcard.busy{opacity:.3;cursor:not-allowed}
+/* ---------- boutique ---------- */
+.shop{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}
+.item{background:#fff;border:3px solid var(--ink);border-radius:12px;padding:10px;display:flex;gap:10px;align-items:center}
+.item .ic{width:56px;height:56px;display:flex;align-items:center;justify-content:center;flex:none}
+.item .ic img{max-width:56px;max-height:56px}
+.item .ic .egg img{max-width:none;max-height:none}
+.market{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.mk{background:#fff;border:3px solid var(--ink);border-radius:10px;padding:6px;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:11px;text-align:center;position:relative}
+.mk b{font-size:12px}
+.mk.leg{background:linear-gradient(#fff8d8,#fff);border-color:#b8860b}
+.mk .lg{position:absolute;top:3px;left:4px;font-size:9px;background:#f2b632;border:1px solid var(--ink);border-radius:5px;padding:0 4px}
+.playfield{position:relative;height:220px;border-radius:12px;overflow:hidden;background:radial-gradient(ellipse at center,#f6dcc0 0 55%,#ecc9a2 56% 100%);border:3px solid #c99a7a}
+.walker{position:absolute;left:0;top:0;cursor:pointer;will-change:transform}
+.walker::before{content:"";position:absolute;left:16px;bottom:4px;width:24px;height:7px;border-radius:50%;background:rgba(0,0,0,.18)}
+.walker:hover .spr{filter:drop-shadow(0 0 4px #fff)}
+.pdeco{position:absolute;pointer-events:none}
+.hearts{position:absolute;bottom:112px;left:50%;transform:translateX(-50%);width:64px;height:30px;pointer-events:none;z-index:3}
+.hearts span{position:absolute;bottom:0;color:#ff5c8a;font-size:15px;opacity:0;animation:heart 2.4s ease-out infinite;text-shadow:0 1px 0 #7a2040}
+.hearts span:nth-child(1){left:8px}.hearts span:nth-child(2){left:26px;animation-delay:.8s}.hearts span:nth-child(3){left:44px;animation-delay:1.6s}
+@keyframes heart{0%{opacity:0;transform:translateY(0) scale(.6)}20%{opacity:1}100%{opacity:0;transform:translateY(-28px) scale(1.15)}}
+.item .tx{flex:1;font-size:12px}
+.item .tx b{font-size:14px;display:block}
+.price{display:inline-flex;align-items:center;gap:3px}
+.price img{width:16px;height:16px}
+/* ---------- pokédex ---------- */
+.dexgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(64px,1fr));gap:6px}
+.dc{background:#fff;border:2px solid var(--ink);border-radius:8px;text-align:center;font-size:9px;padding:2px;cursor:pointer;position:relative}
+.dc .spr{margin:0 auto}
+.dc.un .spr img{filter:brightness(0);opacity:.3}
+.dc.seen .spr img{filter:grayscale(1);opacity:.6}
+.dc .s{position:absolute;top:0;right:2px;color:#e8a400}
+/* ---------- modale, toasts ---------- */
+#modal{position:fixed;inset:0;background:rgba(40,25,15,.55);display:flex;align-items:center;justify-content:center;z-index:50;padding:12px}
+#modal[hidden]{display:none}
+.mbox{background:var(--paper);border:4px solid var(--ink);border-radius:16px;box-shadow:0 6px 0 var(--ink);max-width:900px;width:100%;max-height:88vh;overflow:auto;padding:16px;position:relative}
+.mbox .x{position:absolute;top:8px;right:8px}
+.mbox h2{margin:0 0 10px}
+#toasts{position:fixed;right:14px;bottom:14px;display:flex;flex-direction:column;gap:6px;z-index:60}
+.toast{background:#fff;border:3px solid var(--ink);border-radius:10px;padding:8px 12px;box-shadow:var(--shadow);animation:tin .25s}
+@keyframes tin{from{transform:translateX(40px);opacity:0}}
+#tip{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);background:#fffbe0;border:3px solid var(--ink);border-radius:12px;padding:10px 14px;box-shadow:var(--shadow);z-index:40;max-width:560px;display:flex;gap:10px;align-items:center}
+#tip[hidden]{display:none}
+.hatch{display:flex;flex-wrap:wrap;gap:12px;justify-content:center}
+.banner{font-weight:900;padding:2px 8px;border-radius:8px;border:2px solid var(--ink)}
+.banner.m{background:#f0d6ff}
+.banner.s{background:#fff1a8}
+.muted{opacity:.7;font-size:12px}
+.flexr{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.slotrow{display:flex;align-items:center;gap:10px;background:#fff;border:2px solid var(--ink);border-radius:10px;padding:6px;margin-bottom:6px}
+
+.slotrow .bar{flex:1}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">POKETABS<span>EGGS COLLECTOR</span></div>
+  <div class="stats">
+    <span><img src="sprites/Graphics/Items/COIN_GOLD.png" alt=""> <b id="coins">0</b></span>
+    <span>🥚 <b id="eggN">0</b></span>
+    <span>⚔ Tableau <b id="stN">1</b></span>
+  </div>
+  <nav>
+    <button data-tab="nursery" class="on">Nurserie</button>
+    <button data-tab="team">Pokémon</button>
+    <button data-tab="battle">Combat</button>
+    <button data-tab="shop">Boutique</button>
+    <button data-tab="dex">Pokédex</button>
+    <button data-act="cloud" id="cloudBtn">☁ Compte</button>
+  </nav>
+</header>
+<main>
+  <section id="tab-nursery"></section>
+  <section id="tab-team" hidden></section>
+  <section id="tab-battle" hidden>
+    <div class="bhead" id="bhead"></div>
+    <canvas id="bcv" width="960" height="540"></canvas>
+    <div class="roster" id="roster"></div>
+  </section>
+  <section id="tab-shop" hidden></section>
+  <section id="tab-dex" hidden></section>
+</main>
+<div id="modal" hidden><div class="mbox"><button class="x sm" data-act="closeModal">✕</button><div id="mbody"></div></div></div>
+<div id="toasts"></div>
+<div id="tip" hidden><span id="tipTx"></span><button class="sm" data-act="tipOk">OK</button></div>
+
+<script>
+'use strict';
+/* =====================================================================
+   POKETABS EGGS COLLECTOR  (V00.01.00)
+   Réglages rapides : objet T ci-dessous (durées en secondes, chances en 0..1)
+   ===================================================================== */
+const VERSION='V00.04.00';
+const T={
+  breed:45,        // durée de base d'une ponte (s)
+  hatch:30,        // durée de base d'éclosion (s)
+  mut:0.10,        // chance de mutation de base (+5 niveaux)
+  mutLv:5,         // niveaux gagnés par mutation
+  sh0:0.01,        // chance shiny, aucun parent shiny
+  sh1:0.04,        // un parent shiny
+  sh2:0.12,        // deux parents shiny
+  trainXP:1.6,     // XP par seconde d'un punching-ball niveau 1
+  offlineMax:8*3600,// progression hors-ligne maximum (s)
+  pow:42,          // puissance des attaques en combat
+  hpMul:1.6        // multiplicateur de PV en combat
+};
+const SPR='sprites/';
+const OVDIR=SPR+'Gen 1-9 OV SPrites/Gen 1-7 OV SPrites/';
+const EGGDIR=SPR+'Graphics/Battlers/Eggs/';
+const TREE_IMG=SPR+'Graphics/Tilesets/bw_taragonia_mix_special_trees_.png';
+const COIN='<img src="sprites/Graphics/Items/COIN_GOLD.png" alt="">';
+
+/* ---------- données Pokémon (reprises de Métamorph) ---------- */
+const DEXRAW=[[1,"Bulbizarre","Bulbizarre","plante","poison",45,49,49,45,65,"plante",1,2],[2,"herbizarre","Herbizarre","plante","poison",60,62,63,60,80,"plante",2,2],[3,"Florizzare","Florizarre","plante","poison",80,82,83,80,100,"plante",3,2],[4,"Salameche","Salamèche","feu","",39,52,43,65,50,"feu",1,2],[5,"Reptincel","Reptincel","feu","",58,64,58,80,65,"feu",2,2],[6,"Dracaufeu","Dracaufeu","feu","vol",78,84,78,100,85,"feu",3,2],[7,"Carapuce","Carapuce","eau","",44,48,65,43,50,"eau",1,2],[8,"Carabaffe","Carabaffe","eau","",59,63,80,58,65,"eau",2,2],[9,"Tortank","Tortank","eau","",79,83,100,78,85,"eau",3,2],[10,"Chenipan","Chenipan","insecte","",45,30,35,45,20,"chenipan",1,0],[11,"Chrysacier","Chrysacier","insecte","",50,20,55,30,25,"chenipan",2,0],[12,"Papilusion","Papilusion","insecte","vol",60,45,50,70,80,"chenipan",3,0],[13,"Aspicot","Aspicot","insecte","poison",40,35,30,50,20,"aspicot",1,0],[14,"Coconfort","Coconfort","insecte","poison",45,25,50,35,25,"aspicot",2,0],[15,"Dardargnan","Dardargnan","insecte","poison",65,80,40,75,45,"aspicot",3,0],[16,"Roucool","Roucool","neutre","vol",40,45,40,56,35,"roucool",1,0],[17,"Roucoups","Roucoups","neutre","vol",63,60,55,71,50,"roucool",2,0],[18,"Roucarnage","Roucarnage","neutre","vol",83,80,75,91,70,"roucool",3,0],[19,"Rattata","Rattata","neutre","",30,56,35,72,25,"rat",1,0],[20,"Rattatac","Rattatac","neutre","",55,81,60,97,50,"rat",2,0],[21,"Piafabec","Piafabec","neutre","vol",40,60,30,70,31,"piafabec",1,0],[22,"Rapasdepic","Rapasdepic","neutre","vol",65,90,65,100,61,"piafabec",2,0],[23,"Abo","Abo","poison","",35,60,44,55,40,"abo",1,1],[24,"Arbok","Arbok","poison","",60,85,69,80,65,"abo",2,1],[25,"Pikachu","Pikachu","foudre","",35,55,30,90,50,"foudre",2,1],[26,"Raichu","Raichu","foudre","",60,90,55,100,90,"foudre",3,1],[27,"Sabelette","Sabelette","sol","",50,75,85,40,30,"sabelette",1,0],[28,"Sablaireau","Sablaireau","sol","",75,100,110,65,55,"sabelette",2,0],[29,"NidoranF","Nidoran♀","poison","",55,47,52,41,40,"nidof",1,1],[30,"Nidorina","Nidorina","poison","",70,62,67,56,55,"nidof",2,1],[31,"Nidoqueen","Nidoqueen","poison","sol",90,82,87,76,75,"nidof",3,1],[32,"NidoranM","Nidoran♂","poison","",46,57,40,50,40,"nidom",1,1],[33,"Nidorino","Nidorino","poison","",61,72,57,65,55,"nidom",2,1],[34,"Nidoking","Nidoking","poison","sol",81,92,77,85,75,"nidom",3,1],[35,"Melofee","Mélofée","fee","",70,45,48,35,60,"melofee",2,2],[36,"Melodelfe","Mélodelfe","fee","",95,70,73,60,85,"melofee",3,2],[37,"Goupix","Goupix","feu","",38,41,40,65,65,"goupix",1,1],[38,"Feunard","Feunard","feu","",73,76,75,100,100,"goupix",2,1],[39,"Rondoudou","Rondoudou","neutre","fee",115,45,20,20,25,"rondoudou",2,1],[40,"Grodoudou","Grodoudou","neutre","fee",140,70,45,45,50,"rondoudou",3,1],[41,"Nosferapti","Nosferapti","poison","vol",40,45,35,55,40,"chauve",1,0],[42,"Nosferalto","Nosferalto","poison","vol",75,80,70,90,75,"chauve",2,0],[43,"Mystherbe","Mystherbe","plante","poison",45,50,55,30,75,"mystherbe",1,0],[44,"Ortide","Ortide","plante","poison",60,65,70,40,85,"mystherbe",2,0],[45,"Rafflesia","Rafflesia","plante","poison",75,80,85,50,100,"mystherbe",3,0],[46,"Paras","Paras","insecte","plante",35,70,55,25,55,"paras",1,0],[47,"Parasect","Parasect","insecte","plante",60,95,80,30,80,"paras",2,0],[48,"Mimitoss","Mimitoss","insecte","poison",60,55,50,45,40,"mimitoss",1,1],[49,"Aeromite","Aéromite","insecte","poison",70,65,60,90,90,"mimitoss",2,1],[50,"Taupiqueur","Taupiqueur","sol","",10,55,25,95,45,"taupiqueur",1,1],[51,"Triopikeur","Triopikeur","sol","",35,80,50,120,70,"taupiqueur",2,1],[52,"Miaouss","Miaouss","neutre","",40,45,35,90,40,"miaouss",1,1],[53,"Persian","Persian","neutre","",65,70,60,115,65,"miaouss",2,1],[54,"Psykokwak","Psykokwak","eau","",50,52,48,55,50,"psykokwak",1,1],[55,"Akwakwak","Akwakwak","eau","",80,82,78,85,80,"psykokwak",2,1],[56,"Ferosinge","Férosinge","combat","",40,80,35,70,35,"ferosinge",1,1],[57,"Colossinge","Colossinge","combat","",65,105,60,95,60,"ferosinge",2,1],[58,"Caninos","Caninos","feu","",55,70,45,60,50,"chien",1,1],[59,"Arcanin","Arcanin","feu","",90,110,80,95,80,"chien",2,1],[60,"Ptitard","Ptitard","eau","",40,50,40,90,40,"ptitard",1,0],[61,"Tetarte","Têtarte","eau","",65,65,65,90,50,"ptitard",2,0],[62,"Tartard","Tartard","eau","combat",90,85,95,70,70,"ptitard",3,0],[63,"Abra","Abra","psy","",25,20,15,90,105,"abra",1,2],[64,"Kadabra","Kadabra","psy","",40,35,30,105,120,"abra",2,2],[65,"Alakazam","Alakazam","psy","",55,50,45,120,135,"abra",3,2],[66,"Machoc","Machoc","combat","",70,80,50,35,35,"machoc",1,1],[67,"Machopeur","Machopeur","combat","",80,100,70,45,50,"machoc",2,1],[68,"Mackogneur","Mackogneur","combat","",90,130,80,55,65,"machoc",3,1],[69,"Chetiflor","Chétiflor","plante","poison",50,75,35,40,70,"cloche",1,0],[70,"Boustiflor","Boustiflor","plante","poison",65,90,50,55,85,"cloche",2,0],[71,"Empiflor","Empiflor","plante","poison",80,105,65,70,100,"cloche",3,0],[72,"Tentacool","Tentacool","eau","poison",40,40,35,70,100,"tentacool",1,0],[73,"Tentacruel","Tentacruel","eau","poison",80,70,65,100,120,"tentacool",2,0],[74,"Racaillou","Racaillou","roche","sol",40,80,100,20,30,"sol",1,0],[75,"Gravalanch","Gravalanch","roche","sol",55,95,115,35,45,"sol",2,0],[76,"Grolem","Grolem","roche","sol",80,110,130,45,55,"sol",3,0],[77,"Ponyta","Ponyta","feu","",50,85,55,90,65,"ponyta",1,1],[78,"Galopa","Galopa","feu","",65,100,70,105,80,"ponyta",2,1],[79,"Ramoloss","Ramoloss","eau","psy",90,65,65,15,40,"ramoloss",1,1],[80,"Flagadoss","Flagadoss","eau","psy",95,75,110,30,80,"ramoloss",2,1],[81,"Magneti","Magnéti","foudre","acier",25,35,70,45,95,"magneti",1,1],[82,"Magneton","Magnéton","foudre","acier",50,60,95,70,120,"magneti",2,1],[83,"Canarticho","Canarticho","neutre","vol",52,65,55,60,58,"canarticho",1,2],[84,"Doduo","Doduo","neutre","vol",35,85,45,75,35,"doduo",1,1],[85,"Dodrio","Dodrio","neutre","vol",60,110,70,100,60,"doduo",2,1],[86,"Otaria","Otaria","eau","",65,45,55,45,70,"otaria",1,1],[87,"Lamantine","Lamantine","eau","glace",90,70,80,70,95,"otaria",2,1],[88,"Tadmorv","Tadmorv","poison","",80,80,50,25,40,"tadmorv",1,1],[89,"Grotadmorv","Grotadmorv","poison","",105,105,75,50,65,"tadmorv",2,1],[90,"Kokiyas","Kokiyas","eau","",30,65,100,40,45,"kokiyas",1,1],[91,"Crustabri","Crustabri","eau","glace",50,95,180,70,85,"kokiyas",2,1],[92,"Fantominus","Fantominus","spectre","poison",30,35,30,80,100,"fantominus",1,2],[93,"Spectrum","Spectrum","spectre","poison",45,50,45,95,115,"fantominus",2,2],[94,"Ectoplasma","Ectoplasma","spectre","poison",60,65,60,110,130,"fantominus",3,2],[95,"Onix","Onix","roche","sol",35,45,160,70,30,"onix",1,2],[96,"Soporifik","Soporifik","psy","",60,48,45,42,90,"soporifik",1,1],[97,"Hypnomade","Hypnomade","psy","",85,73,70,67,115,"soporifik",2,1],[98,"Krabby","Krabby","eau","",30,105,90,50,25,"crabe",1,0],[99,"Kraboss","Krabboss","eau","",55,130,115,75,50,"crabe",2,0],[100,"Voltorbe","Voltorbe","foudre","",40,30,50,100,55,"voltorbe",1,1],[101,"Electrode","Électrode","foudre","",60,50,70,140,80,"voltorbe",2,1],[102,"Noeunoeuf","Noeunoeuf","plante","psy",60,40,80,40,60,"noeunoeuf",1,1],[103,"Noadkoko","Noadkoko","plante","psy",95,95,85,55,125,"noeunoeuf",2,1],[104,"Osselait","Osselait","sol","",50,50,95,35,40,"os",1,1],[105,"Ossatueur","Ossatueur","sol","",60,80,110,45,50,"os",2,1],[106,"Kicklee","Kicklee","combat","",50,120,53,87,35,"kicklee",1,2],[107,"Tygnon","Tygnon","combat","",50,105,79,76,35,"tygnon",1,2],[108,"Excelangue","Excelangue","neutre","",90,55,75,30,60,"excelangue",1,2],[109,"Smogo","Smogo","poison","",40,65,95,35,60,"smogo",1,1],[110,"Smogogo","Smogogo","poison","",65,90,120,60,85,"smogo",2,1],[111,"Rhinocorne","Rhinocorne","sol","roche",80,85,95,25,30,"rhinocorne",1,1],[112,"Rhinoferos","Rhinoféros","sol","roche",105,130,120,40,45,"rhinocorne",2,1],[113,"Leveinard","Leveinard","neutre","",250,5,5,50,105,"leveinard",1,2],[114,"Saquedeneu","Saquedeneu","plante","",65,55,115,60,100,"saquedeneu",1,1],[115,"Kangourex","Kangourex","neutre","",105,95,80,90,40,"kangourex",1,2],[116,"Hypotrempe","Hypotrempe","eau","",30,40,70,60,70,"hypotrempe",1,1],[117,"Hypocean","Hypocéan","eau","",55,65,95,85,95,"hypotrempe",2,1],[118,"Poissirene","Poissirène","eau","",45,67,60,63,50,"poissirene",1,0],[119,"Poissoroy","Poissoroy","eau","",80,92,65,68,80,"poissirene",2,0],[120,"Stari","Stari","eau","",30,45,55,85,70,"stari",1,1],[121,"Staross","Staross","eau","psy",60,75,85,115,100,"stari",2,1],[122,"MMime","M. Mime","psy","fee",40,45,65,90,100,"mmime",1,2],[123,"Insecateur","Insécateur","insecte","vol",70,110,80,105,55,"insecateur",1,2],[124,"Lippoutou","Lippoutou","glace","psy",65,50,35,95,95,"lippoutou",2,2],[125,"Elektek","Élektek","foudre","",65,83,57,105,85,"elektek",2,2],[126,"Magmar","Magmar","feu","",65,95,57,93,85,"magmar",2,2],[127,"Scarabrute","Scarabrute","insecte","",65,125,100,85,55,"scarabrute",1,2],[128,"Tauros","Tauros","neutre","",75,100,95,110,70,"tauros",1,1],[129,"Magickarp","Magicarpe","eau","",20,10,55,80,20,"Magickarp",1,0],[130,"Leviathor","Léviator","eau","vol",95,125,79,81,100,"Magickarp",2,0],[131,"Lokhlass","Lokhlass","eau","glace",130,85,80,60,95,"lokhlass",1,2],[132,"Metamorph","Métamorph","neutre","",48,48,48,48,48,"base",1,9],[133,"Evoli","Évoli","neutre","",55,55,50,55,65,"evoli",1,2],[134,"Aquali","Aquali","eau","",130,65,60,65,110,"aquali",1,2],[135,"Voltali","Voltali","foudre","",65,65,60,130,110,"voltali",1,2],[136,"Pyroli","Pyroli","feu","",65,130,60,65,110,"pyroli",1,2],[137,"Porygon","Porygon","neutre","",65,60,70,40,75,"porygon",1,2],[138,"Amonita","Amonita","roche","eau",35,40,100,35,90,"amonita",1,2],[139,"Amonistar","Amonistar","roche","eau",70,60,125,55,115,"amonita",2,2],[140,"Kabuto","Kabuto","roche","eau",30,80,90,55,45,"kabuto",1,2],[141,"Kabutops","Kabutops","roche","eau",60,115,105,80,70,"kabuto",2,2],[142,"Ptera","Ptéra","roche","vol",80,105,65,130,60,"ptera",1,3],[143,"Ronflex","Ronflex","neutre","",160,110,65,30,65,"ronflex",1,2],[144,"Artikodin","Artikodin","glace","vol",90,85,100,85,125,"artikodin",1,3],[145,"Electhor","Électhor","foudre","vol",90,90,85,100,125,"electhor",1,3],[146,"Sulfura","Sulfura","feu","vol",90,100,90,90,125,"sulfura",1,3],[147,"Minidraco","Minidraco","dragon","",41,64,45,50,50,"minidraco",1,2],[148,"Draco","Draco","dragon","",61,84,65,70,70,"minidraco",2,2],[149,"Dracolosse","Dracolosse","dragon","vol",91,134,95,80,100,"minidraco",3,2],[150,"Mewtwo","Mewtwo","psy","",106,110,90,130,154,"boss",4,9],[151,"Mew","Mew","psy","",100,100,100,100,100,"mew",1,3],[152,"Germignon","Germignon","plante","",45,49,65,45,49,"germignon",1,2],[153,"Macronium","Macronium","plante","",60,62,80,60,63,"germignon",2,2],[154,"Meganium","Méganium","plante","",80,82,100,80,83,"germignon",3,2],[155,"Hericendre","Héricendre","feu","",39,52,43,65,60,"hericendre",1,2],[156,"Feurisson","Feurisson","feu","",58,64,58,80,80,"hericendre",2,2],[157,"Typhlosion","Typhlosion","feu","",78,84,78,100,109,"hericendre",3,2],[158,"Kaiminus","Kaiminus","eau","",50,65,64,43,44,"kaiminus",1,2],[159,"Crocrodil","Crocrodil","eau","",65,80,80,58,59,"kaiminus",2,2],[160,"Aligatueur","Aligatueur","eau","",85,105,100,78,79,"kaiminus",3,2],[161,"Fouinette","Fouinette","neutre","",35,46,34,20,35,"fouinette",1,0],[162,"Fouinar","Fouinar","neutre","",85,76,64,90,45,"fouinette",2,0],[163,"Hoothoot","Hoothoot","neutre","vol",60,30,30,50,36,"hoothoot",1,0],[164,"Noarfang","Noarfang","neutre","vol",100,50,50,70,86,"hoothoot",2,0],[165,"Coxy","Coxy","insecte","vol",40,20,30,55,40,"coxy",1,0],[166,"Coxyclaque","Coxyclaque","insecte","vol",55,35,50,85,55,"coxy",2,0],[167,"Mimigal","Mimigal","insecte","poison",40,60,40,30,40,"mimigal",1,0],[168,"Migalos","Migalos","insecte","poison",70,90,70,40,60,"mimigal",2,0],[169,"Nostenfer","Nostenfer","poison","vol",85,90,80,130,70,"chauve",3,0],[170,"Loupio","Loupio","eau","foudre",75,38,38,67,56,"loupio",1,1],[171,"Lanturn","Lanturn","eau","foudre",125,58,58,67,76,"loupio",2,1],[172,"Pichu","Pichu","foudre","",20,40,15,60,35,"foudre",1,1],[173,"Melo","Mélo","fee","",50,25,28,15,45,"melofee",1,2],[174,"Toudoudou","Toudoudou","neutre","fee",90,30,15,15,40,"rondoudou",1,1],[175,"Togepi","Togepi","fee","",35,20,65,20,40,"togepi",1,2],[176,"Togetic","Togetic","fee","vol",55,40,85,40,80,"togepi",2,2],[177,"Natu","Natu","psy","vol",40,50,45,70,70,"natu",1,1],[178,"Xatu","Xatu","psy","vol",65,75,70,95,95,"natu",2,1],[179,"Wattouat","Wattouat","foudre","",55,40,40,35,65,"wattouat",1,1],[180,"Lainergie","Lainergie","foudre","",70,55,55,45,80,"wattouat",2,1],[181,"Pharamp","Pharamp","foudre","",90,75,85,55,115,"wattouat",3,1],[182,"Joliflor","Joliflor","plante","",75,80,95,50,90,"mystherbe",3,2],[183,"Marill","Marill","eau","fee",70,20,50,40,20,"marill",1,0],[184,"Azumarill","Azumarill","eau","fee",100,50,80,50,60,"marill",2,0],[185,"Simularbre","Simularbre","roche","",70,100,115,30,30,"simularbre",1,1],[186,"Tarpaud","Tarpaud","eau","",90,75,75,70,90,"ptitard",3,2],[187,"Granivol","Granivol","plante","vol",35,35,40,50,35,"granivol",1,0],[188,"Floravol","Floravol","plante","vol",55,45,50,80,45,"granivol",2,0],[189,"Cotovol","Cotovol","plante","vol",75,55,70,110,55,"granivol",3,0],[190,"Capumain","Capumain","neutre","",55,70,55,85,40,"capumain",1,1],[191,"Tournegrin","Tournegrin","plante","",30,30,30,30,30,"tournegrin",1,0],[192,"Heliatronc","Héliatronc","plante","",75,75,55,30,105,"tournegrin",2,0],[193,"Yanma","Yanma","insecte","vol",65,65,45,95,75,"yanma",1,1],[194,"Axoloto","Axoloto","eau","sol",55,45,45,15,25,"axoloto",1,0],[195,"Maraiste","Maraiste","eau","sol",95,85,85,35,65,"axoloto",2,0],[196,"Mentali","Mentali","psy","",65,65,60,110,130,"mentali",1,2],[197,"Noctali","Noctali","tenebres","",95,65,110,65,60,"noctali",1,2],[198,"Cornebre","Cornèbre","tenebres","vol",60,85,42,91,85,"cornebre",1,1],[199,"Roigada","Roigada","eau","psy",95,75,80,30,100,"ramoloss",2,2],[200,"Feuforeve","Feuforêve","spectre","",60,60,60,85,85,"feuforeve",1,1],[201,"Zarbi","Zarbi","psy","",48,72,48,48,72,"zarbi",1,1],[202,"Qulbutoke","Qulbutoké","psy","",190,33,58,33,33,"qulbutoke",1,2],[203,"Girafarig","Girafarig","neutre","psy",70,80,65,85,90,"girafarig",1,1],[204,"Pomdepik","Pomdepik","insecte","",50,65,90,15,35,"pomdepik",1,0],[205,"Foretress","Foretress","insecte","acier",75,90,140,40,60,"pomdepik",2,0],[206,"Insolourdo","Insolourdo","neutre","",100,70,70,45,65,"insolourdo",1,1],[207,"Scorplane","Scorplane","sol","vol",65,75,105,85,35,"scorplane",1,1],[208,"Steelix","Steelix","acier","sol",75,85,200,30,55,"onix",2,2],[209,"Snubbull","Snubbull","fee","",60,80,50,30,40,"snubbull",1,1],[210,"Granbull","Granbull","fee","",90,120,75,45,60,"snubbull",2,1],[211,"Qwilfish","Qwilfish","eau","poison",65,95,85,85,55,"qwilfish",1,1],[212,"Cizayox","Cizayox","insecte","acier",70,130,100,65,55,"insecateur",2,2],[213,"Caratroc","Caratroc","insecte","roche",20,10,230,5,10,"caratroc",1,1],[214,"Scarhino","Scarhino","insecte","combat",80,125,75,85,40,"scarhino",1,1],[215,"Farfuret","Farfuret","tenebres","glace",55,95,55,115,35,"farfuret",1,1],[216,"Teddiursa","Teddiursa","neutre","",60,80,50,40,50,"teddiursa",1,1],[217,"Ursaring","Ursaring","neutre","",90,130,75,55,75,"teddiursa",2,1],[218,"Limagma","Limagma","feu","",40,40,40,20,70,"limagma",1,0],[219,"Volcaropod","Volcaropod","feu","roche",60,50,120,30,90,"limagma",2,0],[220,"Marcacrin","Marcacrin","glace","sol",50,50,40,50,30,"marcacrin",1,0],[221,"Cochignon","Cochignon","glace","sol",100,100,80,50,60,"marcacrin",2,0],[222,"Corayon","Corayon","eau","roche",65,55,95,35,65,"corayon",1,1],[223,"Remoraid","Rémoraid","eau","",35,65,35,65,65,"remoraid",1,0],[224,"Octillery","Octillery","eau","",75,105,75,45,105,"remoraid",2,0],[225,"Cadoizo","Cadoizo","glace","vol",45,55,45,75,65,"cadoizo",1,1],[226,"Demanta","Démanta","eau","vol",85,40,70,70,80,"demanta",1,1],[227,"Airmure","Airmure","acier","vol",65,80,140,70,40,"airmure",1,2],[228,"Malosse","Malosse","tenebres","feu",45,60,30,65,80,"malosse",1,1],[229,"Demolosse","Démolosse","tenebres","feu",75,90,50,95,110,"malosse",2,1],[230,"Hyporoi","Hyporoi","eau","dragon",75,95,95,85,95,"hypotrempe",3,1],[231,"Phanpy","Phanpy","sol","",90,60,60,40,40,"phanpy",1,1],[232,"Donphan","Donphan","sol","",90,120,120,50,60,"phanpy",2,1],[233,"Porygon2","Porygon2","neutre","",85,80,90,60,105,"porygon",2,2],[234,"Cerfrousse","Cerfrousse","neutre","",73,95,62,85,85,"cerfrousse",1,1],[235,"Queulorior","Queulorior","neutre","",55,20,35,75,20,"queulorior",1,1],[236,"Debugant","Debugant","combat","",35,35,35,35,35,"debugant",1,2],[237,"Kapoera","Kapoera","combat","",50,95,95,70,35,"kapoera",1,2],[238,"Lippouti","Lippouti","glace","psy",45,30,15,65,85,"lippoutou",1,2],[239,"Elekid","Élekid","foudre","",45,63,37,95,65,"elektek",1,2],[240,"Magby","Magby","feu","",45,75,37,83,70,"magmar",1,2],[241,"Ecremeuh","Écrémeuh","neutre","",95,80,105,100,40,"ecremeuh",1,1],[242,"Leuphorie","Leuphorie","neutre","",255,10,10,55,75,"leveinard",2,2],[243,"Raikou","Raikou","foudre","",90,85,75,115,115,"raikou",1,3],[244,"Entei","Entei","feu","",115,115,85,100,90,"entei",1,3],[245,"Suicune","Suicune","eau","",100,75,115,85,90,"suicune",1,3],[246,"Embrylex","Embrylex","roche","sol",50,64,50,41,45,"embrylex",1,2],[247,"Ymphect","Ymphect","roche","sol",70,84,70,51,65,"embrylex",2,2],[248,"Tyranocif","Tyranocif","roche","tenebres",100,134,110,61,95,"embrylex",3,2],[249,"Lugia","Lugia","psy","vol",106,90,130,110,90,"lugia",1,3],[250,"HoOh","Ho-Oh","feu","vol",106,130,90,90,110,"hooh",1,3],[251,"Celebi","Celebi","psy","plante",100,100,100,100,100,"celebi",1,3],[252,"Arcko","Arcko","plante","",40,45,35,70,65,"arcko",1,2],[253,"Massko","Massko","plante","",50,65,45,95,85,"arcko",2,2],[254,"Jungko","Jungko","plante","",70,85,65,120,105,"arcko",3,2],[255,"Poussifeu","Poussifeu","feu","",45,60,40,45,70,"poussifeu",1,2],[256,"Galifeu","Galifeu","feu","combat",60,85,60,55,85,"poussifeu",2,2],[257,"Brasegali","Braségali","feu","combat",80,120,70,80,110,"poussifeu",3,2],[258,"Gobou","Gobou","eau","",50,70,50,40,50,"gobou",1,2],[259,"Flobio","Flobio","eau","sol",70,85,70,50,60,"gobou",2,2],[260,"Laggron","Laggron","eau","sol",100,110,90,60,85,"gobou",3,2],[261,"Medhyena","Medhyena","tenebres","",35,55,35,35,30,"medhyena",1,0],[262,"Grahyena","Grahyèna","tenebres","",70,90,70,70,60,"medhyena",2,0],[263,"Zigzaton","Zigzaton","neutre","",38,30,41,60,30,"zigzaton",1,0],[264,"Lineon","Linéon","neutre","",78,70,61,100,50,"zigzaton",2,0],[265,"Chenipotte","Chenipotte","insecte","",45,45,35,20,20,"chenipotte",1,0],[266,"Armulys","Armulys","insecte","",50,35,55,15,25,"chenipotte",2,0],[267,"Charmillon","Charmillon","insecte","vol",60,70,50,65,90,"chenipotte",3,0],[268,"Blindalys","Blindalys","insecte","",50,35,55,15,25,"blindalys",1,0],[269,"Papinox","Papinox","insecte","poison",60,50,70,65,50,"blindalys",2,0],[270,"Nenupiot","Nénupiot","eau","plante",40,30,30,30,40,"nenupiot",1,1],[271,"Lombre","Lombre","eau","plante",60,50,50,50,60,"nenupiot",2,1],[272,"Ludicolo","Ludicolo","eau","plante",80,70,70,70,90,"nenupiot",3,1],[273,"Grainipiot","Grainipiot","plante","",40,40,50,30,30,"grainipiot",1,1],[274,"Pifeuil","Pifeuil","plante","tenebres",70,70,40,60,60,"grainipiot",2,1],[275,"Tengalice","Tengalice","plante","tenebres",90,100,60,80,90,"grainipiot",3,1],[276,"Nirondelle","Nirondelle","neutre","vol",40,55,30,85,30,"nirondelle",1,0],[277,"Heledelle","Hélédelle","neutre","vol",60,85,60,125,50,"nirondelle",2,0],[278,"Goelise","Goélise","eau","vol",40,30,30,85,55,"goelise",1,0],[279,"Bekipan","Bekipan","eau","vol",60,50,100,65,85,"goelise",2,0],[280,"Tarsal","Tarsal","psy","fee",28,25,25,40,45,"tarsal",1,2],[281,"Kirlia","Kirlia","psy","fee",38,35,35,50,65,"tarsal",2,2],[282,"Gardevoir","Gardevoir","psy","fee",68,65,65,80,125,"tarsal",3,2],[283,"Arakdo","Arakdo","insecte","eau",40,30,32,65,50,"arakdo",1,1],[284,"Maskadra","Maskadra","insecte","vol",70,60,62,60,80,"arakdo",2,1],[285,"Balignon","Balignon","plante","",60,40,60,35,40,"balignon",1,1],[286,"Chapignon","Chapignon","plante","combat",60,130,80,70,60,"balignon",2,1],[287,"Parecool","Parecool","neutre","",60,60,60,30,35,"parecool",1,1],[288,"Vigoroth","Vigoroth","neutre","",80,80,80,90,55,"parecool",2,1],[289,"Monaflemit","Monaflèmit","neutre","",150,160,100,100,95,"parecool",3,1],[290,"Ningale","Ningale","insecte","sol",31,45,90,40,30,"ningale",1,1],[291,"Ninjask","Ninjask","insecte","vol",61,90,45,160,50,"ningale",2,1],[292,"Munja","Munja","insecte","spectre",1,90,45,40,30,"munja",1,2],[293,"Chuchmur","Chuchmur","neutre","",64,51,23,28,51,"chuchmur",1,0],[294,"Ramboum","Ramboum","neutre","",84,71,43,48,71,"chuchmur",2,0],[295,"Brouhabam","Brouhabam","neutre","",104,91,63,68,91,"chuchmur",3,0],[296,"Makuhita","Makuhita","combat","",72,60,30,25,20,"makuhita",1,1],[297,"Hariyama","Hariyama","combat","",144,120,60,50,40,"makuhita",2,1],[298,"Azurill","Azurill","neutre","fee",50,20,40,20,20,"marill",0,0],[299,"Tarinor","Tarinor","roche","",30,45,135,30,45,"tarinor",1,1],[300,"Skitty","Skitty","neutre","",50,45,45,50,35,"skitty",1,1],[301,"Delcatty","Delcatty","neutre","",70,65,65,70,55,"skitty",2,1],[302,"Tenefix","Ténéfix","tenebres","spectre",50,75,75,50,65,"tenefix",1,2],[303,"Mysdibule","Mysdibule","acier","fee",50,85,85,50,55,"mysdibule",1,2],[304,"Galekid","Galekid","acier","roche",50,70,100,30,40,"galekid",1,1],[305,"Galegon","Galegon","acier","roche",60,90,140,40,50,"galekid",2,1],[306,"Galeking","Galeking","acier","roche",70,110,180,50,60,"galekid",3,1],[307,"Meditikka","Méditikka","combat","psy",30,40,55,60,40,"meditikka",1,1],[308,"Charmina","Charmina","combat","psy",60,60,75,80,60,"meditikka",2,1],[309,"Dynavolt","Dynavolt","foudre","",40,45,40,65,65,"dynavolt",1,1],[310,"Elecsprint","Élecsprint","foudre","",70,75,60,105,105,"dynavolt",2,1],[311,"Posipi","Posipi","foudre","",60,50,40,95,85,"posipi",1,1],[312,"Negapi","Négapi","foudre","",60,40,50,95,75,"negapi",1,1],[313,"Muciole","Muciole","insecte","",65,73,55,85,47,"muciole",1,1],[314,"Lumivole","Lumivole","insecte","",65,47,55,85,73,"lumivole",1,1],[315,"Roselia","Rosélia","plante","poison",50,60,45,65,100,"roselia",1,1],[316,"Gloupti","Gloupti","poison","",70,43,53,40,43,"gloupti",1,0],[317,"Avaltout","Avaltout","poison","",100,73,83,55,73,"gloupti",2,0],[318,"Carvanha","Carvanha","eau","tenebres",45,90,20,65,65,"carvanha",1,1],[319,"Sharpedo","Sharpedo","eau","tenebres",70,120,40,95,95,"carvanha",2,1],[320,"Wailmer","Wailmer","eau","",130,70,35,60,70,"wailmer",1,1],[321,"Wailord","Wailord","eau","",170,90,45,60,90,"wailmer",2,1],[322,"Chamallot","Chamallot","feu","sol",60,60,40,35,65,"chamallot",1,1],[323,"Camerupt","Camérupt","feu","sol",70,100,70,40,105,"chamallot",2,1],[324,"Chartor","Chartor","feu","",70,85,140,20,85,"chartor",1,1],[325,"Spoink","Spoink","psy","",60,25,35,60,70,"spoink",1,1],[326,"Groret","Groret","psy","",80,45,65,80,90,"spoink",2,1],[327,"Spinda","Spinda","neutre","",60,60,60,60,60,"spinda",1,1],[328,"Kraknoix","Kraknoix","sol","",45,100,45,10,45,"kraknoix",1,2],[329,"Vibraninf","Vibraninf","sol","dragon",50,70,50,70,50,"kraknoix",2,2],[330,"Libegon","Libégon","sol","dragon",80,100,80,100,80,"kraknoix",3,2],[331,"Cacnea","Cacnea","plante","",50,85,40,35,85,"cacnea",1,1],[332,"Cacturne","Cacturne","plante","tenebres",70,115,60,55,115,"cacnea",2,1],[333,"Tylton","Tylton","neutre","vol",45,40,60,50,40,"tylton",1,1],[334,"Altaria","Altaria","dragon","vol",75,70,90,80,70,"tylton",2,1],[335,"Mangriff","Mangriff","neutre","",73,115,60,90,60,"mangriff",1,1],[336,"Seviper","Séviper","poison","",73,100,60,65,100,"seviper",1,1],[337,"Seleroc","Séléroc","roche","psy",70,55,65,70,95,"seleroc",1,2],[338,"Solaroc","Solaroc","roche","psy",70,95,85,70,55,"solaroc",1,2],[339,"Barloche","Barloche","eau","sol",50,48,43,60,46,"barloche",1,0],[340,"Barbicha","Barbicha","eau","sol",110,78,73,60,76,"barloche",2,0],[341,"Ecrapince","Écrapince","eau","",43,80,65,35,50,"ecrapince",1,0],[342,"Colhomard","Colhomard","eau","tenebres",63,120,85,55,90,"ecrapince",2,0],[343,"Balbuto","Balbuto","sol","psy",40,40,55,55,40,"balbuto",1,1],[344,"Kaorine","Kaorine","sol","psy",60,70,105,75,70,"balbuto",2,1],[345,"Lilia","Lilia","roche","plante",66,41,77,23,61,"lilia",1,2],[346,"Vacilys","Vacilys","roche","plante",86,81,97,43,81,"lilia",2,2],[347,"Anorith","Anorith","roche","insecte",45,95,50,75,40,"anorith",1,2],[348,"Armaldo","Armaldo","roche","insecte",75,125,100,45,70,"anorith",2,2],[349,"Barpau","Barpau","eau","",20,15,20,80,10,"barpau",1,2],[350,"Milobellus","Milobellus","eau","",95,60,79,81,100,"barpau",2,2],[351,"Morpheo","Morphéo","neutre","",70,70,70,70,70,"morpheo",1,2],[352,"Kecleon","Kecleon","neutre","",60,90,70,40,60,"kecleon",1,2],[353,"Polichombr","Polichombr","spectre","",44,75,35,45,63,"polichombr",1,1],[354,"Branette","Branette","spectre","",64,115,65,65,83,"polichombr",2,1],[355,"Skelenox","Skelénox","spectre","",20,40,90,25,30,"skelenox",1,1],[356,"Teraclope","Téraclope","spectre","",40,70,130,25,60,"skelenox",2,1],[357,"Tropius","Tropius","plante","vol",99,68,83,51,72,"tropius",1,1],[358,"Eoko","Éoko","psy","",65,50,70,65,95,"eoko",1,2],[359,"Absol","Absol","tenebres","",65,130,60,75,75,"absol",1,2],[360,"Okeoke","Okéoké","psy","",95,23,48,23,23,"qulbutoke",0,2],[361,"Stalgamin","Stalgamin","glace","",50,50,50,50,50,"stalgamin",1,1],[362,"Oniglali","Oniglali","glace","",80,80,80,80,80,"stalgamin",2,1],[363,"Obalie","Obalie","glace","eau",70,40,50,25,55,"obalie",1,1],[364,"Phogleur","Phogleur","glace","eau",90,60,70,45,75,"obalie",2,1],[365,"Kaimorse","Kaimorse","glace","eau",110,80,90,65,95,"obalie",3,1],[366,"Coquiperl","Coquiperl","eau","",35,64,85,32,74,"coquiperl",1,1],[367,"Serpang","Serpang","eau","",55,104,105,52,94,"coquiperl",2,1],[368,"Rosabyss","Rosabyss","eau","",55,84,105,52,114,"rosabyss",1,2],[369,"Relicanth","Relicanth","eau","roche",100,90,130,55,45,"relicanth",1,2],[370,"Lovdisc","Lovdisc","eau","",43,30,55,97,40,"lovdisc",1,0],[371,"Draby","Draby","dragon","",45,75,60,50,40,"draby",1,2],[372,"Drackhaus","Drackhaus","dragon","",65,95,100,50,60,"draby",2,2],[373,"Drattak","Drattak","dragon","vol",95,135,80,100,110,"draby",3,2],[374,"Terhal","Terhal","acier","psy",40,55,80,30,35,"terhal",1,2],[375,"Metang","Métang","acier","psy",60,75,100,50,55,"terhal",2,2],[376,"Metalosse","Métalosse","acier","psy",80,135,130,70,95,"terhal",3,2],[377,"Regirock","Regirock","roche","",80,100,200,50,50,"regirock",1,3],[378,"Regice","Regice","glace","",80,50,100,50,100,"regice",1,3],[379,"Registeel","Registeel","acier","",80,75,150,50,75,"registeel",1,3],[380,"Latias","Latias","dragon","psy",80,80,90,110,110,"latias",1,3],[381,"Latios","Latios","dragon","psy",80,90,80,110,130,"latios",1,3],[382,"Kyogre","Kyogre","eau","",100,100,90,90,150,"kyogre",1,3],[383,"Groudon","Groudon","sol","",100,150,140,90,100,"groudon",1,3],[384,"Rayquaza","Rayquaza","dragon","vol",105,150,90,95,150,"rayquaza",1,3],[385,"Jirachi","Jirachi","acier","psy",100,100,100,100,100,"jirachi",1,3],[386,"Deoxys","Deoxys","psy","",50,150,50,150,150,"deoxys",1,3],[387,"Tortipouss","Tortipouss","plante","",55,68,64,31,45,"tortipouss",1,2],[388,"Boskara","Boskara","plante","",75,89,85,36,55,"tortipouss",2,2],[389,"Torterra","Torterra","plante","sol",95,109,105,56,75,"tortipouss",3,2],[390,"Ouisticram","Ouisticram","feu","",44,58,44,61,58,"ouisticram",1,2],[391,"Chimpenfeu","Chimpenfeu","feu","combat",64,78,52,81,78,"ouisticram",2,2],[392,"Simiabraz","Simiabraz","feu","combat",76,104,71,108,104,"ouisticram",3,2],[393,"Tiplouf","Tiplouf","eau","",53,51,53,40,61,"tiplouf",1,2],[394,"Prinplouf","Prinplouf","eau","",64,66,68,50,81,"tiplouf",2,2],[395,"Pingoleon","Pingoléon","eau","acier",84,86,88,60,111,"tiplouf",3,2],[399,"Keunotor","Keunotor","neutre","",59,45,40,31,35,"keunotor",1,0],[400,"Castorno","Castorno","neutre","eau",79,85,60,71,55,"keunotor",2,0],[403,"Lixy","Lixy","foudre","",45,65,34,45,40,"lixy",1,1],[404,"Luxio","Luxio","foudre","",60,85,49,60,60,"lixy",2,1],[405,"Luxray","Luxray","foudre","",80,120,79,70,95,"lixy",3,1],[406,"Rozbouton","Rozbouton","plante","poison",40,30,35,55,50,"roselia",0,1],[407,"Roserade","Roserade","plante","poison",60,70,65,90,125,"roselia",2,1],[408,"Kranidos","Kranidos","roche","",67,125,40,58,30,"kranidos",1,2],[409,"Charkos","Charkos","roche","",97,165,60,58,65,"kranidos",2,2],[410,"Dinoclier","Dinoclier","roche","acier",30,42,118,30,42,"dinoclier",1,2],[411,"Bastiodon","Bastiodon","roche","acier",60,52,168,30,47,"dinoclier",2,2],[424,"Capidextre","Capidextre","neutre","",75,100,66,115,60,"capumain",2,1],[425,"Baudrive","Baudrive","spectre","vol",90,50,34,70,60,"baudrive",1,1],[426,"Grodrive","Grodrive","spectre","vol",150,80,44,80,90,"baudrive",2,1],[427,"Laporeille","Laporeille","neutre","",55,66,44,85,44,"laporeille",1,1],[428,"Lockpin","Lockpin","neutre","",65,76,84,105,54,"laporeille",2,1],[429,"Magireve","Magirêve","spectre","",60,60,60,105,105,"feuforeve",2,1],[430,"Corboss","Corboss","tenebres","vol",100,125,52,71,105,"cornebre",2,1],[438,"Manzai","Manzaï","roche","",50,80,95,10,10,"simularbre",0,1],[439,"MimeJr","Mime Jr.","psy","fee",20,25,45,60,70,"mmime",0,2],[440,"Ptiravi","Ptiravi","neutre","",100,5,5,30,15,"leveinard",0,2],[442,"Spiritomb","Spiritomb","spectre","tenebres",50,92,108,35,92,"spiritomb",1,2],[443,"Griknot","Griknot","dragon","sol",58,70,45,42,40,"griknot",1,2],[444,"Carmache","Carmache","dragon","sol",68,90,65,82,50,"griknot",2,2],[445,"Carchacrok","Carchacrok","dragon","sol",108,130,95,102,80,"griknot",3,2],[446,"Goinfrex","Goinfrex","neutre","",135,85,40,5,40,"ronflex",0,2],[447,"Riolu","Riolu","combat","",40,70,40,60,35,"riolu",1,2],[448,"Lucario","Lucario","combat","acier",70,110,70,90,115,"riolu",2,2],[458,"Babimanta","Babimanta","eau","vol",45,20,50,50,60,"demanta",0,1],[461,"Dimoret","Dimoret","tenebres","glace",70,120,65,125,45,"farfuret",2,1],[462,"Magnezone","Magnézone","foudre","acier",70,70,115,60,130,"magneti",3,1],[463,"Coudlangue","Coudlangue","neutre","",110,85,95,50,80,"excelangue",2,2],[464,"Rhinastoc","Rhinastoc","sol","roche",115,140,130,40,55,"rhinocorne",3,1],[465,"Bouldeneu","Bouldeneu","plante","",100,100,125,50,110,"saquedeneu",2,1],[466,"Elekable","Élekable","foudre","",75,123,67,95,95,"elektek",3,2],[467,"Maganon","Maganon","feu","",75,95,67,83,125,"magmar",3,2],[468,"Togekiss","Togekiss","fee","vol",85,50,95,80,120,"togepi",3,2],[469,"Yanmega","Yanmega","insecte","vol",86,76,86,95,116,"yanma",2,1],[470,"Phyllali","Phyllali","plante","",65,110,130,95,60,"phyllali",1,2],[471,"Givrali","Givrali","glace","",65,60,110,65,130,"givrali",1,2],[472,"Scorvol","Scorvol","sol","vol",75,95,125,95,45,"scorplane",2,1],[473,"Mammochon","Mammochon","glace","sol",110,130,80,80,70,"marcacrin",3,0],[474,"PorygonZ","Porygon-Z","neutre","",85,80,70,90,135,"porygon",3,2],[475,"Gallame","Gallame","psy","combat",68,125,65,80,65,"tarsal",3,2],[476,"Tarinorme","Tarinorme","roche","acier",60,55,145,40,75,"tarinor",2,1],[477,"Noctunoir","Noctunoir","spectre","",45,100,135,45,65,"skelenox",3,1],[478,"Momartik","Momartik","glace","spectre",70,80,70,110,80,"stalgamin",2,1],[479,"Motisma","Motisma","foudre","spectre",50,50,77,91,95,"motisma",1,2],[483,"Dialga","Dialga","acier","dragon",100,120,120,90,150,"dialga",1,3],[484,"Palkia","Palkia","eau","dragon",90,120,100,100,150,"palkia",1,3],[486,"Regigigas","Regigigas","neutre","",110,160,110,100,80,"regigigas",1,3],[487,"Giratina","Giratina","spectre","dragon",150,100,120,90,100,"giratina",1,3],[488,"Cresselia","Cresselia","psy","",120,70,120,85,75,"cresselia",1,3],[491,"Darkrai","Darkrai","tenebres","",70,90,90,125,135,"darkrai",1,3],[493,"Arceus","Arceus","neutre","",120,120,120,120,120,"arceus",1,3],[543,"Venipatte","Venipatte","insecte","poison",30,45,59,57,30,"venipatte",1,1],[544,"Scobolide","Scobolide","insecte","poison",40,55,99,47,40,"venipatte",2,1],[545,"Brutapode","Brutapode","insecte","poison",60,100,89,112,55,"venipatte",3,1],[546,"Doudouvet","Doudouvet","plante","fee",40,27,60,66,37,"doudouvet",1,1],[547,"Farfaduvet","Farfaduvet","plante","fee",60,67,85,116,77,"doudouvet",2,1],[551,"Mascaiman","Mascaïman","sol","tenebres",50,72,35,65,35,"mascaiman",1,1],[552,"Escroco","Escroco","sol","tenebres",60,82,45,74,45,"mascaiman",2,1],[553,"Crocorible","Crocorible","sol","tenebres",95,117,80,92,65,"mascaiman",3,1],[562,"Tutafeh","Tutafeh","spectre","",38,30,85,30,55,"tutafeh",1,1],[563,"Tutankafer","Tutankafer","spectre","",58,50,145,30,95,"tutafeh",2,1],[568,"Miamiasme","Miamiasme","poison","",50,50,62,65,40,"miamiasme",1,0],[569,"Miasmax","Miasmax","poison","",80,95,82,75,60,"miamiasme",2,0],[570,"Zorua","Zorua","tenebres","",40,65,40,65,80,"zorua",1,2],[571,"Zoroark","Zoroark","tenebres","",60,105,60,105,120,"zorua",2,2],[577,"Nucleos","Nucléos","psy","",45,30,40,20,105,"nucleos",1,1],[578,"Meios","Méios","psy","",65,40,50,30,125,"nucleos",2,1],[579,"Symbios","Symbios","psy","",110,65,75,30,125,"nucleos",3,1],[595,"Statitik","Statitik","insecte","foudre",50,47,50,65,57,"statitik",1,1],[596,"Mygavolt","Mygavolt","insecte","foudre",70,77,60,108,97,"statitik",2,1],[597,"Grindur","Grindur","plante","acier",44,50,91,10,24,"grindur",1,1],[598,"Noacier","Noacier","plante","acier",74,94,131,20,54,"grindur",2,1],[599,"Tic","Tic","acier","",40,55,70,30,45,"tic",1,1],[600,"Clic","Clic","acier","",60,80,95,50,70,"tic",2,1],[601,"Cliticlic","Cliticlic","acier","",60,100,115,90,70,"tic",3,1],[607,"Funecire","Funécire","spectre","feu",50,30,55,20,65,"funecire",1,2],[608,"Melancolux","Mélancolux","spectre","feu",60,40,60,55,95,"funecire",2,2],[609,"Lugulabre","Lugulabre","spectre","feu",60,55,90,80,145,"funecire",3,2],[610,"Coupenotte","Coupenotte","dragon","",46,87,60,57,30,"coupenotte",1,2],[611,"Incisache","Incisache","dragon","",66,117,70,67,40,"coupenotte",2,2],[612,"Tranchodon","Tranchodon","dragon","",76,147,90,97,60,"coupenotte",3,2],[618,"Limonde","Limonde","sol","foudre",109,66,84,32,81,"limonde",1,1],[622,"Gringolem","Gringolem","sol","spectre",59,74,50,35,35,"gringolem",1,1],[623,"Golemastoc","Golemastoc","sol","spectre",89,124,80,55,55,"gringolem",2,1],[624,"Scalpion","Scalpion","tenebres","acier",45,85,70,60,40,"scalpion",1,2],[625,"Scalproie","Scalproie","tenebres","acier",65,125,100,70,60,"scalpion",2,2],[633,"Solochi","Solochi","tenebres","dragon",52,65,50,38,45,"solochi",1,2],[634,"Diamat","Diamat","tenebres","dragon",72,85,70,58,65,"solochi",2,2],[635,"Trioxhydre","Trioxhydre","tenebres","dragon",92,105,90,98,125,"solochi",3,2],[636,"Pyronille","Pyronille","insecte","feu",55,85,55,60,50,"pyronille",1,2],[637,"Pyrax","Pyrax","insecte","feu",85,60,65,100,135,"pyronille",2,2],[643,"Reshiram","Reshiram","dragon","feu",100,120,100,90,150,"reshiram",1,3],[644,"Zekrom","Zekrom","dragon","foudre",100,150,120,90,120,"zekrom",1,3],[646,"Kyurem","Kyurem","dragon","glace",125,130,90,95,130,"kyurem",1,3],[648,"Meloetta","Meloetta","neutre","psy",100,77,77,90,128,"meloetta",1,3],[649,"Genesect","Genesect","insecte","acier",71,120,95,99,120,"genesect",1,3],[661,"Passerouge","Passerouge","neutre","vol",45,50,43,62,40,"passerouge",1,1],[662,"Braisillon","Braisillon","feu","vol",62,73,55,84,56,"passerouge",2,1],[663,"Flambusard","Flambusard","feu","vol",78,81,71,126,74,"passerouge",3,1],[679,"Monorpale","Monorpale","acier","spectre",45,80,100,28,35,"monorpale",1,2],[680,"Dimocles","Dimoclès","acier","spectre",59,110,150,35,45,"monorpale",2,2],[681,"Exagide","Exagide","acier","spectre",60,50,140,60,50,"monorpale",3,2],[696,"Ptyranidur","Ptyranidur","roche","dragon",58,89,77,48,45,"ptyranidur",1,2],[697,"Rexillius","Rexillius","roche","dragon",82,121,119,71,69,"ptyranidur",2,2],[698,"Amagara","Amagara","roche","glace",77,59,50,46,67,"amagara",1,2],[699,"Dragmara","Dragmara","roche","glace",123,77,72,58,99,"amagara",2,2],[700,"Nymphali","Nymphali","fee","",95,65,65,60,110,"nymphali",1,2],[701,"Brutalibre","Brutalibré","combat","vol",78,92,75,118,74,"brutalibre",1,2],[704,"Mucuscule","Mucuscule","dragon","",45,50,35,40,55,"mucuscule",1,2],[705,"Colimucus","Colimucus","dragon","",68,75,53,60,83,"mucuscule",2,2],[706,"Muplodocus","Muplodocus","dragon","",90,100,70,80,110,"mucuscule",3,2],[707,"Trousselin","Trousselin","acier","fee",57,80,91,75,80,"trousselin",1,2],[708,"Brocelome","Brocélôme","spectre","plante",43,70,48,38,50,"brocelome",1,1],[709,"Desseliande","Desséliande","spectre","plante",85,110,76,56,65,"brocelome",2,1],[714,"Sonistrelle","Sonistrelle","vol","dragon",40,30,35,55,45,"sonistrelle",1,2],[715,"Bruyverne","Bruyverne","vol","dragon",85,70,80,123,97,"sonistrelle",2,2],[741,"Plumeline","Plumeline","feu","vol",75,70,70,93,98,"plumeline",1,1],[744,"Rocabot","Rocabot","roche","",45,65,40,60,30,"rocabot",1,1],[745,"Lougaroc","Lougaroc","roche","",75,115,65,112,55,"rocabot",2,1],[747,"Vorasterie","Vorastérie","poison","eau",50,53,62,45,43,"vorasterie",1,1],[748,"Predasterie","Prédastérie","poison","eau",50,63,152,35,53,"vorasterie",2,1],[759,"Nounourson","Nounourson","neutre","combat",70,75,50,50,45,"nounourson",1,1],[760,"Chelours","Chelours","neutre","combat",120,125,80,60,55,"nounourson",2,1],[769,"Bacabouh","Bacabouh","spectre","sol",55,55,80,15,70,"bacabouh",1,1],[770,"Trepassable","Trépassable","spectre","sol",85,75,110,35,100,"bacabouh",2,1],[771,"Concombaffe","Concombaffe","eau","",55,60,130,5,30,"concombaffe",1,1],[778,"Mimiqui","Mimiqui","spectre","fee",55,90,80,96,50,"mimiqui",1,2],[779,"Denticrisse","Denticrisse","eau","psy",68,105,70,92,70,"denticrisse",1,1],[781,"Sinistrail","Sinistrail","spectre","plante",70,131,100,40,86,"sinistrail",1,2],[800,"Necrozma","Necrozma","psy","",97,107,101,79,127,"necrozma",1,3]];
+/* œufs : n° national -> n° du fichier (numérotation Infinite Fusion au-delà de 251) */
+const EGG_FILE={"1": 1, "4": 4, "7": 7, "10": 10, "13": 13, "16": 16, "19": 19, "21": 21, "23": 23, "27": 27, "29": 29, "32": 32, "37": 37, "41": 41, "43": 43, "46": 46, "48": 48, "50": 50, "52": 52, "54": 54, "56": 56, "58": 58, "60": 60, "63": 63, "66": 66, "69": 69, "72": 72, "74": 74, "77": 77, "79": 79, "81": 81, "83": 83, "84": 84, "86": 86, "88": 88, "90": 90, "92": 92, "95": 95, "96": 96, "98": 98, "100": 100, "102": 102, "104": 104, "108": 108, "109": 109, "111": 111, "114": 114, "115": 115, "116": 116, "118": 118, "120": 120, "123": 123, "127": 127, "128": 128, "129": 129, "131": 131, "132": 132, "133": 133, "137": 137, "138": 138, "140": 140, "142": 142, "144": 144, "145": 145, "146": 146, "147": 147, "150": 150, "151": 151, "152": 152, "155": 155, "158": 158, "161": 161, "163": 163, "165": 165, "167": 167, "170": 170, "172": 172, "173": 173, "174": 174, "175": 175, "177": 177, "179": 179, "187": 187, "190": 190, "191": 191, "193": 193, "194": 194, "198": 198, "200": 200, "201": 201, "203": 203, "204": 204, "206": 206, "207": 207, "209": 209, "211": 211, "213": 213, "214": 214, "215": 215, "216": 216, "218": 218, "220": 220, "222": 222, "223": 223, "225": 225, "227": 227, "228": 228, "231": 231, "234": 234, "235": 235, "236": 236, "238": 238, "239": 239, "240": 240, "241": 241, "243": 243, "244": 244, "245": 245, "246": 246, "249": 249, "250": 250, "251": 251, "298": 252, "360": 253, "438": 257, "439": 258, "440": 259, "446": 260, "458": 261, "252": 276, "255": 279, "258": 282, "280": 285, "352": 290, "374": 291, "399": 294, "442": 295, "443": 297, "303": 300, "345": 301, "347": 303, "408": 305, "410": 307, "359": 310, "355": 311, "493": 315, "387": 316, "390": 319, "393": 322, "299": 325, "679": 327, "624": 330, "382": 340, "383": 341, "384": 342, "483": 343, "484": 344, "487": 345, "486": 346, "491": 347, "649": 348, "643": 349, "644": 350, "646": 351, "479": 358, "607": 365, "771": 370, "707": 371, "778": 373, "633": 375, "380": 378, "381": 379, "386": 380, "385": 381, "290": 382, "447": 384, "287": 385, "320": 387, "403": 388, "304": 390, "328": 392, "349": 394, "371": 395, "599": 397, "570": 399, "406": 400, "425": 402, "427": 403, "285": 404, "353": 405, "577": 406, "546": 408, "551": 409, "562": 411, "595": 412, "597": 413, "610": 414, "622": 416, "661": 417, "636": 419, "618": 420, "302": 421, "543": 422, "696": 425, "361": 427, "741": 430, "568": 434, "318": 436, "708": 438, "714": 440, "333": 442, "704": 444, "377": 447, "378": 448, "379": 449, "800": 450, "759": 451, "781": 453, "747": 454, "701": 456, "331": 457, "769": 459, "698": 461, "744": 463, "648": 466, "488": 468, "779": 469};
+const EGG_HAS=new Set(Object.keys(EGG_FILE).map(Number));
+const DEX={},LINE={};
+DEXRAW.forEach(r=>{const[n,id,name,t1,t2,hp,atk,def,spd,spa,line,stage,rar]=r;DEX[n]={n,id,name,t1,t2,hp,atk,def,spd,spa,line,stage,rar};(LINE[line]=LINE[line]||[]).push(n)});
+const NDEX=DEXRAW.length;
+const EEVEE=[134,135,136,196,197,470,471,700];
+const TCOL={neutre:'#a8a878',feu:'#f08030',eau:'#6890f0',plante:'#78c850',foudre:'#e8c020',glace:'#6cc8dc',combat:'#c0392b',poison:'#a050c0',sol:'#c8a050',vol:'#a890f0',psy:'#f0588a',insecte:'#8fb02a',roche:'#b09a50',spectre:'#6b5aa6',dragon:'#6a4ff0',tenebres:'#705848',acier:'#a8a8c0',fee:'#e080a8'};
+const TNAME={neutre:'Normal',feu:'Feu',eau:'Eau',plante:'Plante',foudre:'Électrik',glace:'Glace',combat:'Combat',poison:'Poison',sol:'Sol',vol:'Vol',psy:'Psy',insecte:'Insecte',roche:'Roche',spectre:'Spectre',dragon:'Dragon',tenebres:'Ténèbres',acier:'Acier',fee:'Fée'};
+const EFF={
+ neutre:{roche:.5,spectre:0,acier:.5},
+ feu:{feu:.5,eau:.5,plante:2,glace:2,insecte:2,roche:.5,dragon:.5,acier:2},
+ eau:{feu:2,eau:.5,plante:.5,sol:2,roche:2,dragon:.5},
+ plante:{feu:.5,eau:2,plante:.5,poison:.5,sol:2,vol:.5,insecte:.5,roche:2,dragon:.5,acier:.5},
+ foudre:{eau:2,plante:.5,foudre:.5,sol:0,vol:2,dragon:.5},
+ glace:{feu:.5,eau:.5,plante:2,glace:.5,sol:2,vol:2,dragon:2,acier:.5},
+ combat:{neutre:2,glace:2,poison:.5,vol:.5,psy:.5,insecte:.5,roche:2,spectre:0,tenebres:2,acier:2,fee:.5},
+ poison:{plante:2,poison:.5,sol:.5,roche:.5,spectre:.5,acier:0,fee:2},
+ sol:{feu:2,plante:.5,foudre:2,poison:2,vol:0,insecte:.5,roche:2,acier:2},
+ vol:{plante:2,foudre:.5,combat:2,insecte:2,roche:.5,acier:.5},
+ psy:{combat:2,poison:2,psy:.5,tenebres:0,acier:.5},
+ insecte:{feu:.5,plante:2,combat:.5,poison:.5,vol:.5,psy:2,spectre:.5,tenebres:2,acier:.5,fee:.5},
+ roche:{feu:2,glace:2,combat:.5,sol:.5,vol:2,insecte:2,acier:.5},
+ spectre:{neutre:0,psy:2,spectre:2,tenebres:.5},
+ dragon:{dragon:2,acier:.5,fee:0},
+ tenebres:{combat:.5,psy:2,spectre:2,tenebres:.5,fee:.5},
+ acier:{feu:.5,eau:.5,foudre:.5,glace:2,roche:2,acier:.5,fee:2},
+ fee:{feu:.5,combat:2,poison:.5,dragon:2,tenebres:2,acier:.5}};
+function typeEff(a,t1,t2){const e=EFF[a]||{};let m=1;for(const t of [t1,t2]){if(!t)continue;let v=e[t];if(v===undefined)v=1;if(v===0)v=.25;m*=v}return m}
+const RANGED=new Set(['feu','foudre','glace','poison','psy','spectre','dragon','fee']);
+const GK=['hp','atk','def','spd'],GN={hp:'PV',atk:'Att',def:'Déf',spd:'Vit'};
+const RF={0:1,1:1.25,2:1.6,3:2.4,9:1.2};
+
+/* ---------- utilitaires ---------- */
+const $=id=>document.getElementById(id);
+const rnd=Math.random,ri=(a,b)=>a+Math.floor(rnd()*(b-a+1)),pick=a=>a[Math.floor(rnd()*a.length)];
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const pad3=n=>String(n).padStart(3,'0');
+function rng(seed){let s=seed>>>0;return()=>{s=s+0x6D2B79F5|0;let t=Math.imul(s^s>>>15,1|s);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+function fmtT(ms){let s=Math.max(0,Math.ceil(ms/1000));if(s<60)return s+' s';const m=Math.floor(s/60);s%=60;if(m<60)return m+' min '+String(s).padStart(2,'0');return Math.floor(m/60)+' h '+String(m%60).padStart(2,'0')}
+const fmt=n=>Math.floor(n).toLocaleString('fr-FR');
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+const NO_SHINY_SPR=new Set([493,744]);/* pas de sprite shiny dans le pack */
+const ovSrc=(n,sh)=>OVDIR+pad3(n)+(sh&&!NO_SHINY_SPR.has(n)?'s':'')+'.png';
+function eggSrc(n){const b=baseOf(n,true);return EGG_HAS.has(b)?EGGDIR+EGG_FILE[b]+'.png':EGGDIR+'egg_base.png'}
+function eggH(n,s,cls='',attrs=''){const k=s/64;return `<span class="egg ${cls}" ${attrs} data-k="${k}" style="width:${s}px;height:${Math.round(s*68/64)}px"><img src="${typeof n==='string'?n:eggSrc(n)}" style="width:${160*k}px;left:-${48*k}px;top:-${44*k}px" alt="">${cls.includes('ck')?`<span class="ck" style="background-size:${800*k}px ${160*k}px"></span>`:''}</span>`}
+function tyHTML(d){return '<span class="types">'+[d.t1,d.t2].filter(Boolean).map(t=>`<span class="ty" style="background:${TCOL[t]||'#888'}">${TNAME[t]||t}</span>`).join('')+'</span>'}
+function sprHTML(n,sh,size=48,still=false,row=0){const w=size*4;return `<span class="spr${still?' still':''}" style="width:${size}px;height:${size}px;--w:-${w}px"><img src="${ovSrc(n,sh)}" style="width:${w}px;height:${w}px;top:-${row*size}px" onerror="this.parentNode.classList.add('miss')" alt=""></span>`}
+
+/* ---------- espèces, évolutions ---------- */
+function baseOf(n,fixed){if(EEVEE.includes(n))return 133;const d=DEX[n];if(!d)return n;const L=LINE[d.line].filter(x=>DEX[x].rar!==9||x===n);const m=Math.min(...L.map(x=>DEX[x].stage));const c=L.filter(x=>DEX[x].stage===m);if(c.includes(n))return n;return fixed?c[0]:pick(c)}
+function evoTargets(n){if(n===133)return EEVEE.slice();const d=DEX[n];return LINE[d.line].filter(x=>DEX[x].stage===d.stage+1&&DEX[x].rar!==9)}
+function evoLevel(n){if(n===133)return 25;const d=DEX[n];const maxSt=Math.max(...LINE[d.line].map(x=>DEX[x].stage));const minSt=Math.min(...LINE[d.line].map(x=>DEX[x].stage));const k=d.stage-minSt;if(d.rar>=3)return k===0?30:55;if(maxSt-minSt>=2)return k===0?16:32;return 20}
+/* espèces disponibles : celles qui ont un œuf numéroté + toutes leurs évolutions */
+const AVAIL=new Set();(function(){const add=n=>{if(!DEX[n]||AVAIL.has(n))return;AVAIL.add(n);evoTargets(n).forEach(add)};EGG_HAS.forEach(add)})();
+const EGG_SPECIES=[...EGG_HAS].filter(n=>DEX[n]).sort((a,b)=>a-b);
+const LEGEND=new Set([144,145,146,150,151,243,244,245,249,250,251,377,378,379,380,381,382,383,384,385,386,483,484,486,487,488,491,493,643,644,646,648,649,800]);
+const MYTHIC=new Set([150,151,249,250,382,383,384,483,484,487,493,643,644,646,800]);
+function eggPrice(n){const d=DEX[n];if(n===132)return 400;if(MYTHIC.has(n))return 80000;if(LEGEND.has(n))return 40000;return [120,250,800,3000][d.rar]||800}
+function eggLevel(n){const d=DEX[n];return LEGEND.has(n)?20:d.rar>=2?10:5}
+function canBreed(a,b){if(!a||!b)return false;if(a.n===132||b.n===132)return true;const fa=a.n===133||EEVEE.includes(a.n),fb=b.n===133||EEVEE.includes(b.n);if(fa&&fb)return true;return DEX[a.n].line===DEX[b.n].line}
+
+/* ---------- statistiques ---------- */
+function stats(m){const d=DEX[m.n],g=m.g,L=m.lv,f=m.sh?1.1:1;const s=(b,x)=>Math.floor(((2*b+x)*L/100+5)*f);
+  return{hp:Math.floor(((2*d.hp+g.hp)*L/100+L+10)*f),atk:s(d.atk,g.atk),def:s(d.def,g.def),spa:s(d.spa,g.atk),spd:s(d.spd,g.spd)}}
+function pc(m){const s=stats(m);return s.hp+s.atk+s.def+s.spa+s.spd}
+const need=L=>Math.floor(10+6*L*Math.sqrt(L));
+
+/* ---------- sauvegarde ---------- */
+const SAVEKEY='poketabs-eggs-collector-v1';
+let SAVE;
+function newSave(){return{v:1,coins:250,mons:[],eggs:[],nests:[{lvl:1,a:null,b:null,t0:0,dur:0,egg:null}],incs:[{lvl:1,slots:[]}],balls:[{lvl:1,mons:[]}],best:0,army:4,boosts:{},items:{mirror:0},dex:{},tuto:0,uid:1,last:Date.now(),name:'',created:Date.now()}}
+function loadSave(){try{const r=localStorage.getItem(SAVEKEY);if(r){const s=JSON.parse(r);return Object.assign(newSave(),s)}}catch(e){}return newSave()}
+function saveJson(){return JSON.stringify(SAVE)}
+function saveGame(){try{localStorage.setItem(SAVEKEY,saveJson())}catch(e){}if(CLOUD.user)cloudPush(false)}
+const mon=u=>SAVE.mons.find(m=>m.u===u);
+function monStatus(u){for(let i=0;i<SAVE.nests.length;i++){const n=SAVE.nests[i];if(n.a===u||n.b===u)return{k:'nest',i}}for(let i=0;i<SAVE.balls.length;i++)if(SAVE.balls[i].mons.includes(u))return{k:'ball',i};return null}
+const statusTxt=s=>!s?'Libre':s.k==='nest'?'Au nid '+(s.i+1):'Entraînement '+(s.i+1);
+function dexSee(n){const d=SAVE.dex[n]=SAVE.dex[n]||{};d.s=1}
+function dexOwn(n,sh){const d=SAVE.dex[n]=SAVE.dex[n]||{};d.s=1;d.o=1;if(sh)d.sh=1}
+function boostOn(k){return (SAVE.boosts[k]||0)>Date.now()}
+function addMon(o){const m=Object.assign({u:SAVE.uid++,xp:0,mut:0,sh:false,born:Date.now()},o);SAVE.mons.push(m);dexOwn(m.n,m.sh);return m}
+function randGenes(a,b){const g={};GK.forEach(k=>g[k]=ri(a,b));return g}
+
+/* ---------- niveaux et évolution ---------- */
+function gainXP(m,x){if(m.lv>=100)return;m.xp+=x;let up=false;while(m.lv<100&&m.xp>=need(m.lv)){m.xp-=need(m.lv);m.lv++;up=true}if(up){dirty=true;checkEvo(m)}}
+function checkEvo(m,quiet){let ev=null;for(let k=0;k<4;k++){const t=evoTargets(m.n);if(!t.length||m.lv<evoLevel(m.n))break;const old=DEX[m.n].name;m.n=pick(t);dexOwn(m.n,m.sh);ev=[old,DEX[m.n].name]}if(ev&&!quiet)toast(`✨ ${ev[0]} évolue en <b>${ev[1]}</b> !`);if(ev)dirty=true;return ev}
+
+/* ---------- œufs ---------- */
+function makeEgg(A,B,nestLvl){
+  const non=[A,B].filter(m=>m.n!==132);
+  const sp=non.length?baseOf(pick(non).n):132;
+  let lv=Math.round((A.lv+B.lv)/2)-ri(0,2);
+  const g={};GK.forEach(k=>g[k]=clamp(Math.round((A.g[k]+B.g[k])/2+ri(-2,3)),0,31));
+  let mut=0;const pm=T.mut+(nestLvl-1)*0.03+(boostOn('mut')?0.15:0);
+  if(rnd()<pm){mut=1;lv+=T.mutLv;const k=pick(GK);g[k]=Math.min(31,g[k]+ri(3,6))}
+  const nsh=(A.sh?1:0)+(B.sh?1:0);let ps=[T.sh0,T.sh1,T.sh2][nsh];
+  if(boostOn('shiny'))ps*=3;if(nestLvl>=5)ps*=1.5;
+  const sh=rnd()<ps;if(sh){lv+=T.mutLv;mut=2}
+  return{id:SAVE.uid++,n:sp,lv:clamp(lv,1,100),g,sh,mut,src:'nid'}
+}
+function shopEgg(tier){
+  const rars=tier==='c'?[0,1]:tier==='r'?[2]:[3];
+  const pool=EGG_SPECIES.map(n=>DEX[n]).filter(d=>rars.includes(d.rar)&&!LEGEND.has(d.n)&&d.n!==132);
+  const d=pick(pool);const lv=eggLevel(d.n);
+  const sh=rnd()<T.sh0;
+  return{id:SAVE.uid++,n:d.n,lv:lv+(sh?T.mutLv:0),g:randGenes(tier==='l'?12:0,tier==='c'?12:20),sh,mut:sh?2:0,src:'boutique'}
+}
+function eggOf(n){const sh=rnd()<T.sh0;return{id:SAVE.uid++,n,lv:eggLevel(n)+(sh?T.mutLv:0),g:randGenes(LEGEND.has(n)?12:0,LEGEND.has(n)?24:14),sh,mut:sh?2:0,src:'boutique'}}
+const breedRar=(A,B)=>Math.max(DEX[A.n].rar===9?0:DEX[A.n].rar,DEX[B.n].rar===9?0:DEX[B.n].rar);
+function breedDur(nest,A,B){let d=T.breed*(RF[breedRar(A,B)]||1)*Math.pow(.85,nest.lvl-1)*(boostOn('love')?.5:1);if(SAVE.tuto<5)d*=.35;return d*1000}
+function hatchDur(inc,e){let d=T.hatch*(RF[DEX[e.n].rar]||1)*Math.pow(.88,inc.lvl-1);if(SAVE.tuto<5)d*=.4;return d*1000}
+const INC_CAP=[0,2,2,3,3,4,5,6];
+const BALL_SLOT=[0,1,2,2,3,4];
+const ballRate=b=>T.trainXP*(1+.5*(b.lvl-1));
+const NEST_IMG=['nest1','nest0','nest2','nest3','nest3'];
+
+/* ---------- boucle de temps (fonctionne aussi hors-ligne) ---------- */
+let dirty=true;
+function tick(){
+  const now=Date.now();const dt=clamp((now-SAVE.last)/1000,0,T.offlineMax);SAVE.last=now;
+  SAVE.balls.forEach(b=>b.mons.forEach(u=>{const m=mon(u);if(m)gainXP(m,ballRate(b)*dt)}));
+  SAVE.nests.forEach(n=>{if(n.a&&n.b&&!n.egg&&n.t0&&now>=n.t0+n.dur){const A=mon(n.a),B=n.b==='solo'?A:mon(n.b);if(A&&B){n.egg=makeEgg(A,B,n.lvl);dirty=true;if(SAVE.tuto===1)setTuto(2)}}});
+  if(dirty&&cur==='nursery')renderNursery();
+  else if(cur==='nursery')liveNursery();
+  if(dirty&&cur==='team')renderTeam();
+  if(dirty)renderTop();
+  dirty=false;
+}
+
+/* =====================================================================
+   NURSERIE
+   ===================================================================== */
+function nestHTML(n,i){
+  const A=mon(n.a),B=n.b==='solo'?null:mon(n.b);
+  let cap='Clique pour placer un couple';
+  if(A)cap=esc(DEX[A.n].name)+' Nv'+A.lv+(n.b==='solo'?' (Gène miroir)':B?' + '+esc(DEX[B.n].name)+' Nv'+B.lv:'');
+  return `<div class="st nest" data-act="nest" data-i="${i}">
+    <span class="lvl">Nid ${i+1} · Nv ${n.lvl}${n.lvl>=5?' ★':''}</span>
+    ${n.egg?`${eggH(n.egg.n,54,'egg-ico',`data-act="collect" data-i="${i}" title="Récupérer l'œuf"`)}<span class="readyTag">Œuf !</span>`:''}
+    ${A&&(B||n.b==='solo')&&!n.egg?'<div class="hearts"><span>♥</span><span>♥</span><span>♥</span></div>':''}<div class="pair">${A?sprHTML(A.n,A.sh,60,false,2):''}${B?sprHTML(B.n,B.sh,60,false,1):n.b==='solo'?'<span style="font-size:26px">🧬</span>':''}</div>
+    <img class="base" src="assets/${NEST_IMG[n.lvl-1]}.png" alt="">
+    <div class="bar"><i id="nb${i}"></i></div>
+    <div class="cap" id="nc${i}">${cap}</div></div>`}
+function incHTML(c,i){
+  const cap=INC_CAP[c.lvl];
+  return `<div class="st inc" data-act="inc" data-i="${i}">
+    <span class="lvl">Incubateur ${i+1} · Nv ${c.lvl}</span>
+    <div class="base" style="background-position:-${c.lvl*84}px 0"><div class="eggs">${c.slots.map((s,k)=>`${eggH(s.egg.n,26,'ck',`id="ie${i}_${k}"`)}`).join('')}</div></div>
+    <div class="cap">${c.slots.length}/${cap} œufs<br><span id="ic${i}"></span></div></div>`}
+function ballHTML(b,i){
+  const img=b.lvl>=5?'tower':b.lvl>=3?'post1':'post0';
+  return `<div class="st ball" data-act="ball" data-i="${i}">
+    <span class="lvl">Punching-ball ${i+1} · Nv ${b.lvl}</span>
+    <div class="trainees">${b.mons.map(u=>{const m=mon(u);return m?sprHTML(m.n,m.sh,40):''}).join('')}</div>
+    <img class="base" src="assets/${img}.png" alt="">
+    <div class="cap">${b.mons.length}/${BALL_SLOT[b.lvl]} Pokémon · ${ballRate(b).toFixed(1)} XP/s</div></div>`}
+function eggChip(e){return `<div class="eggchip" title="${esc(DEX[e.n].name)}">${eggH(e.n,40)}${esc(DEX[e.n].name)}</div>`}
+function renderNursery(){
+  const el=$('tab-nursery');
+  const anyNest=SAVE.nests.some(n=>n.egg),anyReady=SAVE.incs.some(c=>c.slots.some(s=>Date.now()>=s.t0+s.dur));
+  const bo=[['love','💞 Reproduction ×2'],['mut','🧪 Mutation +15 %'],['shiny','✨ Shiny ×3']].filter(([k])=>boostOn(k)).map(([k,t])=>`<span class="biome" id="bo_${k}">${t}</span>`).join(' ');
+  el.innerHTML=`<div class="room">
+   <div class="wall"><img class="deco" src="assets/window.png" style="left:6%;bottom:14px;width:78px"><img class="deco" src="assets/frame.png" style="left:22%;bottom:30px;width:44px"><img class="deco" src="assets/window.png" style="right:30%;bottom:14px;width:78px"><img class="deco" src="assets/shelf.png" style="right:6%;width:90px"><img class="deco" src="assets/plant_big.png" style="right:16%;width:48px"><img class="deco" src="assets/plant_small.png" style="left:40%;bottom:6px;width:26px">
+     <div style="position:absolute;left:50%;top:10px;transform:translateX(-50%);text-align:center">${bo}</div></div>
+   <div class="floor">
+    <div class="zone"><h3>Salle de jeu <span class="muted">Les Pokémon libres se promènent ici. Clique sur l'un d'eux pour voir sa fiche.</span></h3><div class="playfield" id="playfield"></div></div>
+    <div class="zone"><h3>Nids <button class="sm go" data-act="collectAll" ${anyNest?'':'disabled'}>Tout récupérer</button></h3><div class="row">${SAVE.nests.map(nestHTML).join('')}</div></div>
+    <div class="zone"><h3>Incubateurs <button class="sm go" data-act="hatchAll" ${anyReady?'':'disabled'}>Tout faire éclore</button></h3><div class="row">${SAVE.incs.map(incHTML).join('')}</div></div>
+    <div class="zone"><h3>Entraînement <span class="muted">Un Pokémon à l'entraînement ne peut pas se reproduire ni combattre.</span></h3><div class="row">${SAVE.balls.map(ballHTML).join('')}</div></div>
+    <div class="zone"><h3>Sac d'œufs (${SAVE.eggs.length}) <span class="muted">Clique sur un incubateur pour y placer des œufs.</span></h3><div class="eggbag">${SAVE.eggs.map(eggChip).join('')||'<span class="muted">Aucun œuf pour le moment.</span>'}</div></div>
+   </div></div>`;
+  buildWalkers();liveNursery();
+}
+/* --- Pokémon qui se promènent dans la salle de jeu --- */
+const WALK={},WS=56;
+const PDECO=[['bowl0',.03,.70,40],['bowl2',.09,.80,40],['foodbag',.015,.20,32],['plant_big',.955,.08,40],['tower',.90,.02,60],['bowl3',.95,.80,40]];
+function buildWalkers(){const pf=$('playfield');if(!pf)return;const W=Math.max(200,pf.clientWidth-WS),H=Math.max(100,pf.clientHeight-WS);
+  const free=freeMons().slice(0,40),keep=new Set(free.map(m=>m.u));for(const k in WALK)if(!keep.has(+k))delete WALK[k];
+  pf.innerHTML=PDECO.map(([f,x,y,w])=>`<img class="pdeco" src="assets/${f}.png" style="left:${x*100}%;top:${y*100}%;width:${w}px;z-index:${10+Math.round(y*H)}" alt="">`).join('')
+    +free.map(m=>`<div class="walker" id="wk${m.u}" data-act="monInfo" data-u="${m.u}" title="${esc(DEX[m.n].name)} Nv${m.lv}">${sprHTML(m.n,m.sh,WS,true)}</div>`).join('')
+    +(free.length?'':'<span class="muted" style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%)">Aucun Pokémon libre pour le moment.</span>');
+  free.forEach(m=>{let w=WALK[m.u];if(!w)w=WALK[m.u]={x:rnd()*W,y:rnd()*H,tx:0,ty:0,wait:rnd()*1.5,dir:0,mv:false};w.el=$('wk'+m.u);w.mv=null;placeW(w,false)})}
+function placeW(w,mv){if(!w.el)return;w.el.style.transform=`translate(${w.x|0}px,${w.y|0}px)`;w.el.style.zIndex=10+(w.y|0);const im=w.el.querySelector('img');if(im)im.style.top=-(w.dir*WS)+'px';if(w.mv!==mv){w.mv=mv;const sp=w.el.querySelector('.spr');if(sp)sp.classList.toggle('still',!mv)}}
+function stepWalkers(dt){const pf=$('playfield');if(!pf)return;const W=pf.clientWidth-WS,H=pf.clientHeight-WS;
+  for(const k in WALK){const w=WALK[k];if(!w.el||!w.el.isConnected)continue;
+    if(w.wait>0){w.wait-=dt;if(w.wait<=0){w.tx=rnd()*W;w.ty=rnd()*H;if(rnd()<.3)w.dir=0}placeW(w,false);continue}
+    const dx=w.tx-w.x,dy=w.ty-w.y,d=Math.hypot(dx,dy);if(d<2){w.wait=1.5+rnd()*3.5;w.dir=0;placeW(w,false);continue}
+    const s=Math.min(d,38*dt);w.x+=dx/d*s;w.y+=dy/d*s;w.dir=Math.abs(dx)>Math.abs(dy)?(dx<0?1:2):(dy<0?3:0);placeW(w,true)}}
+function liveNursery(){
+  const now=Date.now();
+  SAVE.nests.forEach((n,i)=>{const b=$('nb'+i);if(!b)return;let p=0;if(n.egg)p=1;else if(n.t0&&n.b)p=clamp((now-n.t0)/n.dur,0,1);b.style.width=(p*100)+'%';const c=$('nc'+i);if(c&&n.a&&n.b&&!n.egg&&c.dataset.base===undefined){c.dataset.base=c.innerHTML}if(c&&c.dataset.base)c.innerHTML=c.dataset.base+(n.egg?'':'<br>Ponte dans '+fmtT(n.t0+n.dur-now))});
+  let ready=false;
+  SAVE.incs.forEach((c,i)=>{let nx=Infinity;c.slots.forEach((s,k)=>{const e=$('ie'+i+'_'+k);if(!e)return;const p=clamp((now-s.t0)/s.dur,0,1);const f=Math.min(4,Math.floor(p*5));const kk=+e.dataset.k;e.querySelector('.ck').style.backgroundPosition=`-${(f*160+48)*kk}px -${44*kk}px`;e.querySelector('.ck').style.opacity=p<.08?0:1;e.classList.toggle('ok',p>=1);if(p>=1)ready=true;else nx=Math.min(nx,s.t0+s.dur-now)});const t=$('ic'+i);if(t)t.textContent=c.slots.some(s=>now>=s.t0+s.dur)?'Prêt à éclore !':nx<Infinity?'Éclosion dans '+fmtT(nx):''});
+  const hb=document.querySelector('[data-act=hatchAll]');if(hb)hb.disabled=!ready;
+  if(ready&&SAVE.tuto===3)setTuto(4);
+}
+/* --- actions nid --- */
+function freeMons(){return SAVE.mons.filter(m=>!monStatus(m.u))}
+function monCard(m,opt={}){const d=DEX[m.n],s=stats(m),st=monStatus(m.u);
+  return `<div class="card ${opt.pick?'pick':''} ${opt.busy?'busy':''} ${opt.sel?'sel':''}" ${opt.act?`data-act="${opt.act}" data-u="${m.u}"`:''}>
+    ${m.sh?'<span class="sh">★ Shiny</span>':''}<span class="tag">${statusTxt(st)}</span>
+    ${sprHTML(m.n,m.sh,64)}<span class="nm">${esc(d.name)}</span>${tyHTML(d)}
+    <span>Nv ${m.lv} · PC ${pc(m)}${m.mut?` · <span class="mut">${m.mut>1?'Super mutation':'Muté'}</span>`:''}</span>
+    <div class="bar xp" style="height:6px;margin:0"><i style="width:${m.lv>=100?100:Math.floor(m.xp/need(m.lv)*100)}%"></i></div>
+    <div class="genes">${GK.map(k=>`<span>${GN[k]}</span><b><i style="width:${m.g[k]/31*100}%"></i></b>`).join('')}</div>
+    ${opt.extra||''}</div>`}
+let pickState=null;
+function openNest(i){
+  const n=SAVE.nests[i];
+  if(n.a){const A=mon(n.a),B=n.b==='solo'?A:mon(n.b);
+    const pm=Math.round((T.mut+(n.lvl-1)*.03+(boostOn('mut')?.15:0))*100);
+    let ps=[T.sh0,T.sh1,T.sh2][(A.sh?1:0)+(n.b!=='solo'&&B.sh?1:0)]*(boostOn('shiny')?3:1)*(n.lvl>=5?1.5:1);
+    openModal(`<h2>Nid ${i+1} (niveau ${n.lvl})</h2>
+      <div class="flexr">${monCard(A)}${n.b==='solo'?'<div class="card">🧬<br>Gène miroir</div>':monCard(B)}</div>
+      <p>Bébé attendu : <b>${esc(DEX[A.n].n===132&&n.b!=='solo'?DEX[baseOf(B.n,true)].name:DEX[baseOf(A.n,true)].name)}</b> · niveau de départ ≈ ${Math.round((A.lv+B.lv)/2)-1}<br>
+      Chance de mutation (+${T.mutLv} niveaux) : <b>${pm} %</b> · Chance shiny : <b>${(ps*100).toFixed(1)} %</b></p>
+      <div class="flexr"><button data-act="split" data-i="${i}">Séparer le couple</button> ${n.egg?`<button class="go" data-act="collect" data-i="${i}">Récupérer l'œuf</button>`:''}</div>`);return}
+  pickState={nest:i,a:null};pickParent();
+}
+function pickParent(){
+  const ps=pickState,A=ps.a?mon(ps.a):null;
+  const list=SAVE.mons.filter(m=>m.u!==ps.a);
+  const ok=m=>!monStatus(m.u)&&(!A||canBreed(A,m));
+  list.sort((x,y)=>ok(y)-ok(x)||pc(y)-pc(x));
+  openModal(`<h2>${A?'Choisis le 2ᵉ parent pour '+esc(DEX[A.n].name):'Choisis le 1ᵉʳ parent'}</h2>
+   <p class="muted">Deux Pokémon de la même famille peuvent se reproduire. Métamorph peut se reproduire avec tout le monde.</p>
+   ${A&&SAVE.items.mirror>0?`<p><button data-act="solo">🧬 Utiliser un Gène miroir (${SAVE.items.mirror}) : reproduire ${esc(DEX[A.n].name)} seul</button></p>`:''}
+   <div class="grid">${list.map(m=>monCard(m,{pick:ok(m),busy:!ok(m),act:ok(m)?'pickMon':''})).join('')||'<p>Aucun Pokémon disponible.</p>'}</div>`);
+}
+function placeCouple(b){const ps=pickState,n=SAVE.nests[ps.nest];n.a=ps.a;n.b=b;const A=mon(n.a),B=b==='solo'?A:mon(b);n.t0=Date.now();n.dur=breedDur(n,A,B);pickState=null;closeModal();dirty=true;saveGame();if(SAVE.tuto===1)setTip("Les parents couvent ! Quand un œuf apparaît au-dessus du nid, clique dessus pour le récupérer.");}
+function collect(i,quiet){const n=SAVE.nests[i];if(!n.egg)return 0;SAVE.eggs.push(n.egg);dexSee(n.egg.n);n.egg=null;const A=mon(n.a),B=n.b==='solo'?A:mon(n.b);if(A&&B){n.t0=Date.now();n.dur=breedDur(n,A,B)}else{n.t0=0}dirty=true;if(!quiet){toast('🥚 Œuf récupéré !');saveGame()}if(SAVE.tuto<=2&&SAVE.tuto>=1)setTuto(3);return 1}
+/* --- actions incubateur --- */
+function openInc(i){
+  const c=SAVE.incs[i],cap=INC_CAP[c.lvl],now=Date.now();
+  openModal(`<h2>Incubateur ${i+1} (niveau ${c.lvl}) · ${c.slots.length}/${cap}</h2>
+   ${c.slots.map((s,k)=>{const p=clamp((now-s.t0)/s.dur,0,1);return `<div class="slotrow">${eggH(s.egg.n,40)}<b>${esc(DEX[s.egg.n].name)}</b><div class="bar"><i style="width:${p*100}%"></i></div>${p>=1?`<button class="go sm" data-act="hatch" data-i="${i}" data-k="${k}">Faire éclore</button>`:`<span class="muted">${fmtT(s.t0+s.dur-now)}</span>`}</div>`}).join('')||'<p class="muted">Incubateur vide.</p>'}
+   <h3>Sac d'œufs</h3>
+   ${c.slots.length>=cap?'<p class="muted">Incubateur plein. Améliore-le dans la Boutique pour couver plus d\'œufs à la fois.</p>':''}
+   <div class="eggbag">${SAVE.eggs.map((e,k)=>`<div class="eggchip">${eggH(e.n,40)}${esc(DEX[e.n].name)}<button class="sm" data-act="incAdd" data-i="${i}" data-k="${k}" ${c.slots.length>=cap?'disabled':''}>Couver</button></div>`).join('')||'<span class="muted">Aucun œuf dans le sac.</span>'}</div>
+   ${SAVE.eggs.length>1&&c.slots.length<cap?`<p><button data-act="incFill" data-i="${i}">Remplir automatiquement</button></p>`:''}`);
+}
+function incAdd(i,k,quiet){const c=SAVE.incs[i];if(c.slots.length>=INC_CAP[c.lvl])return;const e=SAVE.eggs.splice(k,1)[0];if(!e)return;c.slots.push({egg:e,t0:Date.now(),dur:hatchDur(c,e)});dirty=true;if(SAVE.tuto===3)setTip("L'œuf couve. Quand il bouge, clique sur l'incubateur pour le faire éclore.");if(!quiet){saveGame();openInc(i)}}
+function hatchOne(i,k){const c=SAVE.incs[i],s=c.slots[k];if(!s||Date.now()<s.t0+s.dur)return null;c.slots.splice(k,1);const e=s.egg;
+  if(!e.sh&&c.lvl>=6&&rnd()<T.sh0*(c.lvl-4)){e.sh=true;e.lv+=T.mutLv;e.mut=2}
+  const m=addMon({n:e.n,lv:e.lv,g:e.g,sh:e.sh,mut:e.mut});const ev=checkEvo(m,true);return{m,e,ev}}
+function hatchAll(only){const res=[];SAVE.incs.forEach((c,i)=>{if(only!==undefined&&only!==i)return;for(let k=c.slots.length-1;k>=0;k--){const r=hatchOne(i,k);if(r)res.push(r)}});if(res.length)showHatch(res);dirty=true;saveGame()}
+function showHatch(res){
+  openModal(`<h2>${res.length>1?res.length+' œufs ont éclos !':'Un œuf a éclos !'}</h2><div class="hatch">${res.map(r=>{let x='';if(r.m.sh)x+='<div class="banner s">✨ SUPER MUTATION SHINY ✨</div>';else if(r.m.mut)x+=`<div class="banner m">🧬 MUTATION +${T.mutLv} niveaux</div>`;if(r.ev)x+=`<div class="muted">Il a évolué en sortant de l'œuf !</div>`;return monCard(r.m,{extra:x})}).join('')}</div>`);
+  if(SAVE.tuto>=1&&SAVE.tuto<=4)setTuto(5);
+}
+/* --- actions entraînement --- */
+function openBall(i){
+  const b=SAVE.balls[i],cap=BALL_SLOT[b.lvl];
+  const free=freeMons().sort((x,y)=>pc(y)-pc(x));
+  openModal(`<h2>Punching-ball ${i+1} (niveau ${b.lvl}) · ${b.mons.length}/${cap}</h2>
+   <p class="muted">${ballRate(b).toFixed(1)} XP par seconde, même quand le jeu est fermé (jusqu'à ${T.offlineMax/3600} h).</p>
+   <div class="grid">${b.mons.map(u=>{const m=mon(u);return m?monCard(m,{extra:`<button class="sm" data-act="unTrain" data-i="${i}" data-u="${u}">Retirer</button>`}):''}).join('')}</div>
+   <h3 style="margin-top:12px">Ajouter un Pokémon</h3>
+   ${b.mons.length>=cap?'<p class="muted">Plus de place. Améliore le punching-ball dans la Boutique.</p>':`<div class="grid">${free.map(m=>monCard(m,{pick:true,act:'train',extra:''})).join('')||'<p class="muted">Aucun Pokémon libre.</p>'}</div>`}`);
+  pickState={ball:i};
+}
+
+/* =====================================================================
+   ÉQUIPE
+   ===================================================================== */
+let teamSort='pc';
+function renderTeam(){
+  const L=SAVE.mons.slice();
+  const f={pc:(a,b)=>pc(b)-pc(a),lv:(a,b)=>b.lv-a.lv,dex:(a,b)=>a.n-b.n||b.lv-a.lv,new:(a,b)=>b.born-a.born}[teamSort];L.sort(f);
+  $('tab-team').innerHTML=`<div class="panel"><h3>Mes Pokémon (${L.length})
+   <select id="teamSort">${[['pc','Puissance (PC)'],['lv','Niveau'],['dex','N° Pokédex'],['new','Plus récents']].map(([k,t])=>`<option value="${k}" ${k===teamSort?'selected':''}>${t}</option>`).join('')}</select></h3>
+   <div class="grid">${L.map(m=>monCard(m,{busy:false,extra:monStatus(m.u)?'':`<button class="sm" data-act="release" data-u="${m.u}">Relâcher (+${relVal(m)} pièces)</button>`})).join('')}</div></div>`;
+  $('teamSort').onchange=e=>{teamSort=e.target.value;renderTeam()};
+}
+const relVal=m=>Math.max(5,Math.round(m.lv*4*(m.sh?5:1)));
+
+/* =====================================================================
+   BOUTIQUE
+   ===================================================================== */
+const SHOP=[
+ {h:'Œufs'},
+ {id:'eggC',name:'Œuf surprise',desc:'Un Pokémon commun ou peu commun au hasard, niveau 5.',ic:EGGDIR+'egg_base.png',price:()=>100,buy:()=>{SAVE.eggs.push(shopEgg('c'))}},
+ {id:'eggR',name:'Œuf surprise rare',desc:'Un Pokémon rare au hasard, niveau 10.',ic:'assets/type_eggs.png#2',price:()=>600,buy:()=>{SAVE.eggs.push(shopEgg('r'))}},
+ {h:'Nurserie'},
+ {id:'nest',name:'Nouveau nid',desc:'Un couple de plus en même temps (max 8).',ic:'assets/nest1.png',price:()=>Math.round(300*Math.pow(2.2,SAVE.nests.length-1)),max:()=>SAVE.nests.length>=8,buy:()=>SAVE.nests.push({lvl:1,a:null,b:null,t0:0,dur:0,egg:null})},
+ {id:'nestUp',name:'Améliorer un nid',desc:'Ponte 15 % plus rapide, +3 % de mutation. Niveau 5 : shiny ×1,5.',ic:'assets/nest3.png',price:()=>{const n=lowNest();return n?Math.round(200*Math.pow(2.1,n.lvl)):0},max:()=>!lowNest(),buy:()=>{lowNest().lvl++}},
+ {id:'inc',name:'Nouvel incubateur',desc:'Encore plus d\'œufs à couver (max 4).',ic:'assets/incubators.png#1',price:()=>Math.round(400*Math.pow(2.5,SAVE.incs.length-1)),max:()=>SAVE.incs.length>=4,buy:()=>SAVE.incs.push({lvl:1,slots:[]})},
+ {id:'incUp',name:'Améliorer un incubateur',desc:'Plus de places et éclosion plus rapide. Niveaux 6 et 7 : chance shiny en plus.',ic:'assets/incubators.png#6',price:()=>{const c=lowInc();return c?Math.round(250*Math.pow(2,c.lvl)):0},max:()=>!lowInc(),buy:()=>{lowInc().lvl++}},
+ {id:'ball',name:'Nouveau punching-ball',desc:'Entraîne plus de Pokémon (max 4).',ic:'assets/post0.png',price:()=>Math.round(350*Math.pow(2.4,SAVE.balls.length-1)),max:()=>SAVE.balls.length>=4,buy:()=>SAVE.balls.push({lvl:1,mons:[]})},
+ {id:'ballUp',name:'Améliorer un punching-ball',desc:'+50 % d\'XP par seconde et plus de places.',ic:'assets/tower.png',price:()=>{const b=lowBall();return b?Math.round(220*Math.pow(2.1,b.lvl)):0},max:()=>!lowBall(),buy:()=>{lowBall().lvl++}},
+ {id:'army',name:'Place dans l\'armée',desc:'Un Pokémon de plus sur le terrain (max 14).',ic:'sprites/Graphics/Items/MACHOBRACE.png',price:()=>Math.round(400*Math.pow(1.7,SAVE.army-4)),max:()=>SAVE.army>=14,buy:()=>SAVE.army++},
+ {h:'Objets et boosts (temporaires)'},
+ {id:'love',name:'Encens d\'amour',desc:'Pontes 2 fois plus rapides pendant 5 min (nouvelles pontes).',ic:'sprites/Graphics/Items/LUCKINCENSE.png',price:()=>250,buy:()=>addBoost('love',5)},
+ {id:'mut',name:'Pierre mutagène',desc:'+15 % de chance de mutation pendant 5 min.',ic:'sprites/Graphics/Items/BERSERKGENE.png',price:()=>400,buy:()=>addBoost('mut',5)},
+ {id:'shiny',name:'Charme chroma',desc:'Chance shiny ×3 pendant 10 min.',ic:'sprites/Graphics/Items/COMETSHARD.png',price:()=>1500,buy:()=>addBoost('shiny',10)},
+ {id:'mirror',name:'Gène miroir',desc:'Permet à un Pokémon seul de pondre (utilisable une fois dans un nid).',ic:'sprites/Graphics/Items/DNASPLICERS.png',price:()=>500,buy:()=>SAVE.items.mirror++},
+];
+const lowNest=()=>SAVE.nests.filter(n=>n.lvl<5).sort((a,b)=>a.lvl-b.lvl)[0];
+const lowInc=()=>SAVE.incs.filter(n=>n.lvl<7).sort((a,b)=>a.lvl-b.lvl)[0];
+const lowBall=()=>SAVE.balls.filter(n=>n.lvl<5).sort((a,b)=>a.lvl-b.lvl)[0];
+function addBoost(k,min){SAVE.boosts[k]=Math.max(Date.now(),SAVE.boosts[k]||0)+min*60000}
+function icHTML(ic){if(ic.startsWith(EGGDIR))return eggH(ic,48);const m=/^(.*)#(\d)$/.exec(ic);if(!m)return `<img src="${ic}" alt="" onerror="this.style.display='none'">`;const k=+m[2];if(m[1].includes('incubators'))return `<span style="display:block;width:46px;height:74px;background:url(${m[1]}) -${k*46}px 0/368px 74px no-repeat;image-rendering:pixelated"></span>`;return `<span style="display:block;width:44px;height:48px;background:url(${m[1]}) -${k*44}px 0 no-repeat;image-rendering:pixelated"></span>`}
+function renderShop(){
+  let h='',open=false;
+  SHOP.forEach((it,i)=>{if(it.h){if(open)h+='</div>';h+=`<h3 style="margin:16px 0 8px">${it.h}</h3><div class="shop">`;open=true;return}
+    const mx=it.max&&it.max(),p=it.price();const extra=it.id==='mirror'?` (tu en as ${SAVE.items.mirror})`:boostOn(it.id)?` · actif encore ${fmtT(SAVE.boosts[it.id]-Date.now())}`:'';
+    h+=`<div class="item"><div class="ic">${icHTML(it.ic)}</div><div class="tx"><b>${it.name}</b>${it.desc}${extra}</div><button class="go" data-act="buy" data-i="${i}" ${mx||SAVE.coins<p?'disabled':''}>${mx?'Max':`<span class="price">${COIN}${fmt(p)}</span>`}</button></div>`});
+  if(open)h+='</div>';
+  h+=`<h3 style="margin:22px 0 8px">Marché aux œufs (${EGG_SPECIES.length} espèces) <input id="eggQ" placeholder="Rechercher un Pokémon ou un n°" value="${esc(marketQ)}" style="font:inherit;padding:4px 8px;border:2px solid var(--ink);border-radius:8px"> <select id="eggT" style="font:inherit"><option value="">Tous les types</option>${Object.keys(TNAME).map(t=>`<option value="${t}" ${t===marketT?'selected':''}>${TNAME[t]}</option>`).join('')}</select></h3><div class="market" id="market"></div>`;
+  $('tab-shop').innerHTML=h;renderMarket();
+  $('eggQ').oninput=e=>{marketQ=e.target.value;renderMarket()};$('eggT').onchange=e=>{marketT=e.target.value;renderMarket()};
+}
+let marketQ='',marketT='';
+function renderMarket(){const q=marketQ.trim().toLowerCase();
+  const L=EGG_SPECIES.filter(n=>{const d=DEX[n];return(!marketT||d.t1===marketT||d.t2===marketT)&&(!q||d.name.toLowerCase().includes(q)||String(n)===q.replace(/^#?0*/,''))});
+  $('market').innerHTML=L.map(n=>{const d=DEX[n],p=eggPrice(n),ev=[];let c=n;for(let k=0;k<2;k++){const t=evoTargets(c);if(!t.length)break;ev.push(t.map(x=>DEX[x].name).join('/'));c=t[0]}
+    return `<div class="mk ${LEGEND.has(n)?'leg':''}">${LEGEND.has(n)?'<span class="lg">Légendaire</span>':''}${eggH(n,44)}<b>#${pad3(n)} ${esc(d.name)}</b>${tyHTML(d)}<span class="muted">${ev.length?'→ '+esc(ev.join(' → ')):'Pas d\'évolution'}</span><button class="go sm" data-act="buyEgg" data-n="${n}" ${SAVE.coins<p?'disabled':''}><span class="price">${COIN}${fmt(p)}</span></button></div>`}).join('')||'<p class="muted">Aucun œuf trouvé.</p>';
+}
+function buyEgg(n){const p=eggPrice(n);if(SAVE.coins<p)return;SAVE.coins-=p;SAVE.eggs.push(eggOf(n));dexSee(n);toast(`🥚 Œuf de <b>${esc(DEX[n].name)}</b> acheté ! Il est dans le sac d'œufs.`);dirty=true;saveGame();renderTop();renderMarket()}
+function buy(i){const it=SHOP[i];const p=it.price();if((it.max&&it.max())||SAVE.coins<p)return;SAVE.coins-=p;it.buy();toast(`Acheté : <b>${it.name}</b>`);dirty=true;saveGame();renderShop();renderTop()}
+
+/* =====================================================================
+   POKÉDEX
+   ===================================================================== */
+function renderDex(){
+  const own=Object.values(SAVE.dex).filter(d=>d.o).length,sh=Object.values(SAVE.dex).filter(d=>d.sh).length;
+  $('tab-dex').innerHTML=`<div class="panel"><h3>Pokédex · ${own}/${NDEX} possédés · ${sh} shiny</h3><div class="dexgrid">${DEXRAW.map(r=>{const n=r[0],d=SAVE.dex[n]||{};const c=d.o?'':d.s?'seen':'un';return `<div class="dc ${c}" data-act="dexInfo" data-n="${n}">${d.sh?'<span class="s">★</span>':''}${sprHTML(n,false,48,true).replace('<img ','<img loading="lazy" ')}<div>${pad3(n)}</div><div>${d.s?esc(DEX[n].name):'???'}</div></div>`}).join('')}</div></div>`;
+}
+function dexInfo(n){const d=DEX[n],s=SAVE.dex[n]||{};if(!s.s){openModal('<h2>???</h2><p>Tu n\'as pas encore rencontré ce Pokémon.</p>');return}
+  const ev=evoTargets(n);
+  openModal(`<h2>${pad3(n)} · ${esc(d.name)}</h2><div class="flexr">${sprHTML(n,false,96)}${s.sh?sprHTML(n,true,96):''}<div>${tyHTML(d)}<p>PV ${d.hp} · Att ${d.atk} · Déf ${d.def} · Att.Spé ${d.spa} · Vit ${d.spd}</p><p>Rareté : ${['Commun','Peu commun','Rare','Très rare'][d.rar]||'Spécial'}</p>${ev.length?`<p>Évolue au niveau ${evoLevel(n)} en ${ev.map(x=>esc(DEX[x].name)).join(', ')}</p>`:''}<p>Œuf : ${eggH(n,40)}</p></div></div>`)}
+
+/* =====================================================================
+   COMBAT : terrains, armées, IA
+   ===================================================================== */
+const TW=30,GW=32,GH=18,CW=GW*TW,CH=GH*TW,PZ=9,EZ=GW-10;
+/* tree: [colonne, rangée(0 haut / 1 bas), forme(0 rond,1 palmier,2 grand)] */
+const BIOMES=[
+ {name:'Prairie',g:['#7cc46a','#6db85e','#8bd078'],sh:'#d9c98a',liq:'#5aa0e6',liq2:'#3f84cf',trees:[[1,0,0],[2,0,0],[1,0,2]],dens:.05,types:['neutre','plante','insecte','vol','foudre'],fl:['#fff','#ffd84a']},
+ {name:'Forêt profonde',g:['#4f9a52','#46904a','#5aa65c'],sh:'#b8a874',liq:'#4a8ccc',liq2:'#356fb0',trees:[[0,1,0],[1,1,0],[0,1,2],[3,1,2]],dens:.1,types:['insecte','plante','poison','neutre','spectre'],fl:['#f7a8d0']},
+ {name:'Désert',g:['#e8d08a','#dfc47a','#efd99a'],sh:'#cfb070',liq:'#4fb2d8',liq2:'#2f92c0',trees:[[3,0,1],[5,0,1],[4,0,1]],dens:.03,types:['sol','roche','feu','combat'],fl:['#c8a060']},
+ {name:'Toundra',g:['#eef4fa','#e2ecf6','#f8fbff'],sh:'#c9d8e6',liq:'#8fd0f0',liq2:'#6ab8e0',trees:[[7,0,0],[8,0,0],[7,0,2],[8,0,2]],dens:.05,types:['glace','eau','acier','neutre'],fl:['#bfe6ff']},
+ {name:'Bois d\'automne',g:['#c9a35a','#bd9550','#d4b068'],sh:'#a88a5a',liq:'#5a96d0',liq2:'#4078b8',trees:[[3,0,0],[5,0,0],[3,0,2],[5,0,2]],dens:.07,types:['tenebres','psy','neutre','fee','spectre'],fl:['#e86a3a','#f2b632']},
+ {name:'Volcan',g:['#5e4a44','#54413c','#6a5550'],sh:'#3a2a26',liq:'#f06a2a',liq2:'#c8401a',lava:1,trees:[[6,1,0],[7,1,0],[7,1,2]],dens:.04,types:['feu','roche','dragon','sol'],fl:['#ff9a3a']},
+ {name:'Marais',g:['#6f8a52','#667f4a','#7a965c'],sh:'#5a6a40',liq:'#5f8a7a',liq2:'#4a7062',trees:[[2,1,0],[4,1,0],[2,1,2]],dens:.07,types:['poison','eau','spectre','insecte'],fl:['#c9a0e0']},
+ {name:'Côte tropicale',g:['#f0dca0','#e8d090','#f5e4b0'],sh:'#e0c888',liq:'#3fb8d8',liq2:'#2898c0',trees:[[1,0,1],[2,0,1],[0,0,1]],dens:.04,types:['eau','vol','dragon','psy'],fl:['#ff7aa0','#fff']}];
+const biomeOf=st=>BIOMES[Math.floor((st-1)/10)%BIOMES.length];
+const IMG={};function img(src){if(!IMG[src]){const i=new Image();i.onload=()=>i.ok=1;i.onerror=()=>i.bad=1;i.src=src;IMG[src]=i}return IMG[src]}
+function noiseFn(seed){const R=rng(seed);const P=new Float32Array(64*64).map(()=>R());const v=(x,y)=>P[((y&63)*64)+(x&63)];
+  return(x,y)=>{const xi=Math.floor(x),yi=Math.floor(y),xf=x-xi,yf=y-yi,sx=xf*xf*(3-2*xf),sy=yf*yf*(3-2*yf);const a=v(xi,yi),b=v(xi+1,yi),c=v(xi,yi+1),d=v(xi+1,yi+1);return a+(b-a)*sx+(c-a)*sy+(a-b-c+d)*sx*sy}}
+function genMap(stage){
+  const R=rng(stage*9973+17),bi=biomeOf(stage);
+  const liq=new Uint8Array(GW*GH),tree=new Uint8Array(GW*GH),bridge=new Uint8Array(GW*GH);
+  const I=(x,y)=>y*GW+x;
+  const river=stage>1&&R()<.8;
+  if(river){let x=12+R()*6;const w=R()<.35?3:2;for(let y=0;y<GH;y++){x=clamp(x+(R()-.5)*1.4,11,GW-14);for(let k=0;k<w;k++)liq[I(Math.round(x)+k,y)]=1}
+    const nb=1+Math.floor(R()*3),rows=[];while(rows.length<nb){const r=2+Math.floor(R()*(GH-4));if(rows.every(q=>Math.abs(q-r)>3))rows.push(r)}
+    rows.forEach(r=>{for(let x2=0;x2<GW;x2++)if(liq[I(x2,r)])bridge[I(x2,r)]=1})}
+  const ponds=Math.floor(R()*(river?2:3));
+  for(let p=0;p<ponds;p++){const cx=11+Math.floor(R()*10),cy=2+Math.floor(R()*(GH-4)),rx=1+R()*1.6,ry=1+R()*1.2;for(let y=0;y<GH;y++)for(let x=0;x<GW;x++){if(((x-cx)/rx)**2+((y-cy)/ry)**2<=1)liq[I(x,y)]=1}}
+  for(let i=0;i<GW*GH;i++)if(bridge[i])liq[i]=1;
+  const nearB=(x,y)=>{for(let dy=-1;dy<=1;dy++)for(let dx=-2;dx<=2;dx++){const xx=x+dx,yy=y+dy;if(xx>=0&&yy>=0&&xx<GW&&yy<GH&&bridge[I(xx,yy)])return true}return false};
+  const nearLiq=(x,y)=>{for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){const xx=x+dx,yy=y+dy;if(xx>=0&&yy>=0&&xx<GW&&yy<GH&&liq[I(xx,yy)])return true}return false};
+  const trees=[];
+  for(let y=2;y<GH;y++)for(let x=1;x<GW-1;x++){const zone=x<=PZ||x>=EZ;const p=bi.dens*(zone?.35:1);if(R()<p){const v=bi.trees[Math.floor(R()*bi.trees.length)];if(v[2]===2&&y<3)continue;if(!nearLiq(x,y)&&!nearB(x,y)&&trees.every(t=>Math.max(Math.abs(t.x-x),Math.abs(t.y-y))>=2)){tree[I(x,y)]=1;trees.push({x,y,v})}}}
+  const M={stage,bi,liq,tree,bridge,trees,seed:stage*31+5};M.cv=drawTerrain(M);return M;
+}
+function drawTerrain(M){
+  const cv=document.createElement('canvas');cv.width=CW;cv.height=CH;const x=cv.getContext('2d');const bi=M.bi;
+  const im=x.createImageData(CW,CH),D=im.data;const nz=noiseFn(M.seed),nz2=noiseFn(M.seed+7);
+  const hex=h=>[parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)];
+  const G=bi.g.map(hex),S=hex(bi.sh),L1=hex(bi.liq),L2=hex(bi.liq2);
+  const lq=(tx,ty)=>tx<0||ty<0||tx>=GW||ty>=GH?0:M.liq[ty*GW+tx];
+  for(let py=0;py<CH;py+=2)for(let px=0;px<CW;px+=2){
+    const fx=px/TW-.5,fy=py/TW-.5,ix=Math.floor(fx),iy=Math.floor(fy),ax=fx-ix,ay=fy-iy;
+    const sx=ax*ax*(3-2*ax),sy=ay*ay*(3-2*ay);
+    let w=lq(ix,iy)*(1-sx)*(1-sy)+lq(ix+1,iy)*sx*(1-sy)+lq(ix,iy+1)*(1-sx)*sy+lq(ix+1,iy+1)*sx*sy;
+    w+=(nz(px/22,py/22)-.5)*.3+(nz2(px/7,py/7)-.5)*.08;
+    let c;
+    if(w>.72)c=L2;else if(w>.5)c=L1;else if(w>.38){c=S}
+    else{const n=nz2(px/64,py/64)+(nz(px/11,py/11)-.5)*.18;c=n<.32?G[1]:n>.7?G[2]:G[0]}
+    for(let dy=0;dy<2;dy++)for(let dx=0;dx<2;dx++){const o=((py+dy)*CW+px+dx)*4;D[o]=c[0];D[o+1]=c[1];D[o+2]=c[2];D[o+3]=255}
+  }
+  x.putImageData(im,0,0);
+  /* reflets dans le liquide */
+  const R=rng(M.seed+3);x.fillStyle='rgba(255,255,255,.35)';
+  for(let i=0;i<GW*GH;i++)if(M.liq[i]&&!M.bridge[i]&&R()<.35){const tx=i%GW,ty=Math.floor(i/GW);x.fillRect(tx*TW+4+R()*14|0,ty*TW+6+R()*16|0,6,2)}
+  /* fleurs et touffes */
+  for(let k=0;k<160;k++){const tx=Math.floor(R()*GW),ty=Math.floor(R()*GH),i=ty*GW+tx;if(M.liq[i]||M.tree[i])continue;const px=tx*TW+R()*TW|0,py=ty*TW+R()*TW|0;if(R()<.5){x.fillStyle='rgba(0,0,0,.12)';x.fillRect(px,py,2,4);x.fillRect(px+3,py+1,2,3)}else{x.fillStyle=pick(bi.fl);x.fillRect(px,py,3,3);x.fillStyle='rgba(0,0,0,.15)';x.fillRect(px,py+3,3,1)}}
+  /* ponts */
+  for(let ty=0;ty<GH;ty++){const xs=[];for(let tx=0;tx<GW;tx++)if(M.bridge[ty*GW+tx])xs.push(tx);if(!xs.length)continue;
+    const x0=xs[0]*TW-10,x1=(xs[xs.length-1]+1)*TW+10,y0=ty*TW+3,h=TW-6;
+    x.fillStyle='rgba(0,0,0,.25)';x.fillRect(x0+2,y0+4,x1-x0,h);
+    x.fillStyle='#9a6a3e';x.fillRect(x0,y0,x1-x0,h);
+    for(let px=x0;px<x1;px+=6){x.fillStyle=(px/6)%2?'#b07c4a':'#a37145';x.fillRect(px,y0,5,h)}
+    x.fillStyle='#6a4426';x.fillRect(x0,y0,x1-x0,3);x.fillRect(x0,y0+h-3,x1-x0,3);
+  }
+  return cv;
+}
+/* --- passabilité et champs de déplacement --- */
+function unitMode(d,bi){const ty=[d.t1,d.t2];if(ty.includes('vol')||d.t1==='spectre')return 'fly';if(bi.lava?ty.includes('feu'):ty.includes('eau'))return 'swim';return 'ground'}
+function passable(M,i,mode){if(mode==='fly')return true;if(M.tree[i])return false;if(M.liq[i]&&!M.bridge[i])return mode==='swim';return true}
+function buildField(M,sources,mode){const F=new Float32Array(GW*GH).fill(Infinity);const q=[];sources.forEach(i=>{if(F[i]!==0){F[i]=0;q.push(i)}});
+  for(let h=0;h<q.length;h++){const i=q[h],x=i%GW,y=(i/GW)|0;for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){if(!dx&&!dy)continue;const nx=x+dx,ny=y+dy;if(nx<0||ny<0||nx>=GW||ny>=GH)continue;const j=ny*GW+nx;if(!passable(M,j,mode))continue;if(dx&&dy&&(!passable(M,y*GW+nx,mode)||!passable(M,ny*GW+x,mode)))continue;const c=F[i]+(dx&&dy?1.414:1);if(c<F[j]){F[j]=c;q.push(j)}}}return F}
+/* --- génération de l'armée ennemie --- */
+/* plus le niveau dépasse le seuil d'évolution, plus la forme évoluée est probable */
+function evolveTo(n,lv,R){for(let k=0;k<3;k++){const t=evoTargets(n);if(!t.length)break;const L=evoLevel(n);const p=lv<L-4?0:lv<L?.12:clamp(.45+(lv-L)*.06,0,.95);if(R()>=p)break;n=t[Math.floor(R()*t.length)]}return n}
+function genEnemies(stage,M){
+  const R=rng(stage*131+7),bi=M.bi,lv=Math.max(2,Math.round(2+stage*1.45));
+  const cnt=Math.min(3+Math.floor(stage/2),14),rarCap=stage<8?1:2;
+  const inBi=d=>bi.types.includes(d.t1)||bi.types.includes(d.t2);
+  let pool=EGG_SPECIES.map(n=>DEX[n]).filter(d=>d.rar<=rarCap&&!LEGEND.has(d.n)&&d.n!==132&&inBi(d));
+  if(pool.length<3)pool=EGG_SPECIES.map(n=>DEX[n]).filter(d=>d.rar<=Math.max(rarCap,2)&&!LEGEND.has(d.n)&&inBi(d));
+  const list=[];
+  for(let k=0;k<cnt;k++){const b=pool[Math.floor(R()*pool.length)].n,l=Math.max(1,lv+Math.floor(R()*3)-1);list.push({n:evolveTo(b,l,R),lv:l,g:{hp:R()*Math.min(31,4+stage)|0,atk:R()*Math.min(31,4+stage)|0,def:R()*Math.min(31,4+stage)|0,spd:R()*Math.min(31,4+stage)|0},sh:false})}
+  if(stage%5===0){const legend=stage%10===0;const ok=d=>legend?LEGEND.has(d.n)&&d.n!==150:d.rar>=2&&!LEGEND.has(d.n)&&d.n!==132;let bp=EGG_SPECIES.map(n=>DEX[n]).filter(d=>ok(d)&&inBi(d));if(!bp.length)bp=EGG_SPECIES.map(n=>DEX[n]).filter(ok);
+    const b=bp[Math.floor(R()*bp.length)].n,l=lv+3;list[0]={n:evolveTo(b,l+6,R),lv:l,g:randGenesR(R,10,31),sh:R()<.1,boss:1}}
+  return list;
+}
+function randGenesR(R,a,b){const g={};GK.forEach(k=>g[k]=a+Math.floor(R()*(b-a+1)));return g}
+/* --- état du combat --- */
+let B=null,battleSel=null,bSpeed=1;
+function setupStage(st){
+  st=clamp(st,1,SAVE.best+1);const M=genMap(st);
+  const E=genEnemies(st,M);
+  const free=[];for(let y=1;y<GH-1;y++)for(let x=EZ+1;x<GW-1;x++)free.push([x,y]);
+  const R=rng(st*77+3);
+  const units=E.map(e=>{const d=DEX[e.n],mode=unitMode(d,M.bi);let k=0,p;do{p=free.splice(Math.floor(R()*free.length),1)[0];k++}while(p&&!passable(M,p[1]*GW+p[0],mode)&&k<50);dexSee(e.n);return mkUnit(e,1,p[0]*TW+TW/2,p[1]*TW+TW/2,M)});
+  B={stage:st,M,units,proj:[],fx:[],phase:'place',placed:[],t:0,fieldT:0,F:null,res:null};
+  battleSel=null;renderBattleHead();renderRoster();
+}
+function mkUnit(m,team,x,y,M){const s=stats(m),d=DEX[m.n];const boss=!!m.boss;
+  return{m,team,n:m.n,sh:m.sh,x,y,hp:s.hp*T.hpMul*(boss?3:1),max:s.hp*T.hpMul*(boss?3:1),atk:s.atk,spa:s.spa,def:s.def,spd:s.spd,lv:m.lv,t1:d.t1,t2:d.t2,mode:unitMode(d,M.bi),ranged:RANGED.has(d.t1)||d.spa>d.atk+15,cd:rnd()*.6,dir:team?1:2,fr:0,ft:0,moving:false,boss,scale:boss?1.45:1,flash:0,tgt:null,tt:0,lunge:0}}
+function renderBattleHead(){
+  if(!B)return;const bi=B.M.bi,used=B.placed.length;
+  $('bhead').innerHTML=`<button class="sm" data-act="stPrev" ${B.stage<=1||B.phase==='fight'?'disabled':''}>◀</button><span class="title">Tableau ${B.stage}${B.stage%10===0?' · BOSS LÉGENDAIRE':B.stage%5===0?' · BOSS':''}</span><button class="sm" data-act="stNext" ${B.stage>SAVE.best||B.phase==='fight'?'disabled':''}>▶</button>
+   <span class="biome">${bi.name}</span><span class="biome">Ennemis : ${B.units.filter(u=>u.team).length} · Nv ≈ ${Math.round(2+B.stage*1.45)}</span>
+   ${B.phase==='place'?`<span>Armée : <b>${used}/${SAVE.army}</b></span><button class="sm" data-act="autoPlace">Placement auto</button><button class="sm" data-act="clearPlace">Vider</button><button class="go" data-act="fight" ${used?'':'disabled'}>⚔ Combat !</button>`:''}
+   ${B.phase==='fight'?`<button class="sm" data-act="speed">Vitesse ×${bSpeed}</button><button class="sm" data-act="flee">Abandonner</button>`:''}`;
+}
+function renderRoster(){
+  if(!B)return;const L=SAVE.mons.slice().sort((a,b)=>pc(b)-pc(a));
+  $('roster').innerHTML=B.phase!=='place'?'':L.map(m=>{const busy=monStatus(m.u),on=B.placed.some(p=>p.u===m.u);return `<div class="rcard ${busy?'busy':''} ${on?'on':''} ${battleSel===m.u?'sel':''}" data-act="rsel" data-u="${m.u}" title="${statusTxt(busy)}">${sprHTML(m.n,m.sh,48)}<div>${esc(DEX[m.n].name)}</div><div>Nv ${m.lv}${m.sh?' ★':''}</div><div class="muted">${busy?statusTxt(busy):'PC '+pc(m)}</div></div>`}).join('')||'<p>Aucun Pokémon.</p>';
+}
+function canvasPos(e){const r=$('bcv').getBoundingClientRect();return[(e.clientX-r.left)/r.width*CW,(e.clientY-r.top)/r.height*CH]}
+function placeAt(px,py){
+  if(!B||B.phase!=='place')return;
+  const hit=B.placed.findIndex(p=>Math.hypot(p.x-px,p.y-py)<16);
+  if(hit>=0){B.placed.splice(hit,1);renderBattleHead();renderRoster();return}
+  if(!battleSel){toast('Choisis d\'abord un Pokémon dans la liste sous le terrain.');return}
+  const tx=Math.floor(px/TW),ty=Math.floor(py/TW);if(tx>PZ){toast('Place ton armée dans la zone bleue, à gauche.');return}
+  const m=mon(battleSel);if(!m)return;
+  if(!passable(B.M,ty*GW+tx,unitMode(DEX[m.n],B.M.bi))){toast('Ce Pokémon ne peut pas se placer ici.');return}
+  if(B.placed.some(p=>Math.floor(p.x/TW)===tx&&Math.floor(p.y/TW)===ty))return;
+  const ex=B.placed.findIndex(p=>p.u===m.u);
+  if(ex<0&&B.placed.length>=SAVE.army){toast('Armée complète. Achète des places dans la Boutique.');return}
+  if(ex>=0)B.placed.splice(ex,1);
+  B.placed.push({u:m.u,x:tx*TW+TW/2,y:ty*TW+TW/2});
+  const nxt=SAVE.mons.filter(x=>!monStatus(x.u)&&!B.placed.some(p=>p.u===x.u)).sort((a,b)=>pc(b)-pc(a))[0];battleSel=nxt?nxt.u:null;
+  renderBattleHead();renderRoster();
+}
+function autoPlace(){
+  B.placed=[];const L=freeMons().sort((a,b)=>pc(b)-pc(a)).slice(0,SAVE.army);
+  const spots=[];for(let x=PZ-1;x>=1;x--)for(let y=2;y<GH-2;y++)spots.push([x,y]);
+  spots.sort((a,b)=>(b[0]-a[0])*3+(Math.abs(a[1]-GH/2)-Math.abs(b[1]-GH/2))/2);
+  L.forEach(m=>{const md=unitMode(DEX[m.n],B.M.bi);const melee=!(RANGED.has(DEX[m.n].t1)||DEX[m.n].spa>DEX[m.n].atk+15);
+    const s=spots.find(([x,y])=>passable(B.M,y*GW+x,md)&&(melee?x>=PZ-3:x<PZ-2)&&!B.placed.some(p=>Math.floor(p.x/TW)===x&&Math.floor(p.y/TW)===y))||spots.find(([x,y])=>passable(B.M,y*GW+x,md)&&!B.placed.some(p=>Math.floor(p.x/TW)===x&&Math.floor(p.y/TW)===y));
+    if(s)B.placed.push({u:m.u,x:s[0]*TW+TW/2,y:s[1]*TW+TW/2})});
+  renderBattleHead();renderRoster();
+}
+function startFight(){
+  if(!B.placed.length)return;
+  B.placed=B.placed.filter(p=>{const m=mon(p.u);return m&&!monStatus(p.u)});
+  B.units=B.units.filter(u=>u.team===1);
+  B.placed.forEach(p=>B.units.push(mkUnit(mon(p.u),0,p.x,p.y,B.M)));
+  /* Métamorph se transforme en l'ennemi le plus fort */
+  const foes=B.units.filter(u=>u.team===1).sort((a,b)=>b.max-a.max);
+  B.units.filter(u=>u.n===132).forEach(u=>{const f=foes[0];if(!f)return;const fake={n:f.n,lv:u.lv,g:u.m.g,sh:u.sh};const s=stats(fake),d=DEX[f.n];Object.assign(u,{n:f.n,atk:s.atk,spa:s.spa,def:s.def,spd:s.spd,t1:d.t1,t2:d.t2,mode:unitMode(d,B.M.bi),ranged:RANGED.has(d.t1)||d.spa>d.atk+15});B.fx.push({k:'txt',x:u.x,y:u.y-30,t:0,s:'Morphing !',c:'#c03cff'})});
+  B.phase='fight';B.t=0;B.fieldT=0;renderBattleHead();renderRoster();
+}
+function dmgCalc(a,d){const P=a.ranged?a.spa:a.atk;const base=((2*a.lv/5+2)*T.pow*P/Math.max(1,d.def))/50+2;const e=typeEff(a.t1,d.t1,d.t2);return[base*e*(.85+rnd()*.15)*(a.boss?1.25:1),e]}
+function hit(a,d){if(d.hp<=0)return;const[v,e]=dmgCalc(a,d);d.hp-=v;d.flash=.12;B.fx.push({k:'txt',x:d.x+(rnd()*10-5),y:d.y-26*d.scale,t:0,s:Math.max(1,Math.round(v))+'',c:e>1?'#ff4a2a':e<1?'#8a8a8a':'#fff'});if(e>1&&rnd()<.4)B.fx.push({k:'txt',x:d.x,y:d.y-40,t:0,s:'Super efficace !',c:'#ffd23a'});B.fx.push({k:'hit',x:d.x,y:d.y-12,t:0,c:TCOL[a.t1]||'#fff'});if(d.hp<=0){d.hp=0;B.fx.push({k:'poof',x:d.x,y:d.y,t:0})}}
+function stepBattle(dt){
+  B.t+=dt;B.fieldT-=dt;
+  const alive=B.units.filter(u=>u.hp>0);
+  if(B.fieldT<=0){B.fieldT=.35;B.F=[0,1].map(t=>{const src=alive.filter(u=>u.team!==t).map(u=>clamp(Math.floor(u.y/TW),0,GH-1)*GW+clamp(Math.floor(u.x/TW),0,GW-1));const o={};['ground','swim','fly'].forEach(md=>o[md]=buildField(B.M,src,md));return o})}
+  for(const u of alive){
+    u.cd-=dt;u.flash=Math.max(0,u.flash-dt);u.lunge=Math.max(0,u.lunge-dt);u.tt-=dt;
+    if(!u.tgt||u.tgt.hp<=0||u.tt<=0){u.tt=.3;let best=null,bd=1e9;for(const v of alive)if(v.team!==u.team&&v.hp>0){const dd=Math.hypot(v.x-u.x,v.y-u.y);if(dd<bd){bd=dd;best=v}}u.tgt=best}
+    const t=u.tgt;if(!t){u.moving=false;continue}
+    const dx=t.x-u.x,dy=t.y-u.y,dist=Math.hypot(dx,dy);const range=u.ranged?125:20+10*(u.scale+t.scale);
+    u.moving=false;
+    if(dist<=range){u.dir=Math.abs(dx)>Math.abs(dy)?(dx<0?1:2):(dy<0?3:0);
+      if(u.cd<=0){u.cd=clamp(1.4-u.spd/250,.55,1.4);if(u.ranged)B.proj.push({x:u.x,y:u.y-14*u.scale,t,a:u,c:TCOL[u.t1]||'#fff'});else{u.lunge=.15;hit(u,t)}}}
+    else{const F=B.F[u.team][u.mode],tx=clamp(Math.floor(u.x/TW),0,GW-1),ty=clamp(Math.floor(u.y/TW),0,GH-1);let gx=t.x,gy=t.y;
+      if(u.mode!=='fly'){let bi=-1,bv=F[ty*GW+tx];for(let oy=-1;oy<=1;oy++)for(let ox=-1;ox<=1;ox++){const nx=tx+ox,ny=ty+oy;if(nx<0||ny<0||nx>=GW||ny>=GH)continue;const j=ny*GW+nx;if(F[j]<bv-.01){bv=F[j];bi=j}}
+        if(bi>=0&&F[ty*GW+tx]>1.5){gx=(bi%GW)*TW+TW/2;gy=Math.floor(bi/GW)*TW+TW/2}else if(!isFinite(F[ty*GW+tx])){continue}}
+      const ddx=gx-u.x,ddy=gy-u.y,dd=Math.hypot(ddx,ddy)||1,sp=(28+u.spd*.4)*dt;u.x+=ddx/dd*Math.min(sp,dd);u.y+=ddy/dd*Math.min(sp,dd);u.moving=true;u.dir=Math.abs(ddx)>Math.abs(ddy)?(ddx<0?1:2):(ddy<0?3:0)}
+    for(const v of alive)if(v!==u){const ox=u.x-v.x,oy=u.y-v.y,d2=Math.hypot(ox,oy),min=14*(u.scale+v.scale)/2+6;if(d2>0&&d2<min){const f=(min-d2)/min*30*dt;const nx=u.x+ox/d2*f,ny=u.y+oy/d2*f,i=clamp(Math.floor(ny/TW),0,GH-1)*GW+clamp(Math.floor(nx/TW),0,GW-1);if(passable(B.M,i,u.mode)){u.x=nx;u.y=ny}}}
+    u.x=clamp(u.x,6,CW-6);u.y=clamp(u.y,10,CH-4);
+    if(u.moving){u.ft+=dt;if(u.ft>.14){u.ft=0;u.fr=(u.fr+1)%4}}else u.fr=0;
+  }
+  B.proj=B.proj.filter(p=>{const dx=p.t.x-p.x,dy=(p.t.y-12)-p.y,d=Math.hypot(dx,dy),s=300*dt;if(d<=s||p.t.hp<=0){if(p.t.hp>0&&p.a.hp>=0)hit(p.a,p.t);return false}p.x+=dx/d*s;p.y+=dy/d*s;return true});
+  B.fx=B.fx.filter(f=>(f.t+=dt)<(f.k==='txt'?.9:.4));
+  const a0=B.units.some(u=>u.team===0&&u.hp>0),a1=B.units.some(u=>u.team===1&&u.hp>0);
+  if(!a0||!a1||B.t>180)endFight(a0&&!a1);
+}
+function endFight(win){
+  B.phase='end';const st=B.stage,first=win&&st>SAVE.best;
+  let coins=0,egg=null,xp=0;
+  if(win){coins=Math.round((30+st*20)*(st%5===0?2.5:1)*(first?1:.5));SAVE.coins+=coins;if(first){SAVE.best=st}
+    const boss=B.units.find(u=>u.boss);if(boss&&first){egg={id:SAVE.uid++,n:baseOf(boss.n,true),lv:Math.max(5,Math.round(boss.lv*.6)),g:randGenes(10,25),sh:boss.sh||rnd()<T.sh0,mut:0,src:'boss'};SAVE.eggs.push(egg)}
+    if(SAVE.tuto>=5&&SAVE.tuto<6)setTuto(6)}
+  xp=Math.round(15+st*(win?14:5));B.placed.forEach(p=>{const m=mon(p.u);if(m)gainXP(m,xp)});
+  B.res={win,coins,egg,xp};dirty=true;saveGame();renderTop();renderBattleHead();
+  openModal(`<h2>${win?'🏆 Victoire !':'💥 Défaite...'}</h2>
+   <p>Tableau ${st} · ${B.M.bi.name}</p>
+   ${win?`<p class="price">${COIN} +${fmt(coins)} pièces${first?'':' (rejouer rapporte moitié moins)'}</p>`:'<p>Fais se reproduire tes Pokémon pour des bébés plus forts, entraîne-les, ou change ton placement.</p>'}
+   <p>+${xp} XP pour chaque Pokémon de ton armée.</p>
+   ${egg?`<p>${eggH(egg.n,48)} Le boss a laissé un œuf de <b>${esc(DEX[egg.n].name)}</b> !</p>`:''}
+   <div class="flexr">${win?`<button class="go" data-act="nextStage">Tableau suivant ▶</button>`:''}<button data-act="retry">${win?'Rejouer ce tableau':'Réessayer'}</button></div>`);
+}
+/* --- rendu --- */
+const bcx=()=>$('bcv').getContext('2d');
+function drawUnit(x,u,ghost){
+  const s=62*u.scale,im=img(ovSrc(u.n,u.sh)),lx=u.lunge>0?(u.dir===2?4:u.dir===1?-4:0):0;
+  x.fillStyle='rgba(0,0,0,.25)';x.beginPath();x.ellipse(u.x,u.y,12*u.scale,5*u.scale,0,0,7);x.fill();
+  x.strokeStyle=u.team?'#e0604f':'#5f9be8';x.lineWidth=2;x.beginPath();x.ellipse(u.x,u.y,13*u.scale,6*u.scale,0,0,7);x.stroke();
+  if(ghost)x.globalAlpha=.85;
+  if(im.ok){x.drawImage(im,u.fr*64,u.dir*64,64,64,Math.round(u.x-s/2+lx),Math.round(u.y-s+12*u.scale),s,s);
+    if(u.flash>0){x.globalCompositeOperation='lighter';x.globalAlpha=.6;x.drawImage(im,u.fr*64,u.dir*64,64,64,Math.round(u.x-s/2+lx),Math.round(u.y-s+12*u.scale),s,s);x.globalAlpha=1;x.globalCompositeOperation='source-over'}}
+  else{x.fillStyle=TCOL[u.t1]||'#aaa';x.beginPath();x.arc(u.x,u.y-12,10*u.scale,0,7);x.fill()}
+  x.globalAlpha=1;
+  if(u.hp!==undefined&&B.phase!=='place'){const w=26*u.scale,y=u.y-s+14*u.scale;x.fillStyle='#2a1a12';x.fillRect(u.x-w/2-1,y-1,w+2,5);x.fillStyle=u.team?'#e0604f':'#5fb86a';x.fillRect(u.x-w/2,y,w*u.hp/u.max,3)}
+  x.font='bold 9px sans-serif';x.textAlign='center';x.fillStyle='#fff';x.strokeStyle='#2a1a12';x.lineWidth=3;const lt=(u.boss?'👑 ':'')+'Nv'+u.lv;x.strokeText(lt,u.x,u.y+12);x.fillText(lt,u.x,u.y+12);
+}
+function drawTree(x,t){const im=img(TREE_IMG);const[c,r,k]=t.v;const sy=(r?264:0)+[0,50,100][k],sh=[50,50,57][k];const cx=t.x*TW+TW/2,by=t.y*TW+TW+4;
+  if(im.ok)x.drawImage(im,c*48,sy,48,sh,cx-36,by-sh*1.5,72,sh*1.5);else{x.fillStyle='#2f6a34';x.beginPath();x.arc(cx,by-30,18,0,7);x.fill()}}
+function drawBattle(){
+  if(!B)return;const x=bcx();x.imageSmoothingEnabled=false;
+  x.drawImage(B.M.cv,0,0);
+  if(B.phase==='place'){x.fillStyle='rgba(95,155,232,.08)';x.fillRect(0,0,(PZ+1)*TW,CH);x.strokeStyle='rgba(60,120,220,.75)';x.setLineDash([6,6]);x.lineWidth=2;x.strokeRect(1,1,(PZ+1)*TW-2,CH-2);x.strokeStyle='rgba(224,96,79,.6)';x.strokeRect(EZ*TW+1,1,CW-EZ*TW-2,CH-2);x.setLineDash([])}
+  const D=[];B.M.trees.forEach(t=>D.push({y:t.y*TW+TW,f:()=>drawTree(x,t)}));
+  if(B.phase==='place'){B.units.forEach(u=>D.push({y:u.y,f:()=>drawUnit(x,u)}));B.placed.forEach(p=>{const m=mon(p.u);if(m){const u={x:p.x,y:p.y,n:m.n,sh:m.sh,fr:0,dir:2,scale:1,team:0,lv:m.lv,lunge:0,flash:0,t1:DEX[m.n].t1};D.push({y:p.y,f:()=>drawUnit(x,u,true)})}})}
+  else B.units.forEach(u=>{if(u.hp>0)D.push({y:u.y,f:()=>drawUnit(x,u)})});
+  D.sort((a,b)=>a.y-b.y).forEach(d=>d.f());
+  B.proj.forEach(p=>{x.fillStyle=p.c;x.beginPath();x.arc(p.x,p.y,4,0,7);x.fill();x.fillStyle='rgba(255,255,255,.8)';x.beginPath();x.arc(p.x-1,p.y-1,1.6,0,7);x.fill()});
+  B.fx.forEach(f=>{const q=f.t/(f.k==='txt'?.9:.4);if(f.k==='txt'){x.globalAlpha=1-q;x.font='bold 12px sans-serif';x.textAlign='center';x.lineWidth=3;x.strokeStyle='#2a1a12';x.strokeText(f.s,f.x,f.y-q*18);x.fillStyle=f.c;x.fillText(f.s,f.x,f.y-q*18);x.globalAlpha=1}
+    else if(f.k==='hit'){x.strokeStyle=f.c;x.globalAlpha=1-q;x.lineWidth=2;x.beginPath();x.arc(f.x,f.y,4+q*12,0,7);x.stroke();x.globalAlpha=1}
+    else if(f.k==='poof'){x.fillStyle='rgba(255,255,255,'+(1-q)+')';for(let k=0;k<6;k++){const an=k/6*6.28;x.beginPath();x.arc(f.x+Math.cos(an)*q*16,f.y-10+Math.sin(an)*q*10,4*(1-q)+1,0,7);x.fill()}}});
+  if(B.phase==='place'&&!B.placed.length){x.font='bold 16px sans-serif';x.textAlign='center';x.lineWidth=4;x.strokeStyle='#2a1a12';x.fillStyle='#fff';const s='Choisis un Pokémon en bas, puis clique dans la zone bleue';x.strokeText(s,CW/2,26);x.fillText(s,CW/2,26)}
+}
+let lastF=performance.now();
+function frame(now){const dt=Math.min(.05,(now-lastF)/1000);lastF=now;if(cur==='nursery')stepWalkers(dt);if(cur==='battle'&&B){if(B.phase==='fight'){for(let k=0;k<bSpeed;k++)stepBattle(dt);}drawBattle()}requestAnimationFrame(frame)}
+
+/* =====================================================================
+   INTERFACE GÉNÉRALE
+   ===================================================================== */
+let cur='nursery';
+function showTab(t){cur=t;document.querySelectorAll('nav button[data-tab]').forEach(b=>b.classList.toggle('on',b.dataset.tab===t));['nursery','team','battle','shop','dex'].forEach(k=>$('tab-'+k).hidden=k!==t);
+  if(t==='nursery')renderNursery();if(t==='team')renderTeam();if(t==='shop')renderShop();if(t==='dex')renderDex();if(t==='battle'){if(!B||B.phase==='end')setupStage(Math.min(SAVE.best+1,B&&B.phase==='end'?B.stage:SAVE.best+1));else{renderBattleHead();renderRoster()}}}
+function renderTop(){$('coins').textContent=fmt(SAVE.coins);$('eggN').textContent=SAVE.eggs.length+SAVE.incs.reduce((s,c)=>s+c.slots.length,0);$('stN').textContent=SAVE.best+1}
+function openModal(h){const b=$('mbody');delete b.dataset.cloud;b.innerHTML=h;$('modal').hidden=false;const x=document.querySelector('#modal .x');if(x)x.style.display=''}
+function closeModal(){$('modal').hidden=true;pickState=null}
+function toast(h){const d=document.createElement('div');d.className='toast';d.innerHTML=h;$('toasts').appendChild(d);setTimeout(()=>d.remove(),3200)}
+function setTip(s){$('tipTx').innerHTML=s;$('tip').hidden=false}
+const TUTO=['',"Clique sur le nid et place Métamorph et Pikachu ensemble : ils vont pondre un œuf.","Un œuf est prêt ! Clique dessus au-dessus du nid pour le récupérer.","Clique sur l'incubateur pour y mettre ton œuf.","L'œuf est prêt à éclore : clique sur « Tout faire éclore ».","Bravo ! Va dans l'onglet Combat et affronte le Tableau 1 avec ton armée.","Bien joué ! Gagne des pièces, achète des nids, des incubateurs et des punching-balls dans la Boutique pour agrandir ton armée."];
+function setTuto(k){if(SAVE.tuto>=k)return;SAVE.tuto=k;setTip(TUTO[k]);saveGame()}
+const ACT={
+  closeModal,tipOk:()=>$('tip').hidden=true,
+  nest:(t)=>openNest(+t.dataset.i),
+  collect:(t,e)=>{e.stopPropagation();collect(+t.dataset.i);closeModal()},
+  collectAll:()=>{let n=0;SAVE.nests.forEach((x,i)=>n+=collect(i,true));if(n){toast(`🥚 ${n} œuf${n>1?'s':''} récupéré${n>1?'s':''} !`);saveGame()}},
+  split:(t)=>{const n=SAVE.nests[+t.dataset.i];n.a=n.b=null;n.t0=0;closeModal();dirty=true;saveGame()},
+  pickMon:(t)=>{const u=+t.dataset.u;if(!pickState)return;if(!pickState.a){pickState.a=u;pickParent()}else placeCouple(u)},
+  solo:()=>{if(SAVE.items.mirror<=0)return;SAVE.items.mirror--;placeCouple('solo')},
+  inc:(t)=>openInc(+t.dataset.i),
+  incAdd:(t)=>incAdd(+t.dataset.i,+t.dataset.k),
+  incFill:(t)=>{const i=+t.dataset.i,c=SAVE.incs[i];while(SAVE.eggs.length&&c.slots.length<INC_CAP[c.lvl])incAdd(i,0,true);saveGame();openInc(i)},
+  hatch:(t)=>{const r=hatchOne(+t.dataset.i,+t.dataset.k);if(r){showHatch([r]);dirty=true;saveGame()}},
+  hatchAll:()=>hatchAll(),
+  ball:(t)=>openBall(+t.dataset.i),
+  train:(t)=>{const b=SAVE.balls[pickState.ball];if(b.mons.length<BALL_SLOT[b.lvl]){b.mons.push(+t.dataset.u);dirty=true;saveGame();openBall(pickState.ball)}},
+  unTrain:(t)=>{const b=SAVE.balls[+t.dataset.i];b.mons=b.mons.filter(u=>u!==+t.dataset.u);dirty=true;saveGame();openBall(+t.dataset.i)},
+  release:(t)=>{const m=mon(+t.dataset.u);if(!m)return;openModal(`<h2>Relâcher ${esc(DEX[m.n].name)} ?</h2><p>Tu gagnes ${relVal(m)} pièces. Ce choix est définitif.</p><div class="flexr"><button class="go" data-act="releaseOk" data-u="${m.u}">Relâcher</button><button data-act="closeModal">Annuler</button></div>`)},
+  releaseOk:(t)=>{const u=+t.dataset.u,m=mon(u);if(!m||monStatus(u))return;SAVE.coins+=relVal(m);SAVE.mons=SAVE.mons.filter(x=>x.u!==u);closeModal();dirty=true;saveGame();renderTeam();renderTop()},
+  buy:(t)=>buy(+t.dataset.i),buyEgg:(t)=>buyEgg(+t.dataset.n),
+  monInfo:(t)=>{const m=mon(+t.dataset.u);if(m)openModal(`<h2>${esc(DEX[m.n].name)}</h2><div class="flexr">${monCard(m)}</div>`)},
+  dexInfo:(t)=>dexInfo(+t.dataset.n),
+  rsel:(t)=>{const u=+t.dataset.u;if(monStatus(u)){toast('Ce Pokémon est occupé (nid ou entraînement).');return}battleSel=u;renderRoster()},
+  autoPlace:()=>autoPlace(),clearPlace:()=>{B.placed=[];renderBattleHead();renderRoster()},
+  fight:()=>startFight(),speed:()=>{bSpeed=bSpeed===1?2:bSpeed===2?4:1;renderBattleHead()},flee:()=>endFight(false),
+  stPrev:()=>setupStage(B.stage-1),stNext:()=>setupStage(B.stage+1),
+  nextStage:()=>{closeModal();setupStage(B.stage+1)},retry:()=>{closeModal();const keep=B.placed;setupStage(B.stage);B.placed=keep.filter(p=>mon(p.u)&&!monStatus(p.u));renderBattleHead();renderRoster()},
+  starter:(t)=>{const n=+t.dataset.n;addMon({n:132,lv:5,g:randGenes(5,15)});addMon({n:25,lv:5,g:randGenes(5,15)});addMon({n,lv:5,g:randGenes(8,18)});SAVE.tuto=0;closeModal();setTuto(1);dirty=true;saveGame()},
+  cloud:()=>openCloud(),signIn:()=>cloudSignIn(),signOut:()=>cloudSignOut()
+};
+document.addEventListener('click',e=>{const tb=e.target.closest('nav button[data-tab]');if(tb){showTab(tb.dataset.tab);return}const t=e.target.closest('[data-act]');if(t&&ACT[t.dataset.act]){ACT[t.dataset.act](t,e)}else if(e.target.id==='modal'&&SAVE.mons.length)closeModal()});
+$('bcv').addEventListener('click',e=>{const[x,y]=canvasPos(e);placeAt(x,y)});
+function starterModal(){const S=[1,4,7,152,155,158,252,255,258,387,390,393].filter(n=>EGG_HAS.has(n));
+  openModal(`<h2>Bienvenue dans PokeTabs Eggs Collector !</h2><p>Tu reçois <b>Métamorph</b> et <b>Pikachu</b> pour apprendre à faire des œufs. Choisis aussi ton starter :</p><div class="grid">${S.map(n=>`<div class="card pick" data-act="starter" data-n="${n}">${sprHTML(n,false,64)}<span class="nm">${esc(DEX[n].name)}</span>${tyHTML(DEX[n])}</div>`).join('')}</div>`);
+  document.querySelector('#modal .x').style.display='none'}
+
+/* =====================================================================
+   CONNEXION GOOGLE + SAUVEGARDE EN LIGNE (Firebase, même système que Métamorph)
+   Pour l'activer : crée le projet Firebase « poketabs-eggs-collector » et colle sa config ici.
+   ===================================================================== */
+const FB_CONFIG={apiKey:'',authDomain:'',projectId:'',storageBucket:'',messagingSenderId:'',appId:''};
+const FB_VER='10.12.2',CLOUD={on:false,user:null,busy:false,err:'',timer:0,db:null,auth:null};
+const cloudReady=()=>!!FB_CONFIG.apiKey&&/^https?:$/.test(location.protocol);
+const progress=s=>(s.best||0)*100000+(s.mons||[]).length*100+((s.last||0)/1e12);
+function loadJs(src){return new Promise((ok,ko)=>{const s=document.createElement('script');s.src=src;s.onload=ok;s.onerror=ko;document.head.appendChild(s)})}
+async function cloudInit(){if(!cloudReady()||CLOUD.auth)return;
+  try{const u='https://cdn.jsdelivr.net/npm/firebase@'+FB_VER+'/';await loadJs(u+'firebase-app-compat.js');await loadJs(u+'firebase-auth-compat.js');await loadJs(u+'firebase-firestore-compat.js');
+    firebase.initializeApp(FB_CONFIG);CLOUD.auth=firebase.auth();CLOUD.db=firebase.firestore();CLOUD.on=true;CLOUD.auth.getRedirectResult().catch(()=>{});
+    CLOUD.auth.onAuthStateChanged(async u=>{CLOUD.user=u;if(u)await cloudPull();renderCloud()})}catch(e){CLOUD.err='Connexion impossible';renderCloud()}}
+async function cloudPull(){if(!CLOUD.user)return;CLOUD.busy=true;try{const d=await CLOUD.db.collection('saves').doc(CLOUD.user.uid).get();if(d.exists){const r=JSON.parse(d.data().data||'{}');if(progress(r)>progress(SAVE)){SAVE=Object.assign(newSave(),r);dirty=true;showTab(cur)}}try{localStorage.setItem(SAVEKEY,saveJson())}catch(e){}await cloudPush(true)}catch(e){CLOUD.err='Erreur de synchronisation'}CLOUD.busy=false}
+async function cloudPush(now){if(!CLOUD.user||!CLOUD.db)return;clearTimeout(CLOUD.timer);const go=async()=>{try{await CLOUD.db.collection('saves').doc(CLOUD.user.uid).set({data:saveJson(),name:(CLOUD.user.displayName||'').split(' ')[0].slice(0,14),updated:firebase.firestore.FieldValue.serverTimestamp()});CLOUD.err=''}catch(e){CLOUD.err='Erreur de sauvegarde'}};if(now)return go();CLOUD.timer=setTimeout(go,5000)}
+async function cloudSignIn(){if(!CLOUD.auth)return;const p=new firebase.auth.GoogleAuthProvider();p.setCustomParameters({prompt:'select_account'});try{await CLOUD.auth.signInWithPopup(p)}catch(e){if(e&&/popup|iframe|operation-not-supported/.test(e.code||''))CLOUD.auth.signInWithRedirect(p)}}
+async function cloudSignOut(){if(!CLOUD.auth)return;try{await cloudPush(true)}catch(e){}await CLOUD.auth.signOut()}
+function renderCloud(){$('cloudBtn').textContent=CLOUD.user?'☁ '+(CLOUD.user.displayName||'Compte').split(' ')[0]:'☁ Compte';if(!$('modal').hidden&&$('mbody').dataset.cloud)openCloud()}
+function openCloud(){openModal(`<h2>Compte et sauvegarde</h2>${!cloudReady()?'<p>La connexion Google sera activée dès que le projet Firebase du jeu sera créé.</p><p>En attendant, ta partie est sauvegardée automatiquement dans ce navigateur.</p>':CLOUD.user?`<p>Connecté en tant que <b>${esc(CLOUD.user.displayName||CLOUD.user.email||'')}</b>. Ta partie est sauvegardée en ligne.</p><button data-act="signOut">Se déconnecter</button>`:'<p>Connecte-toi pour retrouver ta partie sur tous tes appareils.</p><button class="go" data-act="signIn">Se connecter avec Google</button>'}${CLOUD.err?'<p style="color:#c0392b">'+CLOUD.err+'</p>':''}<p class="muted">${VERSION}</p>`);$('mbody').dataset.cloud=1}
+
+/* ---------- démarrage ---------- */
+SAVE=loadSave();
+tick();
+showTab('nursery');renderTop();
+if(!SAVE.mons.length)starterModal();else if(SAVE.tuto>=1&&SAVE.tuto<6)setTip(TUTO[SAVE.tuto]);
+setInterval(tick,500);
+setInterval(saveGame,5000);
+window.addEventListener('beforeunload',()=>{try{localStorage.setItem(SAVEKEY,saveJson())}catch(e){}});
+requestAnimationFrame(frame);
+cloudInit();
+</script>
+</body>
+</html>
