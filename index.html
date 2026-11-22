@@ -82,6 +82,16 @@ h3{margin:0 0 8px;font-size:16px;display:flex;align-items:center;gap:10px}
 .genes b{display:block;height:5px;background:#eee;border-radius:3px;overflow:hidden}
 .genes b i{display:block;height:100%;background:var(--pink)}
 .mut{color:#c03cff}
+.ttl{display:inline-block;font-size:10px;font-weight:800;padding:1px 6px;border-radius:6px;border:2px solid var(--ink);margin-right:5px;vertical-align:middle;color:#fff;text-shadow:0 1px 0 rgba(0,0,0,.35)}
+.ttl.c0{background:#8a8a8a}.ttl.c1{background:#4aa35a}.ttl.c2{background:#3a7bd5}.ttl.c3{background:#9a4ad5}.ttl.c4{background:linear-gradient(90deg,#f0a020,#e04a4a)}
+.rank{width:100%;border-collapse:collapse;background:#fff;border:3px solid var(--ink);border-radius:10px;overflow:hidden}
+.rank th,.rank td{padding:7px 9px;border-bottom:2px solid #e8dcc8;text-align:left;font-size:14px}.rank th{background:#f3e6cf}
+.rank tr.me td{background:#fff6d0}.rank .pl{background:none;border:0;padding:0;box-shadow:none;font:inherit;font-weight:800;color:#2a5bb0;cursor:pointer;text-decoration:underline}
+.rank td.n{width:48px;font-weight:800;text-align:center}
+.pmons{display:grid;grid-template-columns:repeat(auto-fill,minmax(86px,1fr));gap:6px;max-height:46vh;overflow:auto;margin-top:8px}
+.pmon{background:#fff;border:2px solid var(--ink);border-radius:8px;padding:4px;text-align:center;font-size:11px;display:flex;flex-direction:column;align-items:center}
+.pstats{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}.pstats span{background:#fff;border:2px solid var(--ink);border-radius:8px;padding:3px 8px;font-size:13px}
+.ttlpick{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}.ttlpick button{padding:4px 6px}.ttlpick button.sel{outline:3px solid #f0a020}
 .achgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px}
 .ach{display:flex;gap:10px;align-items:center;background:#fff;border:3px solid var(--ink);border-radius:12px;padding:8px;opacity:.75}
 .ach.ok{opacity:1;background:#fff8d8;border-color:#b8860b}
@@ -175,6 +185,7 @@ body.bfull .roster{flex:none;padding:6px 2px}
     <button data-tab="shop">Boutique</button>
     <button data-tab="dex">Pokédex</button>
     <button data-tab="ach">Succès</button>
+    <button data-tab="rank">Classement</button>
     <button data-act="cloud" id="cloudBtn">☁ Compte</button>
   </nav>
 </header>
@@ -189,6 +200,7 @@ body.bfull .roster{flex:none;padding:6px 2px}
   <section id="tab-shop" hidden></section>
   <section id="tab-dex" hidden></section>
   <section id="tab-ach" hidden></section>
+  <section id="tab-rank" hidden></section>
 </main>
 <div id="modal" hidden><div class="mbox"><button class="x sm" data-act="closeModal">✕</button><div id="mbody"></div></div></div>
 <div id="toasts"></div>
@@ -200,7 +212,7 @@ body.bfull .roster{flex:none;padding:6px 2px}
    POKETABS EGGS COLLECTOR  (V00.01.00)
    Réglages rapides : objet T ci-dessous (durées en secondes, chances en 0..1)
    ===================================================================== */
-const VERSION='V00.10.01';
+const VERSION='V00.11.00';
 const T={
   breed:45,        // durée de base d'une ponte (s)
   hatch:75,        // durée de base d'éclosion (s), modulée par l'espèce (stats totales et rareté)
@@ -635,7 +647,11 @@ const biomeOf=st=>st>MAXST-5?VALLEY:BIOMES[Math.floor((st-1)/PER_BIOME)%BIOMES.l
 const bstOf=n=>{const d=DEX[n];return d.hp+d.atk+d.def+d.spd+d.spa};
 /* Pokémon de la Route Victoire : formes finales non légendaires les plus fortes (les 45 meilleures stats totales) */
 const VICTORY_POOL=[...AVAIL].filter(n=>DEX[n]&&!evoTargets(n).length&&!LEGEND.has(n)&&n!==132).sort((a,b)=>bstOf(b)-bstOf(a)).slice(0,45);
-const LEGEND_POOL=[...AVAIL].filter(n=>LEGEND.has(n));
+/* légendaires du plus faible au plus fort (hors Arceus) : boss des 24 biomes dans l'ordre, puis les plus forts dans la Vallée ; Arceus est le dernier boss (tableau 250) */
+const FINAL_BOSS=493;
+const LEGEND_ORDER=[...LEGEND].filter(n=>DEX[n]&&n!==FINAL_BOSS).sort((a,b)=>bstOf(a)-bstOf(b)||a-b);
+const LEGEND_POOL=LEGEND_ORDER.slice(-9);
+const legendBoss=stage=>LEGEND_ORDER[Math.min(LEGEND_ORDER.length-1,Math.floor(stage/PER_BIOME)-1)];
 const bestLevel=()=>Math.max(5,...SAVE.mons.map(m=>m.lv));
 function finalForm(n,R){for(let k=0;k<4;k++){const t=evoTargets(n);if(!t.length)break;n=t[Math.floor(R()*t.length)]}return n}
 /* niveau ennemi : de 2 au tableau 1 jusqu'à 100 au tableau 240 ; en mode Maître, niveau du meilleur Pokémon du joueur */
@@ -710,11 +726,11 @@ function genEnemies(stage,M){
   if(pool.length<3)pool=base.filter(d=>d.rar<=2);
   const list=[];
   if(bi.victory||bi.valley){const P=bi.valley?LEGEND_POOL:VICTORY_POOL;for(let k=0;k<(bi.valley?Math.min(cnt,8):cnt);k++){const l=clamp(lv+Math.floor(R()*3)-1,1,100);list.push({n:P[Math.floor(R()*P.length)],lv:l,g:randGenesR(R,20,31),sh:false})}
-    if(stage%5===0){const P2=bi.valley?LEGEND_POOL.filter(n=>MYTHIC.has(n)):VICTORY_POOL.slice().sort((a,b)=>bstOf(b)-bstOf(a)).slice(0,8);list[0]={n:P2[Math.floor(R()*P2.length)],lv:Math.min(100,lv+3),g:randGenesR(R,25,31),sh:R()<.1,boss:1}}
+    if(stage%5===0){const P2=bi.valley?[FINAL_BOSS]:VICTORY_POOL.slice(0,8);list[0]={n:P2[Math.floor(R()*P2.length)],lv:Math.min(100,lv+3),g:randGenesR(R,25,31),sh:R()<.1,boss:1}}
     return list}
   for(let k=0;k<cnt;k++){const b=pool[Math.floor(R()*pool.length)].n,l=clamp(lv+Math.floor(R()*3)-1,1,100);list.push({n:cyc?finalForm(b,R):evolveTo(b,l,R),lv:l,g:randGenesR(R,gmin,gmax),sh:false})}
   if(stage%5===0){const legend=stage%PER_BIOME===0;const ok=d=>legend?LEGEND.has(d.n)&&d.n!==150:d.rar>=2&&!LEGEND.has(d.n)&&d.n!==132;let bp=EGG_SPECIES.map(n=>DEX[n]).filter(d=>ok(d)&&inHab(d));if(!bp.length)bp=EGG_SPECIES.map(n=>DEX[n]).filter(d=>ok(d)&&(bi.types.includes(d.t1)||bi.types.includes(d.t2)));if(!bp.length)bp=EGG_SPECIES.map(n=>DEX[n]).filter(ok);
-    const b=bp[Math.floor(R()*bp.length)].n,l=Math.min(100,lv+3);list[0]={n:cyc?finalForm(b,R):evolveTo(b,l+6,R),lv:l,g:randGenesR(R,10,31),sh:R()<.1,boss:1}}
+    const b=legend?legendBoss(stage):bp[Math.floor(R()*bp.length)].n,l=Math.min(100,lv+3);list[0]={n:legend?b:cyc?finalForm(b,R):evolveTo(b,l+6,R),lv:l,g:randGenesR(R,10,31),sh:R()<.1,boss:1}}
   return list;
 }
 function randGenesR(R,a,b){const g={};GK.forEach(k=>g[k]=a+Math.floor(R()*(b-a+1)));return g}
@@ -831,8 +847,9 @@ function drawUnit(x,u,ghost){
   x.fillStyle='rgba(0,0,0,.25)';x.beginPath();x.ellipse(u.x,u.y,12*u.scale,5*u.scale,0,0,7);x.fill();
   x.strokeStyle=u.team?'#e0604f':'#5f9be8';x.lineWidth=2;x.beginPath();x.ellipse(u.x,u.y,13*u.scale,6*u.scale,0,0,7);x.stroke();
   if(ghost)x.globalAlpha=.85;
-  if(im.ok){x.drawImage(im,u.fr*64,u.dir*64,64,64,Math.round(u.x-s/2+lx),Math.round(u.y-s+12*u.scale),s,s);
-    if(u.flash>0){x.globalCompositeOperation='lighter';x.globalAlpha=.6;x.drawImage(im,u.fr*64,u.dir*64,64,64,Math.round(u.x-s/2+lx),Math.round(u.y-s+12*u.scale),s,s);x.globalAlpha=1;x.globalCompositeOperation='source-over'}}
+  /* planches de 256 px (cases de 64) ou de 512 px (cases de 128, grands légendaires) */
+  if(im.ok){const fw=(im.naturalWidth||256)/4,S=s*(fw>64?1.6:1),dx=Math.round(u.x-S/2+lx),dy=Math.round(u.y-S*50/62);x.drawImage(im,u.fr*fw,u.dir*fw,fw,fw,dx,dy,S,S);
+    if(u.flash>0){x.globalCompositeOperation='lighter';x.globalAlpha=.6;x.drawImage(im,u.fr*fw,u.dir*fw,fw,fw,dx,dy,S,S);x.globalAlpha=1;x.globalCompositeOperation='source-over'}}
   else{x.fillStyle=TCOL[u.t1]||'#aaa';x.beginPath();x.arc(u.x,u.y-12,10*u.scale,0,7);x.fill()}
   x.globalAlpha=1;
   if(u.hp!==undefined&&B.phase!=='place'){const w=26*u.scale,y=u.y-s+14*u.scale;x.fillStyle='#2a1a12';x.fillRect(u.x-w/2-1,y-1,w+2,5);x.fillStyle=u.team?'#e0604f':'#5fb86a';x.fillRect(u.x-w/2,y,w*u.hp/u.max,3)}
@@ -903,16 +920,68 @@ const ACH=[
  ['c50','Grande famille','Avoir 50 Pokémon en même temps',800,()=>SAVE.mons.length,50],
 ];
 function checkAch(){if(!SAVE.mons.length)return;let got=false;ACH.forEach(([id,nm,ds,rw,f,goal])=>{if(SAVE.ach[id])return;let v=0;try{v=f()}catch(e){}if(v>=goal){SAVE.ach[id]=Date.now();SAVE.coins+=rw;got=true;toast(`🏆 Succès débloqué : <b>${esc(nm)}</b> (+${fmt(rw)} pièces)`)}});if(got){dirty=true;saveGame();if(cur==='ach')renderAch()}}
+/* ---------- titres (débloqués par les succès) ---------- */
+/* [id du succès, titre, rang de couleur 0 à 4] ; le titre « Dresseur » est toujours disponible */
+const TITLES=[['','Dresseur',0],
+ ['h1','Couveur en herbe',0],['h10','Couveur',1],['h50','Éleveur',1],['h200','Maître éleveur',2],['h1000','Usine à œufs',3],
+ ['m1','Apprenti mutant',0],['m10','Laborantin',1],['m50','Généticien',2],
+ ['s1','Chasseur de chromas',2],['s5','Collectionneur brillant',3],['p1','Patient zéro',2],['t1','Jackpot vivant',4],
+ ['e1','Évolutionniste',0],['e25','Professeur',2],['e100','Darwin',3],
+ ['d25','Petit Pokédex',0],['d50','Collectionneur',1],['d100','Encyclopédie',2],['d200','Pokédex vivant',3],['d400','Attrapez-les tous',4],
+ ['b5','Aventurier',0],['b10','Explorateur des Plaines',1],['b25','Conquérant',1],['b50','Champion',2],['b100','Grand explorateur',2],['b240','Tour du continent',3],['b250','Légende vivante',4],['bm1','Maître du continent',4],
+ ['w50','Vétéran',1],['k1','Chasseur de boss',1],['k10','Tueur de boss',3],['l1','Ami des légendes',3],
+ ['v50','Costaud',1],['v100','Niveau 100',3],['n4','Nourrice',1],['n8','Pouponnière géante',2],['a10','Général',2],['c50','Grande famille',1]];
+const titleOf=name=>TITLES.find(t=>t[1]===name)||TITLES[0];
+const titleOk=t=>!t[0]||!!SAVE.ach[t[0]];
+const achDesc=id=>((ACH.find(a=>a[0]===id)||[])[2])||'';
+const ttlHTML=name=>{const t=titleOf(name);return `<span class="ttl c${t[2]}">${esc(t[1])}</span>`};
+function myPseudo(){return (SAVE.pseudo||(CLOUD.user&&(CLOUD.user.displayName||'').split(' ')[0])||'Dresseur').slice(0,16)}
+function setPseudo(){const v=prompt('Ton pseudo (16 caractères max) :',myPseudo());if(v===null)return;const c=v.replace(/[<>"&]/g,'').trim().slice(0,16);if(!c)return;SAVE.pseudo=c;dirty=true;saveGame();if(CLOUD.user)profilePush();RANK.list=null;renderAch()}
+function setTitle(name){const t=titleOf(name);if(!titleOk(t))return;SAVE.title=t[1];dirty=true;saveGame();if(CLOUD.user)profilePush();RANK.list=null;renderAch()}
+function titlePickerHTML(){const cur=titleOf(SAVE.title||'Dresseur')[1];const ok=TITLES.filter(titleOk).length;
+  return `<div class="panel" style="margin-bottom:12px"><h3>Profil</h3><p>Pseudo : <b>${esc(myPseudo())}</b> <button class="sm" data-act="setPseudo">Modifier</button> · Titre affiché : ${ttlHTML(cur)}</p>
+  <p class="muted">Chaque succès débloque un titre. Il s'affiche devant ton pseudo dans le classement. (${ok}/${TITLES.length} titres)</p>
+  <div class="ttlpick">${TITLES.map(t=>titleOk(t)?`<button class="sm ${t[1]===cur?'sel':''}" data-act="setTitle" data-t="${esc(t[1])}" title="${t[0]?esc(achDesc(t[0])):'Titre de départ'}">${ttlHTML(t[1])}</button>`:`<button class="sm" disabled title="${esc(achDesc(t[0]))}">🔒 ${esc(t[1])}</button>`).join('')}</div></div>`}
+
+/* ---------- classement en ligne (collection Firestore « profiles », lisible par tous) ---------- */
+const RANK={list:null,err:'',busy:false,t:0};
+const rankScore=s=>(s.cycle||0)*1000+(s.best||0);
+function profileData(){const top=SAVE.mons.slice().sort((a,b)=>b.lv-a.lv||(b.sh?1:0)-(a.sh?1:0)).slice(0,60).map(m=>({n:m.n,lv:m.lv,sh:m.sh?1:0,mu:m.mut?1:0,pk:m.pk?1:0,sx:m.sx||''}));
+  return{name:myPseudo(),title:titleOf(SAVE.title||'Dresseur')[1],best:SAVE.best||0,maxBest:SAVE.maxBest||SAVE.best||0,cycle:SAVE.cycle||0,score:rankScore(SAVE),ach:Object.keys(SAVE.ach).length,dex:ownN(),nmons:SAVE.mons.length,shinies:SAVE.mons.filter(m=>m.sh).length,mons:top,ver:VERSION}}
+async function profilePush(){if(!CLOUD.user||!CLOUD.db)return;try{await CLOUD.db.collection('profiles').doc(CLOUD.user.uid).set(Object.assign(profileData(),{updated:firebase.firestore.FieldValue.serverTimestamp()}))}catch(e){RANK.err=e&&e.code==='permission-denied'?'rules':'net'}}
+async function rankLoad(force){if(!CLOUD.db||RANK.busy)return;if(!force&&RANK.list&&Date.now()-RANK.t<30000)return;RANK.busy=true;
+  try{if(CLOUD.user)await profilePush();const q=await CLOUD.db.collection('profiles').orderBy('score','desc').limit(100).get();RANK.list=q.docs.map(d=>Object.assign({uid:d.id},d.data()));RANK.err='';RANK.t=Date.now()}
+  catch(e){RANK.err=e&&e.code==='permission-denied'?'rules':'net'}RANK.busy=false;if(cur==='rank')renderRank()}
+const progTxt=p=>(p.cycle?`Maître${p.cycle>1?' '+p.cycle:''} · `:'')+`Tableau ${p.best||0}/${MAXST}`;
+function renderRank(){const el=$('tab-rank');
+  if(!cloudReady()){el.innerHTML=`<div class="panel"><h3>Classement</h3><p>Le classement en ligne marche sur la version en ligne du jeu (misterlebn.github.io).</p><p>Ta progression ici : <b>${progTxt(SAVE)}</b>.</p></div>`;return}
+  if(!RANK.list&&!RANK.err&&!RANK.busy)rankLoad();
+  const me=CLOUD.user&&CLOUD.user.uid;
+  let body;
+  if(RANK.err==='rules')body=`<p>Le classement n'est pas encore activé : il faut ajouter la règle « profiles » dans Firebase (voir GUIDE.txt).</p>`;
+  else if(RANK.err)body=`<p>Impossible de charger le classement. <button class="sm" data-act="rankReload">Réessayer</button></p>`;
+  else if(!RANK.list)body='<p>Chargement…</p>';
+  else if(!RANK.list.length)body='<p>Aucun joueur pour l\'instant.</p>';
+  else body=`<table class="rank"><tr><th>#</th><th>Joueur</th><th>Progression</th><th>Pokédex</th><th>Succès</th></tr>${RANK.list.map((p,i)=>`<tr class="${p.uid===me?'me':''}"><td class="n">${i<3?['🥇','🥈','🥉'][i]:i+1}</td><td>${ttlHTML(p.title)}<button class="pl" data-act="showProfile" data-i="${i}">${esc(p.name||'?')}</button></td><td>${progTxt(p)}</td><td>${p.dex||0}</td><td>${p.ach||0}</td></tr>`).join('')}</table>`;
+  el.innerHTML=`<div class="panel"><h3>Classement des dresseurs <button class="sm" data-act="rankReload">Actualiser</button></h3>
+   ${CLOUD.user?`<p class="muted">Tu apparais sous le nom ${ttlHTML(SAVE.title||'Dresseur')}<b>${esc(myPseudo())}</b> (pseudo et titre modifiables dans l'onglet Succès). Clique sur un pseudo pour voir son profil.</p>`:`<p>Connecte-toi avec Google (bouton ☁ Compte) pour apparaître au classement.</p>`}
+   ${body}</div>`}
+function showProfile(i){const p=RANK.list&&RANK.list[i];if(!p)return;
+  const mons=(p.mons||[]).filter(m=>DEX[m.n]);
+  openModal(`<h2>${ttlHTML(p.title)}${esc(p.name||'?')}</h2>
+   <div class="pstats"><span>⚔ ${progTxt(p)}</span><span>Record : tableau ${p.maxBest||p.best||0}</span><span>📖 ${p.dex||0} espèces</span><span>🏆 ${p.ach||0} succès</span><span>Pokémon : ${p.nmons||0}</span><span>✨ ${p.shinies||0} shiny</span></div>
+   <h3>Ses Pokémon${(p.nmons||0)>mons.length?` (les ${mons.length} plus forts)`:''}</h3>
+   <div class="pmons">${mons.map(m=>`<div class="pmon">${sprHTML(m.n,!!m.sh,48,true)}<b>${m.sh?'✨':''}${esc(DEX[m.n].name)}${m.sx==='M'?' ♂':m.sx==='F'?' ♀':''}</b><span>Nv ${m.lv}${m.mu?' · muté':''}${m.pk?' · Pokérus':''}</span></div>`).join('')||'<p>Aucun Pokémon.</p>'}</div>`)}
 function renderAch(){const n=ACH.filter(a=>SAVE.ach[a[0]]).length;
-  $('tab-ach').innerHTML=`<div class="panel"><h3>Succès · ${n}/${ACH.length}</h3><div class="achgrid">${ACH.map(([id,nm,ds,rw,f,goal])=>{const ok=!!SAVE.ach[id];let v=0;try{v=f()}catch(e){}v=Math.min(v,goal);
+  $('tab-ach').innerHTML=titlePickerHTML()+`<div class="panel"><h3>Succès · ${n}/${ACH.length}</h3><div class="achgrid">${ACH.map(([id,nm,ds,rw,f,goal])=>{const ok=!!SAVE.ach[id];let v=0;try{v=f()}catch(e){}v=Math.min(v,goal);
     return `<div class="ach ${ok?'ok':''}"><div class="ai">${ok?'🏆':'🔒'}</div><div class="at"><b>${esc(nm)}</b><span>${esc(ds)}</span><div class="bar" style="height:7px"><i style="width:${v/goal*100}%"></i></div><span class="muted">${ok?'Débloqué':fmt(v)+' / '+fmt(goal)} · <span class="price">${COIN}${fmt(rw)}</span></span></div></div>`}).join('')}</div></div>`}
 
 /* =====================================================================
    INTERFACE GÉNÉRALE
    ===================================================================== */
 let cur='nursery';
-function showTab(t){cur=t;document.querySelectorAll('nav button[data-tab]').forEach(b=>b.classList.toggle('on',b.dataset.tab===t));['nursery','team','battle','shop','dex','ach'].forEach(k=>$('tab-'+k).hidden=k!==t);
-  if(t==='nursery')renderNursery();if(t==='team')renderTeam();if(t==='shop')renderShop();if(t==='dex')renderDex();if(t==='ach')renderAch();if(t==='battle'){if(!B||B.phase==='end')setupStage(Math.min(SAVE.best+1,B&&B.phase==='end'?B.stage:SAVE.best+1));else{renderBattleHead();renderRoster()}}}
+function showTab(t){cur=t;document.querySelectorAll('nav button[data-tab]').forEach(b=>b.classList.toggle('on',b.dataset.tab===t));['nursery','team','battle','shop','dex','ach','rank'].forEach(k=>$('tab-'+k).hidden=k!==t);
+  if(t==='nursery')renderNursery();if(t==='team')renderTeam();if(t==='shop')renderShop();if(t==='dex')renderDex();if(t==='ach')renderAch();if(t==='rank')renderRank();if(t==='battle'){if(!B||B.phase==='end')setupStage(Math.min(SAVE.best+1,B&&B.phase==='end'?B.stage:SAVE.best+1));else{renderBattleHead();renderRoster()}}}
 function renderTop(){$('coins').textContent=fmt(SAVE.coins);$('eggN').textContent=SAVE.eggs.length+SAVE.incs.reduce((s,c)=>s+c.slots.length,0);$('stN').textContent=(SAVE.cycle?'Maître · ':'')+Math.min(MAXST,SAVE.best+1)}
 function openModal(h){const b=$('mbody');delete b.dataset.cloud;b.innerHTML=h;$('modal').hidden=false;const x=document.querySelector('#modal .x');if(x)x.style.display=''}
 function closeModal(){$('modal').hidden=true;pickState=null}
@@ -950,7 +1019,7 @@ const ACT={
   nextStage:()=>{closeModal();setupStage(B.stage+1)},
   newCycle:()=>{SAVE.cycle=(SAVE.cycle||0)+1;SAVE.best=0;closeModal();saveGame();toast(`🔥 Mode Maître ${SAVE.cycle>1?SAVE.cycle:''} : les ennemis sont au niveau de ton meilleur Pokémon !`);setupStage(1);renderTop()},retry:()=>{closeModal();const keep=B.placed;setupStage(B.stage);B.placed=keep.filter(p=>mon(p.u)&&!monStatus(p.u));renderBattleHead();renderRoster()},
   starter:(t)=>{const n=+t.dataset.n;addMon({n:132,lv:5,g:randGenes(5,15)});addMon({n:25,lv:5,g:randGenes(5,15)});addMon({n,lv:5,g:randGenes(8,18)});SAVE.tuto=0;closeModal();setTuto(1);dirty=true;saveGame()},
-  cloud:()=>openCloud(),signIn:()=>cloudSignIn(),signOut:()=>cloudSignOut()
+  cloud:()=>openCloud(),setPseudo:()=>setPseudo(),setTitle:(t)=>setTitle(t.dataset.t),rankReload:()=>{RANK.list=null;RANK.err='';rankLoad(true);renderRank()},showProfile:(t)=>showProfile(+t.dataset.i),signIn:()=>cloudSignIn(),signOut:()=>cloudSignOut()
 };
 document.addEventListener('click',e=>{const tb=e.target.closest('nav button[data-tab]');if(tb){showTab(tb.dataset.tab);return}const t=e.target.closest('[data-act]');if(t&&ACT[t.dataset.act]){ACT[t.dataset.act](t,e)}else if(e.target.id==='modal'&&SAVE.mons.length)closeModal()});
 $('bcv').addEventListener('click',e=>{const[x,y]=canvasPos(e);placeAt(x,y)});
@@ -972,7 +1041,7 @@ async function cloudInit(){if(!cloudReady()||CLOUD.auth)return;
     firebase.initializeApp(FB_CONFIG);CLOUD.auth=firebase.auth();CLOUD.db=firebase.firestore();CLOUD.on=true;CLOUD.auth.getRedirectResult().catch(()=>{});
     CLOUD.auth.onAuthStateChanged(async u=>{CLOUD.user=u;if(u)await cloudPull();renderCloud()})}catch(e){CLOUD.err='Connexion impossible';renderCloud()}}
 async function cloudPull(){if(!CLOUD.user)return;CLOUD.busy=true;try{const d=await CLOUD.db.collection('saves').doc(CLOUD.user.uid).get();if(d.exists){const r=JSON.parse(d.data().data||'{}');if(progress(r)>progress(SAVE)){SAVE=Object.assign(newSave(),r);dirty=true;showTab(cur)}}try{localStorage.setItem(SAVEKEY,saveJson())}catch(e){}await cloudPush(true)}catch(e){CLOUD.err='Erreur de synchronisation'}CLOUD.busy=false}
-async function cloudPush(now){if(!CLOUD.user||!CLOUD.db)return;clearTimeout(CLOUD.timer);const go=async()=>{try{await CLOUD.db.collection('saves').doc(CLOUD.user.uid).set({data:saveJson(),name:(CLOUD.user.displayName||'').split(' ')[0].slice(0,14),updated:firebase.firestore.FieldValue.serverTimestamp()});CLOUD.err=''}catch(e){CLOUD.err='Erreur de sauvegarde'}};if(now)return go();CLOUD.timer=setTimeout(go,5000)}
+async function cloudPush(now){if(!CLOUD.user||!CLOUD.db)return;clearTimeout(CLOUD.timer);const go=async()=>{try{await CLOUD.db.collection('saves').doc(CLOUD.user.uid).set({data:saveJson(),name:(CLOUD.user.displayName||'').split(' ')[0].slice(0,14),updated:firebase.firestore.FieldValue.serverTimestamp()});CLOUD.err='';profilePush()}catch(e){CLOUD.err='Erreur de sauvegarde'}};if(now)return go();CLOUD.timer=setTimeout(go,5000)}
 async function cloudSignIn(){if(!CLOUD.auth)return;const p=new firebase.auth.GoogleAuthProvider();p.setCustomParameters({prompt:'select_account'});try{await CLOUD.auth.signInWithPopup(p)}catch(e){if(e&&/popup|iframe|operation-not-supported/.test(e.code||''))CLOUD.auth.signInWithRedirect(p)}}
 async function cloudSignOut(){if(!CLOUD.auth)return;try{await cloudPush(true)}catch(e){}await CLOUD.auth.signOut()}
 function renderCloud(){$('cloudBtn').textContent=CLOUD.user?'☁ '+(CLOUD.user.displayName||'Compte').split(' ')[0]:'☁ Compte';if(!$('modal').hidden&&$('mbody').dataset.cloud)openCloud()}
