@@ -82,6 +82,8 @@ h3{margin:0 0 8px;font-size:16px;display:flex;align-items:center;gap:10px}
 .genes b{display:block;height:5px;background:#eee;border-radius:3px;overflow:hidden}
 .genes b i{display:block;height:100%;background:var(--pink)}
 .mut{color:#c03cff}
+.pkb{position:absolute;top:22px;right:4px;font-size:9px;font-weight:900;color:#fff;background:#d6338a;border-radius:6px;padding:0 5px;letter-spacing:.5px}
+.banner.pk{background:#ffd1e8}
 /* ---------- combat ---------- */
 .bhead{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px}
 .bhead .title{font-size:18px}
@@ -103,7 +105,7 @@ h3{margin:0 0 8px;font-size:16px;display:flex;align-items:center;gap:10px}
 .mk b{font-size:12px}
 .mk.leg{background:linear-gradient(#fff8d8,#fff);border-color:#b8860b}
 .mk .lg{position:absolute;top:3px;left:4px;font-size:9px;background:#f2b632;border:1px solid var(--ink);border-radius:5px;padding:0 4px}
-.playfield{position:relative;height:220px;border-radius:12px;overflow:hidden;background:radial-gradient(ellipse at center,#f6dcc0 0 55%,#ecc9a2 56% 100%);border:3px solid #c99a7a}
+.playfield{position:relative;isolation:isolate;height:220px;border-radius:12px;overflow:hidden;background:radial-gradient(ellipse at center,#f6dcc0 0 55%,#ecc9a2 56% 100%);border:3px solid #c99a7a}
 .walker{position:absolute;left:0;top:0;cursor:pointer;will-change:transform}
 .walker::before{content:"";position:absolute;left:16px;bottom:4px;width:24px;height:7px;border-radius:50%;background:rgba(0,0,0,.18)}
 .walker:hover .spr{filter:drop-shadow(0 0 4px #fff)}
@@ -183,7 +185,7 @@ h3{margin:0 0 8px;font-size:16px;display:flex;align-items:center;gap:10px}
    POKETABS EGGS COLLECTOR  (V00.01.00)
    Réglages rapides : objet T ci-dessous (durées en secondes, chances en 0..1)
    ===================================================================== */
-const VERSION='V00.04.01';
+const VERSION='V00.05.00';
 const T={
   breed:45,        // durée de base d'une ponte (s)
   hatch:30,        // durée de base d'éclosion (s)
@@ -192,6 +194,10 @@ const T={
   sh0:0.01,        // chance shiny, aucun parent shiny
   sh1:0.04,        // un parent shiny
   sh2:0.12,        // deux parents shiny
+  pkr:0.002,       // chance qu'un œuf attrape le Pokérus (1 sur 500), hérité ensuite par tous les descendants
+  pkXp:1.5,        // Pokérus : multiplicateur d'XP
+  pkStat:1.05,     // Pokérus : bonus de stats
+  bstMul:1.25,     // super mutation : bonus sur une stat
   trainXP:1.6,     // XP par seconde d'un punching-ball niveau 1
   offlineMax:8*3600,// progression hors-ligne maximum (s)
   pow:42,          // puissance des attaques en combat
@@ -268,8 +274,9 @@ function eggLevel(n){const d=DEX[n];return LEGEND.has(n)?20:d.rar>=2?10:5}
 function canBreed(a,b){if(!a||!b)return false;if(a.n===132||b.n===132)return true;const fa=a.n===133||EEVEE.includes(a.n),fb=b.n===133||EEVEE.includes(b.n);if(fa&&fb)return true;return DEX[a.n].line===DEX[b.n].line}
 
 /* ---------- statistiques ---------- */
-function stats(m){const d=DEX[m.n],g=m.g,L=m.lv,f=m.sh?1.1:1;const s=(b,x)=>Math.floor(((2*b+x)*L/100+5)*f);
-  return{hp:Math.floor(((2*d.hp+g.hp)*L/100+L+10)*f),atk:s(d.atk,g.atk),def:s(d.def,g.def),spa:s(d.spa,g.atk),spd:s(d.spd,g.spd)}}
+const BST_K=['hp','atk','def','spa','spd'],BST_N={hp:'PV',atk:'Attaque',def:'Défense',spa:'Att. Spé',spd:'Vitesse'};
+function stats(m){const d=DEX[m.n],g=m.g,L=m.lv,f=(m.sh?1.1:1)*(m.pk?T.pkStat:1);const s=(b,x)=>Math.floor(((2*b+x)*L/100+5)*f);
+  const o={hp:Math.floor(((2*d.hp+g.hp)*L/100+L+10)*f),atk:s(d.atk,g.atk),def:s(d.def,g.def),spa:s(d.spa,g.atk),spd:s(d.spd,g.spd)};if(m.bst&&o[m.bst])o[m.bst]=Math.floor(o[m.bst]*T.bstMul);return o}
 function pc(m){const s=stats(m);return s.hp+s.atk+s.def+s.spa+s.spd}
 const need=L=>Math.floor(10+6*L*Math.sqrt(L));
 
@@ -290,30 +297,32 @@ function addMon(o){const m=Object.assign({u:SAVE.uid++,xp:0,mut:0,sh:false,born:
 function randGenes(a,b){const g={};GK.forEach(k=>g[k]=ri(a,b));return g}
 
 /* ---------- niveaux et évolution ---------- */
-function gainXP(m,x){if(m.lv>=100)return;m.xp+=x;let up=false;while(m.lv<100&&m.xp>=need(m.lv)){m.xp-=need(m.lv);m.lv++;up=true}if(up){dirty=true;checkEvo(m)}}
+function gainXP(m,x){if(m.lv>=100)return;m.xp+=x*(m.pk?T.pkXp:1);let up=false;while(m.lv<100&&m.xp>=need(m.lv)){m.xp-=need(m.lv);m.lv++;up=true}if(up){dirty=true;checkEvo(m)}}
 function checkEvo(m,quiet){let ev=null;for(let k=0;k<4;k++){const t=evoTargets(m.n);if(!t.length||m.lv<evoLevel(m.n))break;const old=DEX[m.n].name;m.n=pick(t);dexOwn(m.n,m.sh);ev=[old,DEX[m.n].name]}if(ev&&!quiet)toast(`✨ ${ev[0]} évolue en <b>${ev[1]}</b> !`);if(ev)dirty=true;return ev}
 
 /* ---------- œufs ---------- */
 function makeEgg(A,B,nestLvl){
   const non=[A,B].filter(m=>m.n!==132);
   const sp=non.length?baseOf(pick(non).n):132;
-  let lv=Math.round((A.lv+B.lv)/2)-ri(0,2);
+  /* niveau entre (le plus faible - 2) et (le plus fort + 2), plus probable vers le milieu */
+  const lo=Math.min(A.lv,B.lv)-2,hi=Math.max(A.lv,B.lv)+2;let lv=Math.round(lo+(hi-lo)*(rnd()+rnd())/2);
   const g={};GK.forEach(k=>g[k]=clamp(Math.round((A.g[k]+B.g[k])/2+ri(-2,3)),0,31));
   let mut=0;const pm=T.mut+(nestLvl-1)*0.03+(boostOn('mut')?0.15:0);
   if(rnd()<pm){mut=1;lv+=T.mutLv;const k=pick(GK);g[k]=Math.min(31,g[k]+ri(3,6))}
   const nsh=(A.sh?1:0)+(B.sh?1:0);let ps=[T.sh0,T.sh1,T.sh2][nsh];
   if(boostOn('shiny'))ps*=3;if(nestLvl>=5)ps*=1.5;
-  const sh=rnd()<ps;if(sh){lv+=T.mutLv;mut=2}
-  return{id:SAVE.uid++,n:sp,lv:clamp(lv,1,100),g,sh,mut,src:'nid'}
+  const sh=rnd()<ps;let bst=null;if(sh){if(!mut)lv+=T.mutLv;mut=2;bst=pick(BST_K)}
+  const pkIn=!!(A.pk||B.pk),pk=pkIn||rnd()<T.pkr;
+  return{id:SAVE.uid++,n:sp,lv:clamp(lv,1,100),g,sh,mut,bst,pk,pkNew:pk&&!pkIn,src:'nid'}
 }
 function shopEgg(tier){
   const rars=tier==='c'?[0,1]:tier==='r'?[2]:[3];
   const pool=EGG_SPECIES.map(n=>DEX[n]).filter(d=>rars.includes(d.rar)&&!LEGEND.has(d.n)&&d.n!==132);
   const d=pick(pool);const lv=eggLevel(d.n);
   const sh=rnd()<T.sh0;
-  return{id:SAVE.uid++,n:d.n,lv:lv+(sh?T.mutLv:0),g:randGenes(tier==='l'?12:0,tier==='c'?12:20),sh,mut:sh?2:0,src:'boutique'}
+  return{id:SAVE.uid++,n:d.n,lv:lv+(sh?T.mutLv:0),g:randGenes(tier==='l'?12:0,tier==='c'?12:20),sh,mut:sh?2:0,bst:sh?pick(BST_K):null,src:'boutique'}
 }
-function eggOf(n){const sh=rnd()<T.sh0;return{id:SAVE.uid++,n,lv:eggLevel(n)+(sh?T.mutLv:0),g:randGenes(LEGEND.has(n)?12:0,LEGEND.has(n)?24:14),sh,mut:sh?2:0,src:'boutique'}}
+function eggOf(n){const sh=rnd()<T.sh0;return{id:SAVE.uid++,n,lv:eggLevel(n)+(sh?T.mutLv:0),g:randGenes(LEGEND.has(n)?12:0,LEGEND.has(n)?24:14),sh,mut:sh?2:0,bst:sh?pick(BST_K):null,src:'boutique'}}
 const breedRar=(A,B)=>Math.max(DEX[A.n].rar===9?0:DEX[A.n].rar,DEX[B.n].rar===9?0:DEX[B.n].rar);
 function breedDur(nest,A,B){let d=T.breed*(RF[breedRar(A,B)]||1)*Math.pow(.85,nest.lvl-1)*(boostOn('love')?.5:1);if(SAVE.tuto<5)d*=.35;return d*1000}
 function hatchDur(inc,e){let d=T.hatch*(RF[DEX[e.n].rar]||1)*Math.pow(.88,inc.lvl-1);if(SAVE.tuto<5)d*=.4;return d*1000}
@@ -406,10 +415,11 @@ function liveNursery(){
 function freeMons(){return SAVE.mons.filter(m=>!monStatus(m.u))}
 function monCard(m,opt={}){const d=DEX[m.n],s=stats(m),st=monStatus(m.u);
   return `<div class="card ${opt.pick?'pick':''} ${opt.busy?'busy':''} ${opt.sel?'sel':''}" ${opt.act?`data-act="${opt.act}" data-u="${m.u}"`:''}>
-    ${m.sh?'<span class="sh">★ Shiny</span>':''}<span class="tag">${statusTxt(st)}</span>
+    ${m.sh?'<span class="sh">★ Shiny</span>':''}<span class="tag">${statusTxt(st)}</span>${m.pk?'<span class="pkb" title="Pokérus : stats +5 %, XP ×1,5, transmis aux descendants">POKÉRUS</span>':''}
     ${sprHTML(m.n,m.sh,64)}<span class="nm">${esc(d.name)}</span>${tyHTML(d)}
     <span>Nv ${m.lv} · PC ${pc(m)}${m.mut?` · <span class="mut">${m.mut>1?'Super mutation':'Muté'}</span>`:''}</span>
     <div class="bar xp" style="height:6px;margin:0"><i style="width:${m.lv>=100?100:Math.floor(m.xp/need(m.lv)*100)}%"></i></div>
+    ${m.bst?`<span class="mut">Boost ${BST_N[m.bst]} +25 %</span>`:''}
     <div class="genes">${GK.map(k=>`<span>${GN[k]}</span><b><i style="width:${m.g[k]/31*100}%"></i></b>`).join('')}</div>
     ${opt.extra||''}</div>`}
 let pickState=null;
@@ -420,7 +430,7 @@ function openNest(i){
     let ps=[T.sh0,T.sh1,T.sh2][(A.sh?1:0)+(n.b!=='solo'&&B.sh?1:0)]*(boostOn('shiny')?3:1)*(n.lvl>=5?1.5:1);
     openModal(`<h2>Nid ${i+1} (niveau ${n.lvl})</h2>
       <div class="flexr">${monCard(A)}${n.b==='solo'?'<div class="card">🧬<br>Gène miroir</div>':monCard(B)}</div>
-      <p>Bébé attendu : <b>${esc(DEX[A.n].n===132&&n.b!=='solo'?DEX[baseOf(B.n,true)].name:DEX[baseOf(A.n,true)].name)}</b> · niveau de départ ≈ ${Math.round((A.lv+B.lv)/2)-1}<br>
+      <p>Bébé attendu : <b>${esc(DEX[A.n].n===132&&n.b!=='solo'?DEX[baseOf(B.n,true)].name:DEX[baseOf(A.n,true)].name)}</b> · niveau de départ entre ${Math.max(1,Math.min(A.lv,B.lv)-2)} et ${Math.max(A.lv,B.lv)+2} (plus souvent au milieu)<br>${A.pk||B.pk?'🦠 Un parent a le Pokérus : le bébé l\'aura aussi.<br>':''}
       Chance de mutation (+${T.mutLv} niveaux) : <b>${pm} %</b> · Chance shiny : <b>${(ps*100).toFixed(1)} %</b></p>
       <div class="flexr"><button data-act="split" data-i="${i}">Séparer le couple</button> ${n.egg?`<button class="go" data-act="collect" data-i="${i}">Récupérer l'œuf</button>`:''}</div>`);return}
   pickState={nest:i,a:null};pickParent();
@@ -449,11 +459,12 @@ function openInc(i){
 }
 function incAdd(i,k,quiet){const c=SAVE.incs[i];if(c.slots.length>=INC_CAP[c.lvl])return;const e=SAVE.eggs.splice(k,1)[0];if(!e)return;c.slots.push({egg:e,t0:Date.now(),dur:hatchDur(c,e)});dirty=true;if(SAVE.tuto===3)setTip("L'œuf couve. Quand il bouge, clique sur l'incubateur pour le faire éclore.");if(!quiet){saveGame();openInc(i)}}
 function hatchOne(i,k){const c=SAVE.incs[i],s=c.slots[k];if(!s||Date.now()<s.t0+s.dur)return null;c.slots.splice(k,1);const e=s.egg;
-  if(!e.sh&&c.lvl>=6&&rnd()<T.sh0*(c.lvl-4)){e.sh=true;e.lv+=T.mutLv;e.mut=2}
-  const m=addMon({n:e.n,lv:e.lv,g:e.g,sh:e.sh,mut:e.mut});const ev=checkEvo(m,true);return{m,e,ev}}
+  if(!e.sh&&c.lvl>=6&&rnd()<T.sh0*(c.lvl-4)){e.sh=true;e.lv+=T.mutLv;e.mut=2;e.bst=pick(BST_K)}
+  if(e.sh&&!e.bst)e.bst=pick(BST_K);
+  const m=addMon({n:e.n,lv:e.lv,g:e.g,sh:e.sh,mut:e.mut,bst:e.bst||null,pk:!!e.pk});m.pkNew=!!e.pkNew;const ev=checkEvo(m,true);return{m,e,ev}}
 function hatchAll(only){const res=[];SAVE.incs.forEach((c,i)=>{if(only!==undefined&&only!==i)return;for(let k=c.slots.length-1;k>=0;k--){const r=hatchOne(i,k);if(r)res.push(r)}});if(res.length)showHatch(res);dirty=true;saveGame()}
 function showHatch(res){
-  openModal(`<h2>${res.length>1?res.length+' œufs ont éclos !':'Un œuf a éclos !'}</h2><div class="hatch">${res.map(r=>{let x='';if(r.m.sh)x+='<div class="banner s">✨ SUPER MUTATION SHINY ✨</div>';else if(r.m.mut)x+=`<div class="banner m">🧬 MUTATION +${T.mutLv} niveaux</div>`;if(r.ev)x+=`<div class="muted">Il a évolué en sortant de l'œuf !</div>`;return monCard(r.m,{extra:x})}).join('')}</div>`);
+  openModal(`<h2>${res.length>1?res.length+' œufs ont éclos !':'Un œuf a éclos !'}</h2><div class="hatch">${res.map(r=>{let x='';if(r.m.sh)x+=`<div class="banner s">✨ SUPER MUTATION SHINY ✨<br>+${T.mutLv} niveaux · ${BST_N[r.m.bst]||''} +25 %</div>`;if(r.m.pk&&r.e.pkNew)x+='<div class="banner pk">🦠 POKÉRUS ! Transmis à tous ses descendants</div>';else if(r.m.pk)x+='<div class="muted">🦠 Pokérus hérité des parents</div>';else if(r.m.mut)x+=`<div class="banner m">🧬 MUTATION +${T.mutLv} niveaux</div>`;if(r.ev)x+=`<div class="muted">Il a évolué en sortant de l'œuf !</div>`;return monCard(r.m,{extra:x})}).join('')}</div>`);
   if(SAVE.tuto>=1&&SAVE.tuto<=4)setTuto(5);
 }
 /* --- actions entraînement --- */
