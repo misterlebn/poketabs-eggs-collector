@@ -183,7 +183,7 @@ h3{margin:0 0 8px;font-size:16px;display:flex;align-items:center;gap:10px}
    POKETABS EGGS COLLECTOR  (V00.01.00)
    Réglages rapides : objet T ci-dessous (durées en secondes, chances en 0..1)
    ===================================================================== */
-const VERSION='V00.04.00';
+const VERSION='V00.04.01';
 const T={
   breed:45,        // durée de base d'une ponte (s)
   hatch:30,        // durée de base d'éclosion (s)
@@ -811,9 +811,9 @@ function starterModal(){const S=[1,4,7,152,155,158,252,255,258,387,390,393].filt
 
 /* =====================================================================
    CONNEXION GOOGLE + SAUVEGARDE EN LIGNE (Firebase, même système que Métamorph)
-   Pour l'activer : crée le projet Firebase « poketabs-eggs-collector » et colle sa config ici.
+   Projet Firebase : poketabs-eggs-collector (connexion Google + Firestore, collection saves).
    ===================================================================== */
-const FB_CONFIG={apiKey:'',authDomain:'',projectId:'',storageBucket:'',messagingSenderId:'',appId:''};
+const FB_CONFIG={apiKey:'AIzaSyCzLf6Ipqo8eLTzuGctQE6Na76DymMbZ3c',authDomain:'poketabs-eggs-collector.firebaseapp.com',projectId:'poketabs-eggs-collector',storageBucket:'poketabs-eggs-collector.firebasestorage.app',messagingSenderId:'299658471968',appId:'1:299658471968:web:362c88213e647a295c6a45'};
 const FB_VER='10.12.2',CLOUD={on:false,user:null,busy:false,err:'',timer:0,db:null,auth:null};
 const cloudReady=()=>!!FB_CONFIG.apiKey&&/^https?:$/.test(location.protocol);
 const progress=s=>(s.best||0)*100000+(s.mons||[]).length*100+((s.last||0)/1e12);
