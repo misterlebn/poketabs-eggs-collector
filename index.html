@@ -28,7 +28,7 @@ h3{margin:0 0 8px;font-size:16px;display:flex;align-items:center;gap:10px}
 .panel{background:var(--paper);border:4px solid var(--ink);border-radius:14px;padding:12px;box-shadow:0 5px 0 var(--ink)}
 /* ---------- nurserie ---------- */
 .room{border:4px solid var(--ink);border-radius:16px;overflow:hidden;box-shadow:0 6px 0 var(--ink)}
-.wall{height:120px;background:linear-gradient(#f9e3d3,#f3cfba);border-bottom:6px solid #c99a7a;position:relative}
+.wall{min-height:22px;padding:4px;display:flex;justify-content:center;gap:6px;background:linear-gradient(#f9e3d3,#f3cfba);border-bottom:6px solid #c99a7a;position:relative}
 .wall .deco{position:absolute;bottom:0}
 .floor{background:repeating-linear-gradient(90deg,#d7a874 0 58px,#cf9e69 58px 60px),#d7a874;padding:14px;display:grid;gap:14px}
 .zone{background:rgba(255,248,238,.88);border:3px solid var(--ink);border-radius:12px;padding:10px}
@@ -95,6 +95,12 @@ h3{margin:0 0 8px;font-size:16px;display:flex;align-items:center;gap:10px}
 .bhead{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px}
 .bhead .title{font-size:18px}
 .biome{font-size:12px;background:#fff;border:2px solid var(--ink);border-radius:8px;padding:2px 8px}
+body.bfull header{display:none}
+body.bfull main{max-width:none;padding:6px 10px;height:100vh;overflow:hidden}
+body.bfull #tab-battle{display:flex;flex-direction:column;height:100%}
+body.bfull .bhead{margin-bottom:6px;flex:none}
+body.bfull #bcv{flex:1;min-height:0;width:100%;height:100%;max-width:none;object-fit:contain;background:#2a1a12}
+body.bfull .roster{flex:none;padding:6px 2px}
 #bcv{width:100%;max-width:1152px;border:4px solid var(--ink);border-radius:12px;display:block;background:#7cc46a;image-rendering:pixelated;cursor:crosshair}
 .roster{display:flex;gap:8px;overflow-x:auto;padding:10px 2px}
 .rcard{flex:none;width:92px;background:#fff;border:3px solid var(--ink);border-radius:10px;padding:4px;text-align:center;font-size:11px;cursor:pointer}
@@ -194,7 +200,7 @@ h3{margin:0 0 8px;font-size:16px;display:flex;align-items:center;gap:10px}
    POKETABS EGGS COLLECTOR  (V00.01.00)
    Réglages rapides : objet T ci-dessous (durées en secondes, chances en 0..1)
    ===================================================================== */
-const VERSION='V00.07.00';
+const VERSION='V00.08.00';
 const T={
   breed:45,        // durée de base d'une ponte (s)
   hatch:75,        // durée de base d'éclosion (s), modulée par l'espèce (stats totales et rareté)
@@ -330,8 +336,8 @@ function makeEgg(A,B,nestLvl){
   if(rnd()<pm){mut=1;lv+=T.mutLv;const k=pick(GK);g[k]=Math.min(31,g[k]+ri(3,6))}
   const nsh=(A.sh?1:0)+(B.sh?1:0);let ps=[T.sh0,T.sh1,T.sh2][nsh];
   if(boostOn('shiny'))ps*=3;if(nestLvl>=5)ps*=1.5;
-  /* trois mécaniques indépendantes : mutation, super mutation (shiny) et Pokérus, chacune avec sa propre chance */
-  const sh=rnd()<ps;let bst=null;if(sh){lv+=T.mutLv;bst=pick(BST_K)}
+  /* trois tirages indépendants : mutation, super mutation (shiny) et Pokérus */
+  const sh=rnd()<ps;let bst=null;if(sh){if(!mut)lv+=T.mutLv;mut=0;bst=pick(BST_K)}/* la super mutation absorbe la mutation classique : +5 niveaux au total */
   const pkIn=!!(A.pk||B.pk),pk=pkIn||rnd()<T.pkr;
   return{id:SAVE.uid++,n:sp,sx:rollSex(sp),lv:clamp(lv,1,100),g,sh,mut,bst,pk,pkNew:pk&&!pkIn,src:'nid'}
 }
@@ -401,12 +407,12 @@ function renderNursery(){
   const anyNest=SAVE.nests.some(n=>n.egg),anyReady=SAVE.incs.some(c=>c.slots.some(s=>Date.now()>=s.t0+s.dur));
   const bo=[['love','💞 Reproduction ×2'],['mut','🧪 Mutation +15 %'],['shiny','✨ Shiny ×3']].filter(([k])=>boostOn(k)).map(([k,t])=>`<span class="biome" id="bo_${k}">${t}</span>`).join(' ');
   el.innerHTML=`<div class="room">
-   <div class="wall"><img class="deco" src="assets/window.png" style="left:6%;bottom:14px;width:78px"><img class="deco" src="assets/frame.png" style="left:22%;bottom:30px;width:44px"><img class="deco" src="assets/window.png" style="right:30%;bottom:14px;width:78px"><img class="deco" src="assets/shelf.png" style="right:6%;width:90px"><img class="deco" src="assets/plant_big.png" style="right:16%;width:48px"><img class="deco" src="assets/plant_small.png" style="left:40%;bottom:6px;width:26px">
-     <div style="position:absolute;left:50%;top:10px;transform:translateX(-50%);text-align:center">${bo}</div></div>
+   <div class="wall">
+     ${bo}</div>
    <div class="floor">
     <div class="zone"><h3>Salle de jeu <span class="muted">Les Pokémon libres se promènent ici. Clique sur l'un d'eux pour voir sa fiche.</span></h3><div class="playfield" id="playfield"></div></div>
     <div class="zone"><h3>Nids <button class="sm go" data-act="collectAll" ${anyNest?'':'disabled'}>Tout récupérer</button></h3><div class="row">${SAVE.nests.map(nestHTML).join('')}</div></div>
-    <div class="zone"><h3>Incubateurs <button class="sm go" data-act="hatchAll" ${anyReady?'':'disabled'}>Tout faire éclore</button></h3><div class="row">${SAVE.incs.map(incHTML).join('')}</div></div>
+    <div class="zone"><h3>Incubateurs <button class="sm go" data-act="hatchAll" ${anyReady?'':'disabled'}>Tout faire éclore</button>${SAVE.items.autofill?`<button class="sm" data-act="fillAll" ${SAVE.eggs.length?'':'disabled'}>Tout remplir</button>`:''}</h3><div class="row">${SAVE.incs.map(incHTML).join('')}</div></div>
     <div class="zone"><h3>Entraînement <span class="muted">Un Pokémon à l'entraînement ne peut pas se reproduire ni combattre.</span></h3><div class="row">${SAVE.balls.map(ballHTML).join('')}</div></div>
     <div class="zone"><h3>Sac d'œufs (${SAVE.eggs.length}) <span class="muted">Clique sur un incubateur pour y placer des œufs.</span></h3><div class="eggbag">${SAVE.eggs.map(eggChip).join('')||'<span class="muted">Aucun œuf pour le moment.</span>'}</div></div>
    </div></div>`;
@@ -485,7 +491,7 @@ function incAdd(i,k,quiet){const c=SAVE.incs[i];if(c.slots.length>=INC_CAP[c.lvl
 function hatchOne(i,k){const c=SAVE.incs[i],s=c.slots[k];if(!s||Date.now()<s.t0+s.dur)return null;c.slots.splice(k,1);const e=s.egg;
   if(!e.sh&&c.lvl>=6&&rnd()<T.sh0*(c.lvl-4)){e.sh=true;e.lv+=T.mutLv;e.bst=pick(BST_K)}
   if(e.sh&&!e.bst)e.bst=pick(BST_K);
-  const m=addMon({n:e.n,sx:e.sx===undefined?rollSex(e.n):e.sx,lv:e.lv,g:e.g,sh:e.sh,mut:e.mut,bst:e.bst||null,pk:!!e.pk});m.pkNew=!!e.pkNew;const st=SAVE.st;st.hatch=(st.hatch||0)+1;if(m.mut===1)st.mut=(st.mut||0)+1;if(m.sh)st.sh=(st.sh||0)+1;if(m.pk&&m.pkNew)st.pk=(st.pk||0)+1;if(m.mut===1&&m.sh&&m.pk)st.triple=(st.triple||0)+1;const ev=checkEvo(m,true);return{m,e,ev}}
+  const m=addMon({n:e.n,sx:e.sx===undefined?rollSex(e.n):e.sx,lv:e.lv,g:e.g,sh:e.sh,mut:e.mut,bst:e.bst||null,pk:!!e.pk});m.pkNew=!!e.pkNew;const st=SAVE.st;st.hatch=(st.hatch||0)+1;if(m.mut===1)st.mut=(st.mut||0)+1;if(m.sh)st.sh=(st.sh||0)+1;if(m.pk&&m.pkNew)st.pk=(st.pk||0)+1;if(m.sh&&m.pk)st.triple=(st.triple||0)+1;const ev=checkEvo(m,true);return{m,e,ev}}
 function hatchAll(only){const res=[];SAVE.incs.forEach((c,i)=>{if(only!==undefined&&only!==i)return;for(let k=c.slots.length-1;k>=0;k--){const r=hatchOne(i,k);if(r)res.push(r)}});if(res.length)showHatch(res);dirty=true;saveGame()}
 function showHatch(res){
   openModal(`<h2>${res.length>1?res.length+' œufs ont éclos !':'Un œuf a éclos !'}</h2><div class="hatch">${res.map(r=>{let x='';if(r.m.sh)x+=`<div class="banner s">✨ SUPER MUTATION SHINY ✨<br>+${T.mutLv} niveaux · ${BST_N[r.m.bst]||''} +25 %</div>`;if(r.m.mut===1)x+=`<div class="banner m">🧬 MUTATION +${T.mutLv} niveaux</div>`;if(r.m.pk&&r.e.pkNew)x+='<div class="banner pk">🦠 POKÉRUS ! Transmis à tous ses descendants</div>';else if(r.m.pk)x+='<div class="muted">🦠 Pokérus hérité des parents</div>';if(r.ev)x+=`<div class="muted">Il a évolué en sortant de l'œuf !</div>`;return monCard(r.m,{extra:x})}).join('')}</div>`);
@@ -529,6 +535,7 @@ const SHOP=[
  {id:'nestUp',name:'Améliorer un nid',desc:'Ponte 15 % plus rapide, +3 % de mutation. Niveau 5 : shiny ×1,5.',ic:'assets/nest3.png',price:()=>{const n=lowNest();return n?Math.round(200*Math.pow(2.1,n.lvl)):0},max:()=>!lowNest(),buy:()=>{lowNest().lvl++}},
  {id:'inc',name:'Nouvel incubateur',desc:'Encore plus d\'œufs à couver (max 4).',ic:'assets/incubators.png#1',price:()=>Math.round(400*Math.pow(2.5,SAVE.incs.length-1)),max:()=>SAVE.incs.length>=4,buy:()=>SAVE.incs.push({lvl:1,slots:[]})},
  {id:'incUp',name:'Améliorer un incubateur',desc:'Plus de places et éclosion plus rapide. Niveaux 6 et 7 : chance shiny en plus.',ic:'assets/incubators.png#6',price:()=>{const c=lowInc();return c?Math.round(250*Math.pow(2,c.lvl)):0},max:()=>!lowInc(),buy:()=>{lowInc().lvl++}},
+ {id:'autofill',name:'Remplissage automatique',desc:'Débloque le bouton « Tout remplir » : place d\'un coup les œufs du sac dans tous les incubateurs. Disponible dès le 2e incubateur.',ic:'assets/incubators.png#3',price:()=>1500,max:()=>!!SAVE.items.autofill||SAVE.incs.length<2,buy:()=>{SAVE.items.autofill=1}},
  {id:'ball',name:'Nouveau punching-ball',desc:'Entraîne plus de Pokémon (max 4).',ic:'assets/post0.png',price:()=>Math.round(350*Math.pow(2.4,SAVE.balls.length-1)),max:()=>SAVE.balls.length>=4,buy:()=>SAVE.balls.push({lvl:1,mons:[]})},
  {id:'ballUp',name:'Améliorer un punching-ball',desc:'+50 % d\'XP par seconde et plus de places.',ic:'assets/tower.png',price:()=>{const b=lowBall();return b?Math.round(220*Math.pow(2.1,b.lvl)):0},max:()=>!lowBall(),buy:()=>{lowBall().lvl++}},
  {id:'army',name:'Place dans l\'armée',desc:'Un Pokémon de plus sur le terrain (max 14).',ic:'sprites/Graphics/Items/MACHOBRACE.png',price:()=>Math.round(400*Math.pow(1.7,SAVE.army-4)),max:()=>SAVE.army>=14,buy:()=>SAVE.army++},
@@ -547,7 +554,7 @@ function renderShop(){
   let h='',open=false;
   SHOP.forEach((it,i)=>{if(it.h){if(open)h+='</div>';h+=`<h3 style="margin:16px 0 8px">${it.h}</h3><div class="shop">`;open=true;return}
     const mx=it.max&&it.max(),p=it.price();const extra=it.id==='mirror'?` (tu en as ${SAVE.items.mirror})`:boostOn(it.id)?` · actif encore ${fmtT(SAVE.boosts[it.id]-Date.now())}`:'';
-    h+=`<div class="item"><div class="ic">${icHTML(it.ic)}</div><div class="tx"><b>${it.name}</b>${it.desc}${extra}</div><button class="go" data-act="buy" data-i="${i}" ${mx||SAVE.coins<p?'disabled':''}>${mx?'Max':`<span class="price">${COIN}${fmt(p)}</span>`}</button></div>`});
+    h+=`<div class="item"><div class="ic">${icHTML(it.ic)}</div><div class="tx"><b>${it.name}</b>${it.desc}${extra}</div><button class="go" data-act="buy" data-i="${i}" ${mx||SAVE.coins<p?'disabled':''}>${mx?(it.id==='autofill'&&!SAVE.items.autofill?'2e incubateur requis':it.id==='autofill'?'Débloqué':'Max'):`<span class="price">${COIN}${fmt(p)}</span>`}</button></div>`});
   if(open)h+='</div>';
   h+=`<h3 style="margin:22px 0 8px">Marché aux œufs (${EGG_SPECIES.length} espèces) <input id="eggQ" placeholder="Rechercher un Pokémon ou un n°" value="${esc(marketQ)}" style="font:inherit;padding:4px 8px;border:2px solid var(--ink);border-radius:8px"> <select id="eggT" style="font:inherit"><option value="">Tous les types</option>${Object.keys(TNAME).map(t=>`<option value="${t}" ${t===marketT?'selected':''}>${TNAME[t]}</option>`).join('')}</select></h3><div class="market" id="market"></div>`;
   $('tab-shop').innerHTML=h;renderMarket();
@@ -676,7 +683,7 @@ function mkUnit(m,team,x,y,M){const s=stats(m),d=DEX[m.n];const boss=!!m.boss;
   return{m,team,n:m.n,sh:m.sh,x,y,hp:s.hp*T.hpMul*(boss?3:1),max:s.hp*T.hpMul*(boss?3:1),atk:s.atk,spa:s.spa,def:s.def,spd:s.spd,lv:m.lv,t1:d.t1,t2:d.t2,mode:unitMode(d,M.bi),ranged:RANGED.has(d.t1)||d.spa>d.atk+15,cd:rnd()*.6,dir:team?1:2,fr:0,ft:0,moving:false,boss,scale:boss?1.45:1,flash:0,tgt:null,tt:0,lunge:0}}
 function renderBattleHead(){
   if(!B)return;const bi=B.M.bi,used=B.placed.length;
-  $('bhead').innerHTML=`<button class="sm" data-act="stPrev" ${B.stage<=1||B.phase==='fight'?'disabled':''}>◀</button><span class="title">Tableau ${B.stage}${B.stage%10===0?' · BOSS LÉGENDAIRE':B.stage%5===0?' · BOSS':''}</span><button class="sm" data-act="stNext" ${B.stage>SAVE.best||B.phase==='fight'?'disabled':''}>▶</button>
+  $('bhead').innerHTML=`<button class="sm" data-act="bfull" title="Plein écran">${document.body.classList.contains('bfull')?'⤡ Quitter':'⤢ Plein écran'}</button><button class="sm" data-act="stPrev" ${B.stage<=1||B.phase==='fight'?'disabled':''}>◀</button><span class="title">Tableau ${B.stage}${B.stage%10===0?' · BOSS LÉGENDAIRE':B.stage%5===0?' · BOSS':''}</span><button class="sm" data-act="stNext" ${B.stage>SAVE.best||B.phase==='fight'?'disabled':''}>▶</button>
    <span class="biome">${bi.name}</span><span class="biome">Ennemis : ${B.units.filter(u=>u.team).length} · Nv ≈ ${Math.round(2+B.stage*1.45)}</span>
    ${B.phase==='place'?`<span>Armée : <b>${used}/${SAVE.army}</b></span><button class="sm" data-act="autoPlace">Placement auto</button><button class="sm" data-act="clearPlace">Vider</button><button class="go" data-act="fight" ${used?'':'disabled'}>⚔ Combat !</button>`:''}
    ${B.phase==='fight'?`<button class="sm" data-act="speed">Vitesse ×${bSpeed}</button><button class="sm" data-act="flee">Abandonner</button>`:''}`;
@@ -685,7 +692,9 @@ function renderRoster(){
   if(!B)return;const L=SAVE.mons.slice().sort((a,b)=>pc(b)-pc(a));
   $('roster').innerHTML=B.phase!=='place'?'':L.map(m=>{const busy=monStatus(m.u),on=B.placed.some(p=>p.u===m.u);return `<div class="rcard ${busy?'busy':''} ${on?'on':''} ${battleSel===m.u?'sel':''}" data-act="rsel" data-u="${m.u}" title="${statusTxt(busy)}">${sprHTML(m.n,m.sh,48)}<div>${esc(DEX[m.n].name)}</div><div>Nv ${m.lv}${m.sh?' ★':''}</div><div class="muted">${busy?statusTxt(busy):'PC '+pc(m)}</div></div>`}).join('')||'<p>Aucun Pokémon.</p>';
 }
-function canvasPos(e){const r=$('bcv').getBoundingClientRect();return[(e.clientX-r.left)/r.width*CW,(e.clientY-r.top)/r.height*CH]}
+function canvasPos(e){const r=$('bcv').getBoundingClientRect(),k=Math.min(r.width/CW,r.height/CH),ox=(r.width-CW*k)/2,oy=(r.height-CH*k)/2;return[(e.clientX-r.left-ox)/k,(e.clientY-r.top-oy)/k]}
+function toggleBattleFull(){const on=!document.body.classList.contains('bfull');document.body.classList.toggle('bfull',on);try{if(on&&!document.fullscreenElement)document.documentElement.requestFullscreen().catch(()=>{});if(!on&&document.fullscreenElement)document.exitFullscreen()}catch(e){}renderBattleHead()}
+document.addEventListener('fullscreenchange',()=>{if(!document.fullscreenElement&&document.body.classList.contains('bfull')){document.body.classList.remove('bfull');renderBattleHead()}});
 function placeAt(px,py){
   if(!B||B.phase!=='place')return;
   const hit=B.placed.findIndex(p=>Math.hypot(p.x-px,p.y-py)<16);
@@ -813,7 +822,7 @@ const ACH=[
  ['s1','Éclat de lumière','Obtenir une super mutation (shiny)',1000,()=>stv('sh'),1],
  ['s5','Collection brillante','Obtenir 5 super mutations',5000,()=>stv('sh'),5],
  ['p1','Patient zéro','Un bébé attrape le Pokérus',2000,()=>stv('pk'),1],
- ['t1','Le jackpot','Un bébé avec mutation, super mutation et Pokérus en même temps',20000,()=>stv('triple'),1],
+ ['t1','Le jackpot','Un bébé avec super mutation et Pokérus en même temps',20000,()=>stv('triple'),1],
  ['e1','Ça évolue !','Faire évoluer un Pokémon',50,()=>stv('evo'),1],
  ['e25','Professeur','Faire évoluer 25 Pokémon',600,()=>stv('evo'),25],
  ['e100','Darwin','Faire évoluer 100 Pokémon',3000,()=>stv('evo'),100],
@@ -866,6 +875,7 @@ const ACT={
   solo:()=>{if(SAVE.items.mirror<=0)return;SAVE.items.mirror--;placeCouple('solo')},
   inc:(t)=>openInc(+t.dataset.i),
   incAdd:(t)=>incAdd(+t.dataset.i,+t.dataset.k),
+  fillAll:()=>{let n=0;SAVE.incs.forEach((c,i)=>{while(SAVE.eggs.length&&c.slots.length<INC_CAP[c.lvl]){incAdd(i,0,true);n++}});if(n){toast(`🥚 ${n} œuf${n>1?'s':''} placé${n>1?'s':''} dans les incubateurs`);saveGame()}else toast('Incubateurs pleins ou sac vide.');dirty=true},
   incFill:(t)=>{const i=+t.dataset.i,c=SAVE.incs[i];while(SAVE.eggs.length&&c.slots.length<INC_CAP[c.lvl])incAdd(i,0,true);saveGame();openInc(i)},
   hatch:(t)=>{const r=hatchOne(+t.dataset.i,+t.dataset.k);if(r){showHatch([r]);dirty=true;saveGame()}},
   hatchAll:()=>hatchAll(),
@@ -879,6 +889,7 @@ const ACT={
   dexInfo:(t)=>dexInfo(+t.dataset.n),
   rsel:(t)=>{const u=+t.dataset.u;if(monStatus(u)){toast('Ce Pokémon est occupé (nid ou entraînement).');return}battleSel=u;renderRoster()},
   autoPlace:()=>autoPlace(),clearPlace:()=>{B.placed=[];renderBattleHead();renderRoster()},
+  bfull:()=>toggleBattleFull(),
   fight:()=>startFight(),speed:()=>{bSpeed=bSpeed===1?2:bSpeed===2?4:1;renderBattleHead()},flee:()=>endFight(false),
   stPrev:()=>setupStage(B.stage-1),stNext:()=>setupStage(B.stage+1),
   nextStage:()=>{closeModal();setupStage(B.stage+1)},retry:()=>{closeModal();const keep=B.placed;setupStage(B.stage);B.placed=keep.filter(p=>mon(p.u)&&!monStatus(p.u));renderBattleHead();renderRoster()},
