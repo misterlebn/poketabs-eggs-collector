@@ -1,4 +1,4 @@
-POKETABS EGGS COLLECTOR - GUIDE RAPIDE (V00.23.00)
+POKETABS EGGS COLLECTOR - GUIDE RAPIDE (V00.25.00)
 
 1. AVANT DE LANCER LE JEU (une seule fois)
    Double-clique sur INSTALLER_SPRITES.bat.
@@ -158,3 +158,25 @@ V00.23.00
                        Œufs du moment (-30 %, 1 par génération, chaque heure) inchangés
    SAVE.cab            Armoire à œufs dans la Nurserie : 12 vrais œufs rangés (hors du sac, n'éclosent pas), visibles sur le profil
                        l'ancienne armoire du Pokédex devient la « Vitrine de collection »
+
+V00.24.00
+   🎲 Relancer          change le Marché du jour (7 par génération) et le Légendaire du jour ; 2 000 puis le prix double
+                        à chaque relance (2 000, 4 000, 8 000…), remis à 2 000 le lendemain (SAVE.mk)
+   Œufs du moment       légendaire possible mais très rare (3 % par heure au lieu de 15 %)
+   passable()           les falaises bloquent tout le monde, même les volants ; les rochers ronds bloquent seulement les non-volants
+                        les volants contournent les falaises (champ de déplacement aussi pour eux)
+   B.focus              pendant le combat, clic sur un ennemi = cible principale (viseur rouge), tous tes Pokémon l'attaquent ;
+                        re-clic ou clic dans le vide pour annuler
+   Vitesse              x1, x2, x3, x4, réglable avant de lancer le combat
+
+V00.25.00
+   Vitesse              x1, x2, x4 ; le choix est gardé pour tous les combats suivants (OPT.mspd)
+   Arène                les Pokémon des équipes passent à la ligne dans les cartes
+                        botFor(id) : les places sans joueur sont tenues par des bots (équipes faibles, niveau selon la place),
+                        un joueur qui bat le bot prend la place ; les bots changent chaque mois
+   Armée                15 Pokémon au maximum (les sauvegardes au-dessus sont ramenées à 15)
+   Synergies            5 / 10 / 15 Pokémon d'espèces différentes du même type (les doublons ne comptent qu'une fois)
+   Gène miroir          un seul œuf, puis le Pokémon quitte le nid
+   Nids                 stock d'œufs en attente : 1 (niveaux 1-2), 2 (niveaux 3-4), 3 (niveau 5) ; la ponte continue tant que le stock n'est pas plein
+   eggRoom()            récupérer un œuf demande une place libre : Pokémon + œufs du sac + œufs en couveuse + bébés en attente < capacité
+                        de la nurserie, et une place dans le sac ; sinon l'œuf reste au nid et la ponte s'arrête quand le stock est plein
