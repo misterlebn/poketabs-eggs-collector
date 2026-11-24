@@ -1,4 +1,4 @@
-POKETABS EGGS COLLECTOR - GUIDE RAPIDE (V00.14.00)
+POKETABS EGGS COLLECTOR - GUIDE RAPIDE (V00.23.00)
 
 1. AVANT DE LANCER LE JEU (une seule fois)
    Double-clique sur INSTALLER_SPRITES.bat.
@@ -58,3 +58,103 @@ V00.14.00
    canBreed/shareType deux espèces différentes avec un type commun peuvent se reproduire ; WEIRD_P = 5 % qu'une autre espèce du même type sorte de l'œuf
    teamSel            sélection multiple dans l'onglet Pokémon pour relâcher plusieurs Pokémon
    renderProfile      onglet Profil : tableau de bord, pseudo, titre, compte ; renderSettings : onglet Réglages
+
+V00.15.00
+   PER_BIOME=40, MAXST=1000   1000 tableaux : 24 biomes de 40 tableaux, Route Victoire 961-995, Vallée 996-999, Temple d'Arceus 1000
+   enemyLv()           sans plafond : 3 + 3,4 × tableau^0,62 (≈ 62 au 100, 107 au 250, 249 au 1000) ; les Pokémon du joueur n'ont plus de niveau max
+   BLK (genMap)        environ 6 % des tableaux bloqués exprès : rivière sans pont (nageurs/volants), lave (Feu/volants), crevasse (volants seuls)
+   AUTO, autoNext()    bouton Auto : rejoue les tableaux suivants avec la même armée jusqu'à une défaite
+   pas d'XP en cas de défaite ; un seul endFight par image (bug des récompenses en double en vitesse ×2/×4)
+
+V00.16.00
+   EGG_METHOD, eggMethod()   obtention de chaque œuf : marche (Marché), boutique (seulement Œufs du moment, 3× plus souvent),
+                             boss (seulement sur un boss de l'espèce, 35 % par victoire, biomes dans EGG_BOSS_BIOMES),
+                             croisement (seulement par union surprise entre espèces de même type, 4× plus probable),
+                             legende (10 % sur le boss légendaire du biome, Œufs du moment, cadeau d'Arceus)
+   Les œufs surprises et les super œufs ne donnent que des espèces du Marché.
+
+V00.17.00
+   rp()                prix ronds (50, 100, 500 ou 1 000 selon le montant)
+   limites             6 nids, 6 incubateurs (4 œufs max chacun), 6 punching-balls
+   bagOf(), addEgg()   sac d'œufs limité (20, 30, 40, 60…, achat « Agrandir le sac ») ; sac plein : œuf de boss revendu
+   SAVE.prioNew        case « Priorité aux œufs pas encore au Pokédex » pour Tout remplir / Remplir automatiquement
+   nestFill            bouton « Remplir avec les plus forts » (nids)
+   TRAIN_D             entraînement à durée choisie (30 min à 24 h) ; XP donnée à la fin, perdue si on retire avant
+   presets (SAVE.presets)  30 équipes enregistrées, menu « Équipe… » et bouton 💾 Équipes en combat
+   vitesse             ×4 sur un tableau déjà réussi, réglage par défaut sur un nouveau ; en Auto la vitesse choisie est gardée
+   filtHTML/applyFilt  recherche par nom + type + tri dans toutes les listes (Pokémon, armée, nids, entraînement, œufs, collection)
+   SAVE.eg, SAVE.shelf collection d'œufs (Pokédex > Collection d'œufs) et armoire de 12 œufs visible sur le profil public
+   NCOLORS             couleurs de pseudo débloquées par les succès ; 10 nouveaux succès et titres
+   ADN légendaire      objet à 50 000 : un légendaire peut pondre une fois (avec Métamorph) ; sans ADN les légendaires ne se reproduisent plus
+   assets/logo.svg     icône du site et logo
+   export/import de partie retirés des Réglages
+
+V00.18.00 / V00.19.00
+   MOVES, pickMove()   attaques par type (4 paliers selon le niveau), le type le plus efficace contre la cible
+   SYN, applySyn()     bonus d'équipe par type à 2 / 4 / 6 Pokémon (bouton « Bonus d'équipe » en combat)
+   ITEMS, invAdd()     objets (sac d'objets dans Aventures) : Super Bonbon, pierres, Grelot Zen, Pierre Stase, Œuf Chance, Pièce Rune, Charme Ovale, pépites
+   SPECIAL_EVO         évolutions par pierre et par bonheur (m.hap, 220 pour évoluer)
+   onglet Aventures    expéditions (EXP_SLOTS=3, 1 à 8 h), missions du jour (MIS), tableaux défi du jour (DEFI_K)
+   DEX_RW              récompenses du Pokédex tous les 50 Pokémon possédés
+   OV_MAP              correspondance des sprites Gen 7 (le pack insère des formes)
+   onglet En ligne     Classement, Arène (8 places, collection arena) et Hôtel des ventes (collection auctions)
+
+V00.20.00
+   SYN_T=[6,10,14]     bonus d'équipe par type à 6 / 10 / 14 Pokémon
+   arena2              Arène : 8 champions (p1-p8), Conseil 4 (c1-c4), Maître (master), un Expert par type (x_<type>)
+                       champion et Conseil 4 : équipe monotype ; Maître : équipe libre ; pas de légendaire sauf Experts
+                       champion -> défie le Conseil 4 ; Conseil 4 -> défie le Maître ; Expert : monotype du type, doit battre l'Expert en place
+                       un joueur = 1 place d'échelle + 1 place d'Expert au maximum
+   arenaMonthly()      chaque début de mois : champions retirés, places vides de Maître / Conseil 4 remplies par les 5 plus forts (PC)
+   Entraînement        durées 30 min, 1 h, 3 h, 6 h, 12 h, 24 h (XP perdue si retrait avant la fin)
+   Règles Firestore (publiées) :
+     match /arena/{place} { allow read: if true; allow write: if request.auth != null; }
+     match /auctions/{id} {
+       allow read: if true;
+       allow create: if request.auth != null && request.resource.data.seller == request.auth.uid;
+       allow update: if request.auth != null;
+       allow delete: if request.auth != null && (resource.data.seller == request.auth.uid || resource.data.bidder == request.auth.uid);
+     }
+
+V00.21.00
+   ADN légendaire      100 000 pièces, seul moyen de faire pondre un légendaire (pas de Gène miroir sur un légendaire)
+   m.rest              après la ponte ADN, le légendaire est épuisé 24 h (monStatus k='rest' : ni combat, ni nid, ni entraînement, ni expédition)
+   Métamorph           œuf uniquement au Marché, 1 000 000 pièces (pas de Gène miroir sur Métamorph)
+   splitOne            retirer un seul parent du nid ; le nid garde l'autre et cherche un partenaire
+   nestFill            « ⚡ Remplir les nids (plus forts) » : nids vides et nids à un seul parent
+   stGo / stJump       ⏮ premier, ⏪ -10, ◀, ▶, ⏩ +10, ⏭ dernier tableau atteint, champ « Aller »
+   B.trans             animation de bande qui défile en passant au tableau suivant (combat en pause pendant l'animation)
+   rock / LAYN         reliefs : Couloir, Entonnoir, Rocher central, Crêtes, Éboulis (falaises et rochers, seuls les volants passent)
+                       vérification automatique : le passage à pied reste toujours possible (sauf passages bloqués voulus)
+   fixSave mig21       migration : nids, incubateurs et punching-balls au-delà de 6 retirés, Pokémon libérés, œufs remis dans le sac,
+                       ADN rendu ; fenêtre d'information au chargement ; fixSave aussi appliqué à la sauvegarde en ligne
+   pg() / PGN=60       listes de Pokémon affichées par 60 (bouton « Afficher plus ») ; mon() indexé ; images en chargement différé
+   capOf               1000 Pokémon au maximum (sauvegarde en ligne bien sous la limite de 1 Mo de Firestore)
+
+V00.22.00 : ANTRE DYNAMAX (onglet Aventures)
+   SAVE.dmax           {k, boss:{n,lv,sh,max,hp}, chain, kills} : les PV du boss sont gardés entre les combats
+   dmaxNew(k)          boss n°k : les 10 Gigamax d'abord (Pikachu, Miaouss, Évoli, Papilusion, Ectoplasma, Lokhlass, Ronflex,
+                       Florizarre, Dracaufeu, Tortank), puis Gigamax ou Pokémon Dynamax au hasard ; niveau = moyenne des 20 meilleurs + 6 + 2k
+                       PV = PV × 10 × niveau × (1 + 0,15k) : environ 2 à 3 combats de 50 Pokémon pour un boss
+   genDen()            la grotte ; DMAX_ARMY = 50 Pokémon, zone de placement élargie
+   dmaxStep()          onde Dynamax toutes les 4,5 s sur les Pokémon proches du boss
+   Enchaîner           le boss suivant arrive dès que le boss tombe, jusqu'à la chute de l'armée
+   m.ko                Pokémon vaincu dans l'antre : K.O. 3 h (monStatus k='ko' : rien n'est possible avec lui)
+   Rappel Max (400)    soigne tout de suite ; Rappel (120) : -1 h 30 ; « Soigner tous », « Sélectionner les K.O. », bouton sur chaque fiche
+   Récompenses         pièces selon les dégâts ; boss vaincu : œuf de l'espèce (niveau 15+, 10 % shiny), objet, 2 Rappels Max
+   sprites/gmax/N.png  planches Gigamax (4 x 4 cases : colonnes 1-2 normal, 3-4 shiny ; lignes bas, gauche, droite, haut)
+
+V00.23.00
+   ⛶ (barre du haut)   plein écran pour tout le jeu (Échap pour quitter) ; le plein écran du combat reste dispo
+   Sprites             36 Pokémon de 3G n'avaient pas de sprite (Zigzaton, Chenipotte, Nénupiot, Grainipiot, Goélise, Arakdo, Munja,
+                       Chuchmur, Makuhita, Dynavolt, Négapi, Muciole, Lumivole, Chartor, Mangriff, Séviper, Séléroc, Solaroc, Barloche,
+                       Tropius, Obalie, Phogleur, Coquiperl, Serpang, Rosabyss, Relicanth…) : ajoutés dans Gen 1-7 OV SPrites
+   Œufs                tous les Pokémon du jeu ont maintenant un œuf (529 espèces disponibles au lieu de 463) ;
+                       36 nouveaux œufs tirés de Graphics/Eggs/pokemon_eggs_gen_1_9.png -> Battlers/Eggs/g3_<n°>.png
+                       évolutions de 3G ajoutées (Nénupiot -> Lombre -> Ludicolo à la Pierre Eau, Grainipiot -> Pifeuil -> Tengalice
+                       à la Pierre Plante, Skitty -> Delcatty à la Pierre Lune, Ningale -> Ninjask ou Munja, Coquiperl -> Serpang ou Rosabyss…)
+   marketToday()       Marché du jour : 7 Pokémon par génération (prix normal) + Métamorph, change à minuit
+                       Légendaire du jour : un légendaire au hasard, prix x2,5, un seul achat par jour
+                       Œufs du moment (-30 %, 1 par génération, chaque heure) inchangés
+   SAVE.cab            Armoire à œufs dans la Nurserie : 12 vrais œufs rangés (hors du sac, n'éclosent pas), visibles sur le profil
+                       l'ancienne armoire du Pokédex devient la « Vitrine de collection »
