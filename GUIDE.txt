@@ -223,21 +223,45 @@ V00.29.00
                         (niveau 50 : Magicarpe ≈ 344 PC, Mewtwo ≈ 650, Arceus ≈ 660) ; Munja garde 1 PV
    Talents              inspirés des vrais jeux, seulement pour certains Pokémon (visible dans la 📋 Fiche) :
                           Camouflage (Kecleon) invisible jusqu'à ce qu'il attaque ou soit touché, ignoré par le ciblage
-                          Absentéisme (Monaflèmit, Monaflèmit… Parecool non) une attaque sur deux « Flemme… »
+                          Absentéisme (Parecool, Monaflemit) une attaque sur deux « Flemme… »
                           Début Calme (Regigigas) ses 5 premières attaques font moitié dégâts
                           Garde Mystik (Munja) ne prend que les coups super efficaces
                           Intimidation (Arbok, Caninos, Arcanin, Tauros, Léviator, Granbull, Cerfrousse, Grahyèna, Drattak)
-                            baisse l'Attaque des ennemis de 15 % (2 fois max par ennemi)
-                          Lévitation (spectres flottants, Séléroc, Solaroc, Motisma…) immunisé contre Sol
-                          Isograisse (Ronflex, Mammochon…) Feu et Glace ×0,5
-                          Torche (Caninos/Arcanin non, Ponyta, Galopa, Héricendre…) immunisé au Feu puis +25 %
-                          Absorb Eau / Absorb Volt (Lanturn, Raichu…) soigne au lieu de blesser
-                          Fermeté (Racaillou, Gravalanch, Grolem, Magnéti…) survit à 1 PV si PV pleins
-                          Coloforce / Force Pure (Marill, Azumarill, Azurill / Méditikka, Charmina) Attaque ×1,6
-                          Turbo (Yanma, Ninjask…) recharge de plus en plus vite
-                          Impudence (Insécateur, Scarabrute…) +10 % par K.O., 5 max
-                          Cran (Machoc, Ursaring…) ×1,35 sous la moitié des PV
-                          Peau Dure (Carvanha, Sharpedo…) renvoie 12 % des coups au corps à corps
-                          Multiécaille (Dracolosse, Lugia) dégâts ×0,5 à PV pleins
-                          Régé-Force (Leveinard, Ramoloss…) régénère 0,8 % des PV par seconde
-                          Statik (Pikachu, Élektek…) 30 % de chance de ralentir un attaquant au corps à corps
+                            Attaque des ennemis -15 % (2 fois max par ennemi)
+                          Lévitation (Fantominus, Spectrum, Ectoplasma, Smogo, Smogogo, Feuforêve, Zarbi, Vibraninf, Libégon,
+                            Séléroc, Solaroc, Balbuto, Kaorine, Skelénox, Éoko, Latias, Latios, Magirêve, Motisma, Cresselia,
+                            Trioxhydre…) insensible au Sol
+                          Isograisse (Ronflex, Marcacrin, Cochignon, Écrémeuh, Obalie, Phogleur, Kaimorse, Goinfrex, Mammochon)
+                            Feu et Glace x0,5
+                          Torche (Goupix, Feunard, Ponyta, Galopa, Pyroli, Malosse, Démolosse, Funécire, Mélancolux, Lugulabre)
+                            insensible au Feu, puis +25 % d'attaque
+                          Absorb Eau (Ptitard, Têtarte, Tartard, Lokhlass, Aquali, Tarpaud, Axoloto, Maraiste, Démanta, Babimanta)
+                          Absorb Volt (Voltali, Loupio, Lanturn) soignés au lieu d'être blessés
+                          Fermeté (Racaillou, Gravalanch, Grolem, Onix, Simularbre, Steelix, Caratroc, Airmure, Tarinor, Galekid,
+                            Galegon, Galeking, Dinoclier, Bastiodon, Manzaï, Tarinorme) survit à 1 PV si PV pleins
+                          Coloforce (Marill, Azumarill, Azurill) / Force Pure (Méditikka, Charmina) Attaque x1,6
+                          Turbo (Yanma, Ninjask, Yanméga) attaque de plus en plus vite
+                          Impudence (Mascaïman, Escroco, Crocorible…) +10 % par K.O., 5 max
+                          Cran (Machoc, Machopeur, Mackogneur, Scarhino, Teddiursa, Ursaring, Nirondelle, Hélédelle…)
+                            +35 % sous la moitié des PV
+                          Peau Dure (Carvanha, Sharpedo, Griknot, Carmache, Carchacrok) renvoie 12 % des coups au corps à corps
+                          Multiécaille (Dracolosse, Lugia) dégâts x0,5 à PV pleins
+                          Régé-Force (Ramoloss, Flagadoss, Roigada, Bouldeneu…) +0,8 % PV par seconde
+                          Statik (Pikachu, Raichu, Pichu, Élektek, Élekid, Dynavolt, Élecsprint, Élekable)
+                            30 % de chance de ralentir un attaquant au corps à corps
+
+V00.30.00
+   Déplacement          nouvelle ligne dans la 📋 Fiche : 🪽 Vol, 🦶 Terrestre, 🌊 Nage, 🌋 Lave (survol de la souris = explication)
+   Vol                  volent aussi : Dardargnan, Munja, Métalosse, Momartik, Darkrai, Pyrax, Reshiram, Zekrom,
+                        Monorpale, Dimoclès, Exagide, Trousselin, Necrozma
+   Nage                 nagent aussi : Minidraco, Draco, Mucuscule, Colimucus, Muplodocus
+   Lave                 traverse aussi la lave : Groudon
+
+V00.31.00
+   Maître de l'arène    le siège de Maître est tenu par un boss PNJ (😈 Maître Aldéric, Maîtresse Sélène, Maître Orion ou
+                        Maîtresse Astrid selon le mois) : 12 Pokémon finaux parmi les plus puissants, niveau 83 à 87, sans légendaire
+                        un membre du Conseil 4 qui le bat devient Maître ; chaque nouveau mois le boss reprend le siège
+                        et le Maître sortant passe au Conseil 4 s'il y a de la place
+                        migration : le Maître placé automatiquement (classement) passe au Conseil 4
+   Revenu des places    par heure tenue : Maître 3 000, Conseil 4 1 500, Champions de 900 (n°1) à 340 (n°8), experts 0
+                        versé une fois par jour, à la première connexion du jour (bandeau « en attente » dans l'onglet Arène)

@@ -198,6 +198,7 @@ body.bfull .roster{flex:none;padding:6px 2px}
 .slotrow{display:flex;align-items:center;gap:10px;background:#fff;border:2px solid var(--ink);border-radius:10px;padding:6px;margin-bottom:6px}
 
 .slotrow .bar{flex:1}
+.mvtag{display:inline-block;padding:2px 8px;margin:1px 2px;border-radius:10px;background:#f3e6cf;border:1px solid #c9a97a;font-size:12px;font-weight:600}
 </style>
 </head>
 <body>
@@ -248,7 +249,7 @@ body.bfull .roster{flex:none;padding:6px 2px}
    POKETABS EGGS COLLECTOR  (V00.01.00)
    Réglages rapides : objet T ci-dessous (durées en secondes, chances en 0..1)
    ===================================================================== */
-const VERSION='V00.29.00';
+const VERSION='V00.32.00';
 const T={
   breed:45,        // durée de base d'une ponte (s)
   hatch:75,        // durée de base d'éclosion (s), modulée par l'espèce (stats totales et rareté)
@@ -418,7 +419,7 @@ function makeEgg(A,B,nestLvl){
   let mut=0;const pm=T.mut+(nestLvl-1)*0.03+(boostOn('mut')?0.15:0);
   if(rnd()<pm){mut=1;lv+=T.mutLv;const k=pick(GK);g[k]=Math.min(31,g[k]+ri(3,6))}
   const nsh=(A.sh?1:0)+(B.sh?1:0);let ps=[T.sh0,T.sh1,T.sh2][nsh];
-  if(boostOn('shiny'))ps*=3;if(nestLvl>=5)ps*=1.5;
+  if(boostOn('shiny'))ps*=3;if(nestLvl>=5)ps*=1.5;ps*=expMul(sp);
   /* trois tirages indépendants : mutation, super mutation (shiny) et Pokérus */
   const sh=rnd()<ps;let bst=null;if(sh){if(!mut)lv+=T.mutLv;mut=0;bst=pick(BST_K)}/* la super mutation absorbe la mutation classique : +5 niveaux au total */
   const pkIn=!!(A.pk||B.pk),pk=pkIn||rnd()<T.pkr;
@@ -428,12 +429,12 @@ function shopEgg(tier){
   const rars=tier==='c'?[0,1]:tier==='r'?[2]:[3];
   const pool=EGG_SPECIES.map(n=>DEX[n]).filter(d=>rars.includes(d.rar)&&!LEGEND.has(d.n)&&d.n!==132&&eggMethod(d.n)==='marche');
   const d=pick(pool);const lv=eggLevel(d.n);
-  const sh=rnd()<T.sh0;
+  const sh=rnd()<T.sh0*expMul(d.n);
   return{id:SAVE.uid++,n:d.n,lv:lv+(sh?T.mutLv:0),g:randGenes(tier==='l'?12:0,tier==='c'?12:20),sh,mut:0,bst:sh?pick(BST_K):null,src:'boutique'}
 }
 function legendEgg(){const L=EGG_SPECIES.filter(x=>LEGEND.has(x));const n=pick(L);const e=eggOf(n);e.src='arceus';e.g=randGenes(20,31);return e}
-function superEgg(){const P=EGG_SPECIES.filter(x=>DEX[x].rar>=2&&!LEGEND.has(x)&&eggMethod(x)==='marche');const n=pick(P);const sh=rnd()<T.sh0*3;return{id:SAVE.uid++,n,sx:rollSex(n),lv:10+(sh?T.mutLv:0),g:randGenes(15,31),sh,mut:0,bst:sh?pick(BST_K):null,src:'super'}}
-function eggOf(n){const sh=rnd()<T.sh0;return{id:SAVE.uid++,n,lv:eggLevel(n)+(sh?T.mutLv:0),g:randGenes(LEGEND.has(n)?12:0,LEGEND.has(n)?24:14),sh,mut:0,bst:sh?pick(BST_K):null,src:'boutique'}}
+function superEgg(){const P=EGG_SPECIES.filter(x=>DEX[x].rar>=2&&!LEGEND.has(x)&&eggMethod(x)==='marche');const n=pick(P);const sh=rnd()<T.sh0*3*expMul(n);return{id:SAVE.uid++,n,sx:rollSex(n),lv:10+(sh?T.mutLv:0),g:randGenes(15,31),sh,mut:0,bst:sh?pick(BST_K):null,src:'super'}}
+function eggOf(n){const sh=rnd()<T.sh0*expMul(n);return{id:SAVE.uid++,n,lv:eggLevel(n)+(sh?T.mutLv:0),g:randGenes(LEGEND.has(n)?12:0,LEGEND.has(n)?24:14),sh,mut:0,bst:sh?pick(BST_K):null,src:'boutique'}}
 const breedRar=(A,B)=>Math.max(DEX[A.n].rar===9?0:DEX[A.n].rar,DEX[B.n].rar===9?0:DEX[B.n].rar);
 function breedDur(nest,A,B){let d=T.breed*(RF[breedRar(A,B)]||1)*Math.pow(.85,nest.lvl-1)*(boostOn('love')?.5:1);if(SAVE.tuto<5)d*=.35;return d*1000}
 /* temps d'éclosion propre à chaque espèce : plus le Pokémon est fort et rare, plus l'œuf est long */
@@ -1086,9 +1087,12 @@ function drawTerrain(M){
 }
 /* --- passabilité et champs de déplacement --- */
 /* volent aussi : Pokémon qui lévitent ou qui ont des ailes ; ne volent pas : oiseaux coureurs sans ailes */
-const FLY_EXTRA=new Set([49,81,82,109,110,151,201,251,269,313,314,329,330,337,338,343,344,358,374,375,380,381,385,433,436,437,455,462,479,480,481,482,488,577,578,579,599,600,601,602,603,604,615,623,635,738,790]);
+const FLY_EXTRA=new Set([15,292,376,478,491,637,643,644,679,680,681,707,800,49,81,82,109,110,151,201,251,269,313,314,329,330,337,338,343,344,358,374,375,380,381,385,433,436,437,455,462,479,480,481,482,488,577,578,579,599,600,601,602,603,604,615,623,635,738,790]);
 const NO_FLY=new Set([84,85,566]);
-function unitMode(d,bi){const ty=[d.t1,d.t2],n=d.n;if(!NO_FLY.has(n)&&(ty.includes('vol')||d.t1==='spectre'||FLY_EXTRA.has(n)))return 'fly';if(bi.lava?ty.includes('feu'):ty.includes('eau'))return 'swim';return 'ground'}
+const SWIM_EXTRA=new Set([147,148,704,705,706]),LAVA_EXTRA=new Set([383]);
+function unitMode(d,bi){const ty=[d.t1,d.t2],n=d.n;if(!NO_FLY.has(n)&&(ty.includes('vol')||d.t1==='spectre'||FLY_EXTRA.has(n)))return 'fly';if(bi.lava?(ty.includes('feu')||LAVA_EXTRA.has(n)):(ty.includes('eau')||SWIM_EXTRA.has(n)))return 'swim';return 'ground'}
+function moveTags(n){const d=DEX[n],ty=[d.t1,d.t2],T=[];if(unitMode(d,{})==='fly')T.push(['🪽','Vol','Survole l\'eau, la lave et la boue ; bloqué par les falaises']);else{T.push(['🦶','Terrestre','Marche au sol ; ralenti dans la boue']);if(ty.includes('eau')||SWIM_EXTRA.has(n))T.push(['🌊','Nage','Traverse l\'eau']);if(ty.includes('feu')||LAVA_EXTRA.has(n))T.push(['🌋','Lave','Traverse la lave'])}return T}
+const moveHTML=n=>moveTags(n).map(([i,l,t])=>`<span class="mvtag" title="${t}">${i} ${l}</span>`).join(' ');
 function passable(M,i,mode){if(M.rock&&M.rock[i]===1)return false;if(mode==='fly')return true;if(M.rock&&M.rock[i])return false;if(M.voidc&&M.voidc[i])return false;if(M.tree[i])return false;if(M.liq[i]&&!M.bridge[i])return mode==='swim';return true}
 function buildField(M,sources,mode){const F=new Float32Array(GW*GH).fill(Infinity);const q=[];sources.forEach(i=>{if(F[i]!==0){F[i]=0;q.push(i)}});
   for(let h=0;h<q.length;h++){const i=q[h],x=i%GW,y=(i/GW)|0;for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){if(!dx&&!dy)continue;const nx=x+dx,ny=y+dy;if(nx<0||ny<0||nx>=GW||ny>=GH)continue;const j=ny*GW+nx;if(!passable(M,j,mode))continue;if(dx&&dy&&(!passable(M,y*GW+nx,mode)||!passable(M,ny*GW+x,mode)))continue;const c=F[i]+(dx&&dy?1.414:1);if(c<F[j]){F[j]=c;q.push(j)}}}return F}
@@ -1191,6 +1195,7 @@ function openMonInfo(u){const m=mon(u);if(!m)return;const d=DEX[m.n],hap=m.hap==
   const held=Object.keys(inv).filter(id=>ITEMS[id]&&ITEMS[id].k==='held');
   const evs=(EVO[m.n]||[]).map(([to,l,c])=>`<li>${esc(DEX[to].name)}${c&&(c.startsWith('stone')||c.startsWith('hap'))?'':' au niveau '+l}${condTxt(c)}</li>`).join('');
   openModal(`<h2>${esc(d.name)} <small class="muted">Nv ${m.lv}</small></h2><div class="flexr">${monCard(m)}<div style="flex:1;min-width:240px">
+   <p><b>Déplacement</b> : ${moveHTML(m.n)}</p>
    ${ABIL_OF[m.n]?`<p><b>Talent</b> : ✨ <b>${ABIL[ABIL_OF[m.n]][0]}</b> · ${ABIL[ABIL_OF[m.n]][1]}</p>`:''}
    <p><b>Attaques</b> : ${movesOf(m).map(x=>`<span class="ty" style="background:${TCOL[x.type]}">${esc(x.name)} · ${x.pow}</span>`).join(' ')}</p>
    <p><b>Bonheur</b> : <span class="hapbar"><i style="width:${hap/255*100}%"></i></span> ${hap}/255${hap>=HAP_EVO?' 💖':''}</p>
@@ -1291,7 +1296,7 @@ const ARENA={map:null,busy:false,err:'',t:0};
 const SEATS_CH=Array.from({length:NARENA},(_,k)=>'p'+(k+1)),SEATS_C4=['c1','c2','c3','c4'];
 const seatKind=id=>id==='master'?'master':id[0]==='c'?'c4':id[0]==='p'?'champ':'expert';
 const seatType=id=>id.startsWith('x_')?id.slice(2):null;
-const seatLabel=id=>{const k=seatKind(id);return k==='master'?'Maître':k==='c4'?'Conseil 4 n°'+id.slice(1):k==='champ'?'Champion n°'+id.slice(1):'Expert '+(TNAME[seatType(id)]||seatType(id))};
+const seatLabel=id=>{const k=seatKind(id);return k==='master'?'Maître':k==='c4'?'Conseil 4 ('+id.slice(1)+')':k==='champ'?'Champion d\'arène ('+id.slice(1)+')':'Expert '+(TNAME[seatType(id)]||seatType(id))};
 /* règle d'équipe de chaque place : experts = un seul type, légendaires permis ; champions et Conseil 4 = équipe d'un seul type sans légendaire ; Maître = sans légendaire */
 const seatRule=id=>{const k=seatKind(id);return k==='expert'?{type:seatType(id),mono:true,nolegend:false}:k==='master'?{mono:false,nolegend:true}:{mono:true,nolegend:true}};
 const ruleTxt=r=>(r.type?'équipe 100 % '+(TNAME[r.type]||r.type):r.mono?'équipe d\'un seul type':'équipe libre')+(r.nolegend?', sans légendaire':', légendaires permis');
@@ -1299,22 +1304,23 @@ const monthKey=()=>new Date().toISOString().slice(0,7);
 async function arenaLoad(force){if(!CLOUD.db||ARENA.busy)return;if(!force&&ARENA.map&&Date.now()-ARENA.t<20000)return;ARENA.busy=true;
   try{let q=await CLOUD.db.collection('arena').get();let M={};q.docs.forEach(d=>M[d.id]=Object.assign({id:d.id},d.data()));
     if(!M.meta||M.meta.month!==monthKey()){await arenaMonthly(M);q=await CLOUD.db.collection('arena').get();M={};q.docs.forEach(d=>M[d.id]=Object.assign({id:d.id},d.data()))}
-    ARENA.map=M;ARENA.err='';ARENA.t=Date.now()}
+    if(!M.meta||M.meta.pnj!==2){const col=CLOUD.db.collection('arena');for(const id of Object.keys(M))if(id!=='meta'&&M[id]&&M[id].auto){await col.doc(id).delete();delete M[id]}
+      await col.doc('meta').set({pnj:2},{merge:true});if(M.meta)M.meta.pnj=2}
+    ARENA.map=M;ARENA.err='';ARENA.t=Date.now();arenaAccrue()}
   catch(e){ARENA.err=errKind(e)}ARENA.busy=false;if(cur==='rank'&&onlineMode==='arena')renderRank()}
-/* nouveau mois : les champions sont destitués ; les sièges vides du Maître et du Conseil 4 vont aux 5 joueurs les plus forts (PC) */
+/* nouveau mois : les champions sont destitués ; personne n'est placé automatiquement */
 async function arenaMonthly(M){const col=CLOUD.db.collection('arena'),first=!M.meta;
-  await col.doc('meta').set({month:monthKey(),at:Date.now()});
-  if(!first)for(const id of SEATS_CH)if(M[id])await col.doc(id).delete();
-  const seated=new Set(['master',...SEATS_C4].filter(id=>M[id]).map(id=>M[id].uid));
-  const q=await CLOUD.db.collection('profiles').orderBy('power','desc').limit(20).get();
-  const cand=q.docs.map(d=>Object.assign({uid:d.id},d.data())).filter(p=>p.team&&p.team.length&&!seated.has(p.uid));
-  const put=async(id,p)=>{await col.doc(id).set({uid:p.uid,name:p.name||'?',title:p.title||'Dresseur',color:p.color||'base',team:p.team,since:Date.now(),wins:0,auto:true})};
-  if(!M.master&&cand.length)await put('master',cand.shift());
-  for(const id of SEATS_C4)if(!M[id]&&cand.length)await put(id,cand.shift())}
+  await col.doc('meta').set({month:monthKey(),at:Date.now(),pnj:2},{merge:true});
+  if(!first)for(const id of SEATS_CH)if(M[id])await col.doc(id).delete()}
 /* bots : occupent les places libres avec une équipe plutôt faible, jusqu'à ce qu'un joueur les batte */
 const BOT_NAMES=['Léo','Mila','Hugo','Zoé','Nina','Tom','Lina','Max','Eva','Noé','Jade','Sam','Lou','Axel','Iris','Paul','Rose','Yanis','Clara','Enzo','Lisa','Malo','Inès','Théo','Anna','Rayan','Lucie'];
-function botFor(id){const k=seatKind(id),h=[...(id+monthKey())].reduce((a,c)=>(a*31+c.charCodeAt(0))>>>0,7),R=rng(h);
-  const lv=k==='master'?70:k==='c4'?50+(+id.slice(1))*2:k==='champ'?14+(NARENA-+id.slice(1))*4:35,size=k==='master'?10:k==='c4'?8:k==='champ'?5:6;
+/* boss PNJ du siège de Maître : équipe de 12 Pokémon finaux parmi les plus puissants (sans légendaire), niveau 85 */
+function bossMaster(){const R=rng(424242);
+  const P=[...AVAIL].filter(n=>DEX[n]&&!LEGEND.has(n)&&n!==132&&!evoTargets(n).length).sort((a,b)=>{const t=d=>d.hp+d.atk+d.def+d.spd+d.spa;return t(DEX[b])-t(DEX[a])}).slice(0,40);
+  const pool=P.slice(),team=[];for(let i=0;i<12&&pool.length;i++){const n=pool.splice(Math.floor(R()*pool.length),1)[0],g={};GK.forEach(x=>g[x]=Math.floor(18+R()*14));team.push({n,lv:83+Math.floor(R()*5),g,sh:false,x:(PZ-1-(i%3)*2)*TW+TW/2,y:(3+Math.floor(i/3)*3)%(GH-2)*TW+TW/2})}
+  return{id:'master',uid:'pnj_master',bot:true,pnj:true,name:'Maître de la Ligue',title:'Boss PNJ',color:'base',team,wins:0}}
+function botFor(id){if(id==='master')return bossMaster();const k=seatKind(id),h=[...(id+monthKey())].reduce((a,c)=>(a*31+c.charCodeAt(0))>>>0,7),R=rng(h);
+  const lv=k==='master'?70:k==='c4'?55:k==='champ'?30:35,size=k==='master'?10:k==='c4'?8:k==='champ'?5:6;
   const rule=seatRule(id);let ty=rule.type||(rule.mono?TYPES_ALL[Math.floor(R()*TYPES_ALL.length)]:null);
   let P=[...AVAIL].filter(n=>DEX[n]&&!LEGEND.has(n)&&n!==132&&(!ty||DEX[n].t1===ty||DEX[n].t2===ty));if(P.length<3){P=[...AVAIL].filter(n=>DEX[n]&&!LEGEND.has(n)&&n!==132);ty=null}
   const team=[];for(let i=0;i<size;i++){const n=P[Math.floor(R()*P.length)],g={};GK.forEach(x=>g[x]=Math.floor(4+R()*12));team.push({n,lv:Math.max(5,lv+Math.floor(R()*7)-3),g,sh:false,x:(PZ-1-(i%3)*2)*TW+TW/2,y:(3+Math.floor(i/3)*3)%(GH-2)*TW+TW/2})}
@@ -1334,28 +1340,40 @@ function teamOk(mons,rule){if(!mons.length)return 'Équipe vide';if(rule.nolegen
   if(rule.mono&&!rule.type){const c=TYPES_ALL.filter(t=>mons.every(m=>DEX[m.n].t1===t||DEX[m.n].t2===t));if(!c.length)return 'Tous les Pokémon doivent partager un même type'}return ''}
 /* qui peut défier ou prendre quelle place */
 function canChallenge(id){const L=myLadder(),k=seatKind(id);
-  if(k==='expert'){const e=myExpert();return !e||e===id?(e===id?'':'ok'):'Tu es déjà expert d\'un autre type'}
+  if(k==='expert')return CLOUD.user&&seatX(id).uid===CLOUD.user.uid?'':'ok';
   if(L===id)return '';
-  if(k==='champ'){if(L&&seatKind(L)!=='champ')return 'Tu es au-dessus des champions';if(L&&+L.slice(1)<+id.slice(1))return 'Place en dessous de la tienne';return 'ok'}
-  if(k==='c4')return L&&seatKind(L)==='champ'?'ok':'Réservé aux champions d\'arène';
+  if(k==='champ'){if(L&&seatKind(L)!=='champ')return 'Tu es au-dessus des champions';if(L)return 'Tu es déjà champion d\'arène';return 'ok'}
+  if(k==='c4')return L&&seatKind(L)==='champ'?'ok':L&&seatKind(L)==='c4'?'Tu es déjà au Conseil 4':L?'Tu es au-dessus du Conseil 4':'Réservé aux champions d\'arène';
   if(k==='master')return L&&seatKind(L)==='c4'?'ok':'Réservé au Conseil 4';return ''}
 function arenaDoc(team){return{uid:CLOUD.user.uid,name:myPseudo(),title:titleOf(SAVE.title||'Dresseur')[1],color:SAVE.ncolor||'base',team,since:Date.now(),wins:0}}
 async function arenaClaim(id,team){const col=CLOUD.db.collection('arena'),k=seatKind(id);
-  const prev=k==='expert'?myExpert():myLadder();
+  const prev=k==='expert'?null:myLadder();
   await col.doc(id).set(arenaDoc(team));if(prev&&prev!==id)await col.doc(prev).delete();
   SAVE.st.arenaWin=(SAVE.st.arenaWin||0)+1;if(k==='master')SAVE.st.arenaTop=(SAVE.st.arenaTop||0)+1;if(k==='c4')SAVE.st.arenaC4=(SAVE.st.arenaC4||0)+1;if(k==='expert')SAVE.st.arenaX=(SAVE.st.arenaX||0)+1;
   dirty=true;saveGame();if(CLOUD.user)profilePush();ARENA.map=null}
-const seatReward=id=>{const k=seatKind(id);return k==='master'?300000:k==='c4'?100000:k==='expert'?20000:rp(5000*(NARENA+1-+id.slice(1)))};
+/* revenu horaire des places : versé une fois par jour (première connexion du jour) */
+/* expert d'un type : chance de shiny x2 pour les Pokémon de ce type (œufs pondus, achetés ou gagnés) */
+const EXP_SH=2;const expMul=n=>{const T=SAVE.expT||[],d=DEX[n];return d&&T.some(t=>d.t1===t||d.t2===t)?EXP_SH:1};
+const seatRate=id=>{const k=seatKind(id);return k==='master'?3000:k==='c4'?1500:k==='champ'?600:0};
+function arenaAccrue(){if(!CLOUD.user||!ARENA.map)return;SAVE.expT=seatOf(CLOUD.user.uid).filter(id=>seatKind(id)==='expert').map(seatType);const M=ARENA.map,now=Date.now(),cur=myLadder(),P=SAVE.arP||(SAVE.arP={seat:null,t:0,pot:0,day:0});
+  let end=P.t;if(P.seat&&P.t){if(cur===P.seat)end=now;else{const c=[M[P.seat]&&M[P.seat].since,cur&&M[cur]&&M[cur].since,M.meta&&M.meta.at].filter(v=>v&&v>P.t);end=c.length?Math.min(now,...c):P.t}
+    P.pot+=seatRate(P.seat)*Math.max(0,end-P.t)/3600000}
+  if(cur!==P.seat){P.seat=cur;P.t=cur?Math.max(M[cur].since||now,end||0):0}else if(cur)P.t=now;
+  if(P.day!==dayKey()&&P.pot>=1){const c=Math.floor(P.pot);P.pot-=c;P.day=dayKey();SAVE.coins+=c;renderTop();toast(`👑 Récompense du jour de l'arène : +${fmt(c)} pièces`)}else if(P.day!==dayKey()&&!P.seat)P.day=dayKey();
+  dirty=true;saveGame()}
+const seatReward=id=>{const k=seatKind(id);return k==='master'?300000:k==='c4'?100000:k==='expert'?20000:30000};
 function seatCard(id){const M=ARENA.map||{},x=seatX(id),r=seatRule(id),ch=canChallenge(id),me=CLOUD.user&&x&&x.uid===CLOUD.user.uid,k=seatKind(id);
   const T=seatType(id);
   return `<div class="aplace ${k} ${me?'me':''}" ${T?`style="border-color:${TCOL[T]}"`:''}><div class="anum">${k==='master'?'👑 ':k==='c4'?'🎖️ ':k==='expert'?SYN[T][0]+' ':''}${seatLabel(id)}</div>
-   ${x?`<div>${x.bot?'🤖 ':''}${ttlHTML(x.title)}${nameHTML(x.name,x.color,'b')}</div><div class="pmini">${(x.team||[]).map(t=>DEX[t.n]?sprHTML(t.n,t.sh,28,true):'').join('')}</div><small>Nv moyen ${Math.round((x.team||[]).reduce((a,t)=>a+t.lv,0)/Math.max(1,(x.team||[]).length))} · ${x.wins||0} défense${(x.wins||0)>1?'s':''}</small>`:'<div class="muted">Place libre</div>'}
-   <small class="muted">${ruleTxt(r)}</small>
+   ${x?`<div>${x.pnj?'😈 <span class="mvtag" style="background:#ffd6d6">Boss PNJ</span> ':(x.bot?'🤖 ':'')+ttlHTML(x.title)}${nameHTML(x.name,x.color,'b')}</div><div class="pmini">${(x.team||[]).map(t=>DEX[t.n]?sprHTML(t.n,t.sh,28,true):'').join('')}</div><small>Nv moyen ${Math.round((x.team||[]).reduce((a,t)=>a+t.lv,0)/Math.max(1,(x.team||[]).length))} · ${x.wins||0} défense${(x.wins||0)>1?'s':''}</small>`:'<div class="muted">Place libre</div>'}
+   <small class="muted">${ruleTxt(r)}</small>${seatRate(id)?`<small>💰 ${fmt(seatRate(id))} pièces/h</small>`:''}
    ${me?`<b>C'est toi !</b><button class="sm" data-act="arenaUpd" data-id="${id}">Mettre à jour mon équipe</button>`:ch!=='ok'?(ch?`<small class="muted">${ch}</small>`:''):x?`<button class="go sm" data-act="arenaFight" data-id="${id}">⚔ Défier</button>`:`<button class="go sm" data-act="arenaFree" data-id="${id}">Prendre la place</button>`}</div>`}
 function renderArena(){const g=onlineGate();if(g)return g;if(!ARENA.map&&!ARENA.err&&!ARENA.busy)arenaLoad();
   if(ARENA.err==='rules')return '<p>L\'arène n\'est pas encore activée dans Firebase (règle « arena »).</p>';if(ARENA.err)return '<p>Impossible de charger l\'arène. <button class="sm" data-act="arenaReload">Réessayer</button></p>';if(!ARENA.map)return '<p>Chargement…</p>';
   const d=new Date(),end=new Date(d.getFullYear(),d.getMonth()+1,1),days=Math.ceil((end-d)/864e5);
-  return `<p class="muted">Bats l'équipe d'une place pour la prendre. 🤖 Les places sans joueur sont gardées par des bots aux équipes plus faibles. Un joueur a au plus une place parmi Maître, Conseil 4 et champions, plus une place d'expert. Un champion peut défier le Conseil 4 avec une équipe d'un seul type ; un membre du Conseil 4 peut défier le Maître avec l'équipe de son choix. Pas de légendaire, sauf pour les experts. Fin du mois dans ${days} jour${days>1?'s':''} : les champions sont destitués et les sièges vides du Conseil 4 et du Maître vont aux joueurs les plus forts (PC).</p>
+  const ex=(SAVE.expT||[]).map(t=>TNAME[t]||t);
+  return `<p class="muted">Bats l'équipe d'une place pour la prendre. 🤖 Les places sans joueur sont gardées par des bots. Parcours : champion d'arène (n'importe laquelle des ${NARENA}) → Conseil 4 → Maître. Tu ne peux tenir qu'une seule place parmi champion, Conseil 4 et Maître ; en montant, tu libères l'ancienne. Un champion défie le Conseil 4 avec une équipe d'un seul type ; un membre du Conseil 4 défie le Maître avec l'équipe de son choix. 😈 Le siège de Maître est tenu par un boss PNJ en attendant qu'un joueur le batte. Les places d'expert se cumulent : expert de plusieurs types à la fois, en plus de ta place. Pas de légendaire, sauf pour les experts. Fin du mois dans ${days} jour${days>1?'s':''} : les champions sont destitués.</p>
+   <div class="banner" style="margin:6px 0">💰 Revenu par heure tenue : 👑 Maître ${fmt(seatRate('master'))} · 🎖️ Conseil 4 ${fmt(seatRate('c1'))} · 🏟️ Champion d'arène ${fmt(seatRate('p1'))}. Versé chaque jour à ta première connexion.<br>✨ Expert d'un type : chance de shiny ×${EXP_SH} pour les Pokémon de ce type.${ex.length?` <b>Tu es expert : ${ex.join(', ')}</b>`:''}${(()=>{const P=SAVE.arP;return P&&(P.seat||P.pot>=1)?`<br><b>${P.seat?'Ta place : '+seatLabel(P.seat)+' · ':''}en attente : ${fmt(Math.floor(P.pot+(P.seat&&P.t?seatRate(P.seat)*(Date.now()-P.t)/3600000:0)))} pièces</b>`:''})()}</div>
    <h3>👑 Maître</h3><div class="arena">${seatCard('master')}</div>
    <h3>🎖️ Conseil 4</h3><div class="arena">${SEATS_C4.map(seatCard).join('')}</div>
    <h3>🏟️ Champions d'arène</h3><div class="arena">${SEATS_CH.map(seatCard).join('')}</div>
@@ -1566,7 +1584,7 @@ function endFight(win){if(B.dmax){dmaxEnd(win);return}
   let drop=null;
   if(win){coins=Math.round((30+st*20)*(st%5===0?2.5:1)*(first?1:.5)*(B.placed.some(p=>{const m=mon(p.u);return m&&m.item==='amuletcoin'})?1.5:1));if(B.defi||B.arena)coins=0;SAVE.coins+=coins;if(first){SAVE.best=st;SAVE.maxBest=Math.max(SAVE.maxBest||0,st+(SAVE.cycle||0)*MAXST)}SAVE.st.wins=(SAVE.st.wins||0)+1;if(B.units.some(u=>u.boss)){SAVE.st.boss=(SAVE.st.boss||0)+1;B.units.filter(u=>u.boss).forEach(u=>[DEX[u.n].t1,DEX[u.n].t2].filter(Boolean).forEach(t=>SAVE.st['bt_'+t]=(SAVE.st['bt_'+t]||0)+1));if(rnd()<.35){drop=rollItem();invAdd(drop)}}
     /* récompense de boss : œuf niveau 5 (boss de mi-biome) ou super œuf rare niveau 10 (boss de fin de biome) */
-    const boss=B.arena?null:B.units.find(u=>u.boss);if(boss){const own0=baseOf(boss.n),own=own0===132?0:own0,mk=(n,lv)=>{const sh=rnd()<T.sh0;return{id:SAVE.uid++,n,sx:rollSex(n),lv:lv+(sh?T.mutLv:0),g:randGenes(8,24),sh,mut:0,bst:sh?pick(BST_K):null,src:'boss'}};
+    const boss=B.arena?null:B.units.find(u=>u.boss);if(boss){const own0=baseOf(boss.n),own=own0===132?0:own0,mk=(n,lv)=>{const sh=rnd()<T.sh0*expMul(n);return{id:SAVE.uid++,n,sx:rollSex(n),lv:lv+(sh?T.mutLv:0),g:randGenes(8,24),sh,mut:0,bst:sh?pick(BST_K):null,src:'boss'}};
     /* œuf du boss lui-même : 10 % pour un légendaire, 35 % sinon ; sinon super œuf (tous les 10 tableaux) ou œuf niveau 5 du biome */
     egg=st===MAXST&&first?legendEgg():LEGEND.has(boss.n)?(rnd()<.1&&EGG_HAS.has(own)?Object.assign(eggOf(own),{src:'legende'}):superEgg()):EGG_HAS.has(own)&&rnd()<.35?mk(own,st%10===0?10:5):st%10===0?superEgg():(()=>{const P=EGG_SPECIES.filter(x=>!LEGEND.has(x)&&x!==132&&eggMethod(x)==='marche'&&(HAB[x]?HAB[x].includes(B.M.bi.hab):(B.M.bi.types.includes(DEX[x].t1)||B.M.bi.types.includes(DEX[x].t2))));const n=P.length?pick(P):pick(EGG_SPECIES.filter(x=>eggMethod(x)==='marche'&&x!==132));const sh=rnd()<T.sh0;return{id:SAVE.uid++,n,sx:rollSex(n),lv:5+(sh?T.mutLv:0),g:randGenes(5,20),sh,mut:0,bst:sh?pick(BST_K):null,src:'boss'}})();if(!addEgg(egg,egg.src==='arceus'||egg.src==='legende')){const v=rp(eggPrice(egg.n)*.3);SAVE.coins+=v;egg.sold=v}}
     if(SAVE.tuto>=5&&SAVE.tuto<6)setTuto(6)}
@@ -2020,7 +2038,7 @@ function loadJs(src){return new Promise((ok,ko)=>{const s=document.createElement
 async function cloudInit(){if(!cloudReady()||CLOUD.auth)return;
   try{const u='https://cdn.jsdelivr.net/npm/firebase@'+FB_VER+'/';await loadJs(u+'firebase-app-compat.js');await loadJs(u+'firebase-auth-compat.js');await loadJs(u+'firebase-firestore-compat.js');
     firebase.initializeApp(FB_CONFIG);CLOUD.auth=firebase.auth();CLOUD.db=firebase.firestore();CLOUD.on=true;CLOUD.auth.getRedirectResult().catch(()=>{});
-    CLOUD.auth.onAuthStateChanged(async u=>{CLOUD.user=u;if(u)await cloudPull();renderCloud()})}catch(e){CLOUD.err='Connexion impossible';renderCloud()}}
+    CLOUD.auth.onAuthStateChanged(async u=>{CLOUD.user=u;if(u){await cloudPull();setTimeout(()=>arenaLoad(true),2500)}renderCloud()});setInterval(()=>{if(CLOUD.user)arenaLoad(true)},600000)}catch(e){CLOUD.err='Connexion impossible';renderCloud()}}
 async function cloudPull(){if(!CLOUD.user)return;CLOUD.busy=true;try{const d=await CLOUD.db.collection('saves').doc(CLOUD.user.uid).get();if(d.exists){const r=JSON.parse(d.data().data||'{}');if(progress(r)>progress(SAVE)){SAVE=Object.assign(newSave(),r);try{fixSave(SAVE)}catch(e){console.error(e)}showMig();dirty=true;showTab(cur)}}try{localStorage.setItem(SAVEKEY,saveJson())}catch(e){}await cloudPush(true)}catch(e){CLOUD.err='Erreur de synchronisation'}CLOUD.busy=false}
 async function cloudPush(now){if(!CLOUD.user||!CLOUD.db)return;clearTimeout(CLOUD.timer);const go=async()=>{try{await CLOUD.db.collection('saves').doc(CLOUD.user.uid).set({data:saveJson(),name:(CLOUD.user.displayName||'').split(' ')[0].slice(0,14),updated:firebase.firestore.FieldValue.serverTimestamp()});CLOUD.err='';profilePush()}catch(e){CLOUD.err='Erreur de sauvegarde'}};if(now)return go();CLOUD.timer=setTimeout(go,5000)}
 async function cloudSignIn(){if(!CLOUD.auth)return;const p=new firebase.auth.GoogleAuthProvider();p.setCustomParameters({prompt:'select_account'});try{await CLOUD.auth.signInWithPopup(p)}catch(e){if(e&&/popup|iframe|operation-not-supported/.test(e.code||''))CLOUD.auth.signInWithRedirect(p)}}
