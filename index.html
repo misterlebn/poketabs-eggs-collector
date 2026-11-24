@@ -199,6 +199,14 @@ body.bfull .roster{flex:none;padding:6px 2px}
 
 .slotrow .bar{flex:1}
 .mvtag{display:inline-block;padding:2px 8px;margin:1px 2px;border-radius:10px;background:#f3e6cf;border:1px solid #c9a97a;font-size:12px;font-weight:600}
+.alog{list-style:none;padding:0;margin:0}.alog li{padding:4px 8px;border-bottom:1px dashed #d8c4a0;font-size:13px}.alog li.me{background:#fff3c4;border-radius:6px}
+#home{position:fixed;inset:0;z-index:200;display:flex;align-items:center;justify-content:center;background:radial-gradient(circle at 50% 30%,#fff7e0,#e8cfa0 70%,#c9a46a);padding:16px}
+#home .hbox{background:var(--paper,#fff8ea);border:4px solid var(--ink,#3a2a1a);border-radius:18px;padding:26px 30px;max-width:460px;width:100%;text-align:center;display:flex;flex-direction:column;gap:10px;align-items:center;box-shadow:0 10px 0 rgba(0,0,0,.15)}
+#home[hidden],#tour[hidden]{display:none}#home .hlogo{width:84px}#home h1{margin:0;font-size:30px;letter-spacing:2px;line-height:1}#home h1 span{display:block;font-size:15px;letter-spacing:4px;color:#b06a20}
+#home button.big{width:100%;font-size:17px;padding:12px}#home .hlang{display:flex;gap:6px}#home .small{font-size:12px}
+#tour{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:150;width:min(620px,94vw);background:#fffaf0;border:4px solid var(--ink,#3a2a1a);border-radius:14px;padding:12px 16px;box-shadow:0 8px 0 rgba(0,0,0,.18)}
+#tour h3{margin:2px 0 6px}#tour p{margin:0 0 10px;line-height:1.45}#tour .tstep{font-size:12px;color:#8a6a3a;font-weight:700}#tour .tbtn{display:flex;gap:6px;align-items:center}
+nav button.tourhl{animation:tourpulse 1s infinite;outline:3px solid #ff8a2a}@keyframes tourpulse{50%{transform:scale(1.08)}}
 </style>
 </head>
 <body>
@@ -249,15 +257,15 @@ body.bfull .roster{flex:none;padding:6px 2px}
    POKETABS EGGS COLLECTOR  (V00.01.00)
    Réglages rapides : objet T ci-dessous (durées en secondes, chances en 0..1)
    ===================================================================== */
-const VERSION='V00.32.00';
+const VERSION='V00.34.00';
 const T={
   breed:45,        // durée de base d'une ponte (s)
   hatch:75,        // durée de base d'éclosion (s), modulée par l'espèce (stats totales et rareté)
   mut:0.10,        // chance de mutation de base (+5 niveaux)
   mutLv:5,         // niveaux gagnés par mutation
-  sh0:0.01,        // chance shiny, aucun parent shiny
-  sh1:0.04,        // un parent shiny
-  sh2:0.12,        // deux parents shiny
+  sh0:0.004,        // chance shiny, aucun parent shiny
+  sh1:0.01,        // un parent shiny
+  sh2:0.02,        // deux parents shiny
   pkr:0.002,       // chance qu'un œuf attrape le Pokérus (1 sur 500), hérité ensuite par tous les descendants
   pkXp:1.5,        // Pokérus : multiplicateur d'XP
   pkStat:1.05,     // Pokérus : bonus de stats
@@ -270,7 +278,7 @@ const T={
 const SPR='sprites/';
 const OVDIR=SPR+'Gen 1-9 OV SPrites/Gen 1-7 OV SPrites/';
 const EGGDIR=SPR+'Graphics/Battlers/Eggs/';
-const TREE_IMG=SPR+'Graphics/Tilesets/bw_taragonia_mix_special_trees_.png';
+const TREE_IMG='assets/trees_clean.png';
 const COIN='<img src="sprites/Graphics/Items/COIN_GOLD.png" alt="">';
 
 /* ---------- données Pokémon (reprises de Métamorph) ---------- */
@@ -414,12 +422,12 @@ function makeEgg(A,B,nestLvl){
     const P=EGG_SPECIES.filter(x=>x!==132&&!LEGEND.has(x)&&baseOf(x)===x&&family(x)!==family(A.n)&&family(x)!==family(B.n)&&typesOf(x).some(t=>ty.includes(t)));
     const P2=[];P.forEach(x=>{P2.push(x);if(eggMethod(x)==='croisement')P2.push(x,x,x)});if(P.length){sp=pick(P2);weird={f:DEX[dad.n].name,m:DEX[mom.n].name}}}
   /* niveau entre (le plus faible - 2) et (le plus fort + 2), plus probable vers le milieu */
-  const lo=Math.min(A.lv,B.lv)-2,hi=Math.max(A.lv,B.lv)+2;let lv=Math.round(lo+(hi-lo)*(rnd()+rnd())/2);
+  const lo=Math.min(A.lv,B.lv)-2,hi=Math.max(A.lv,B.lv)+2;let lv=Math.min(Math.max(A.lv,B.lv),Math.round(lo+(hi-lo)*(rnd()+rnd())/2));
   const g={};GK.forEach(k=>g[k]=clamp(Math.round((A.g[k]+B.g[k])/2+ri(-2,3)),0,31));
   let mut=0;const pm=T.mut+(nestLvl-1)*0.03+(boostOn('mut')?0.15:0);
   if(rnd()<pm){mut=1;lv+=T.mutLv;const k=pick(GK);g[k]=Math.min(31,g[k]+ri(3,6))}
   const nsh=(A.sh?1:0)+(B.sh?1:0);let ps=[T.sh0,T.sh1,T.sh2][nsh];
-  if(boostOn('shiny'))ps*=3;if(nestLvl>=5)ps*=1.5;ps*=expMul(sp);
+  if(boostOn('shiny'))ps*=2;if(nestLvl>=5)ps*=1.5;ps*=expMul(sp);
   /* trois tirages indépendants : mutation, super mutation (shiny) et Pokérus */
   const sh=rnd()<ps;let bst=null;if(sh){if(!mut)lv+=T.mutLv;mut=0;bst=pick(BST_K)}/* la super mutation absorbe la mutation classique : +5 niveaux au total */
   const pkIn=!!(A.pk||B.pk),pk=pkIn||rnd()<T.pkr;
@@ -505,7 +513,7 @@ function eggChip(e){return `<div class="eggchip" title="${esc(DEX[e.n].name)}">$
 function renderNursery(){
   const el=$('tab-nursery');
   const anyNest=SAVE.nests.some(n=>n.egg),anyReady=SAVE.incs.some(c=>c.slots.some(s=>Date.now()>=s.t0+s.dur));
-  const bo=[['love','💞 Reproduction ×2'],['mut','🧪 Mutation +15 %'],['shiny','✨ Shiny ×3']].filter(([k])=>boostOn(k)).map(([k,t])=>`<span class="biome" id="bo_${k}">${t}</span>`).join(' ');
+  const bo=[['love','💞 Reproduction ×2'],['mut','🧪 Mutation +15 %'],['shiny','✨ Shiny ×2']].filter(([k])=>boostOn(k)).map(([k,t])=>`<span class="biome" id="bo_${k}">${t}</span>`).join(' ');
   el.innerHTML=`<div class="room">
    <div class="wall">
      ${bo}</div>
@@ -513,7 +521,7 @@ function renderNursery(){
     ${(SAVE.pend||[]).length?`<div class="zone"><h3>📦 Nurserie pleine : ${SAVE.pend.length} bébé${SAVE.pend.length>1?'s':''} en attente <button class="sm go" data-act="openFull">Faire de la place</button></h3></div>`:''}<div class="zone"><h3>Salle de jeu <span class="biome" id="capN">Pokémon : ${SAVE.mons.length}/${monCap()}</span> <span class="muted">Tes favoris ⭐ et tes Pokémon libres les plus forts se promènent ici (${SHOW_MAX} au maximum). Clique sur l'un d'eux pour voir sa fiche.</span></h3><div class="playfield" id="playfield"></div></div>
     <div class="zone"><h3>Nids <button class="sm go" data-act="collectAll" ${anyNest?'':'disabled'}>Tout récupérer</button><button class="sm go" data-act="nestFill" ${SAVE.nests.some(n=>!n.a||!n.b)?'':'disabled'} title="Place dans les nids vides (ou à moitié vides) les couples compatibles les plus forts">⚡ Remplir les nids (plus forts)</button></h3><div class="row">${SAVE.nests.map(nestHTML).join('')}</div></div>
     <div class="zone"><h3>Incubateurs <button class="sm go" data-act="hatchAll" ${anyReady?'':'disabled'}>Tout faire éclore</button>${SAVE.items.autofill?`<button class="sm" data-act="fillAll" ${SAVE.eggs.length?'':'disabled'}>Tout remplir</button>${prioHTML()}`:''}</h3><div class="row">${SAVE.incs.map(incHTML).join('')}</div></div>
-    <div class="zone"><h3>Entraînement <span class="muted">Un Pokémon à l'entraînement ne peut pas se reproduire ni combattre.</span></h3><div class="row">${SAVE.balls.map(ballHTML).join('')}</div></div>
+    <div class="zone"><h3>Entraînement <button class="sm go" data-act="trainFill" title="Place les Pokémon libres les plus forts dans les places vides des punching-balls (durée : ${trainTxt(trainDur||60)})">⚡ Remplir les punching-balls</button> <span class="muted">Un Pokémon à l'entraînement ne peut pas se reproduire ni combattre.</span></h3><div class="row">${SAVE.balls.map(ballHTML).join('')}</div></div>
     <div class="zone"><h3>🗄️ Armoire à œufs <button class="sm go" data-act="cabOpen" ${cab().length>=CAB_MAX?'disabled':''}>Ranger un œuf du sac</button> <span class="muted">Clique sur un œuf de l'armoire pour le reprendre.</span></h3>${cabHTML(cab(),true)}</div>
     <div class="zone"><h3>Sac d'œufs (${SAVE.eggs.length}/${bagCap()}) <span class="muted">Clique sur un incubateur pour y placer des œufs.</span> ${eggSel?'':`<button class="sm" data-act="eselOn">☑ Vendre des œufs</button>`}</h3>${filtHTML('bag',EGG_SORTS)}${eggSel?eggSelHTML():''}<div class="eggbag">${applyEggFilt('bag').map(({e})=>eggSel?`<div class="eggchip" data-act="eggTog" data-id="${e.id}" style="cursor:pointer;${eggSel.has(e.id)?'outline:3px solid #e0a030;background:#fff1cc':''}">${eggH(e.n,40)}${esc(DEX[e.n].name)} <small>Nv ${e.lv}${e.sh?' ★':''} · ${fmt(eggVal(e))}</small></div>`:eggChip(e)).join('')||'<span class="muted">Aucun œuf'+(SAVE.eggs.length?' avec ce filtre.':' pour le moment.')+'</span>'}</div></div>
    </div></div>`;
@@ -573,7 +581,7 @@ function openNest(i){
   if(n.a&&!n.b){pickState={nest:i,a:n.a,fixed:1};pickParent();return}
   if(n.a){const A=mon(n.a),B=n.b==='solo'?A:mon(n.b);
     const pm=Math.round((T.mut+(n.lvl-1)*.03+(boostOn('mut')?.15:0))*100);
-    let ps=[T.sh0,T.sh1,T.sh2][(A.sh?1:0)+(n.b!=='solo'&&B.sh?1:0)]*(boostOn('shiny')?3:1)*(n.lvl>=5?1.5:1);
+    let ps=[T.sh0,T.sh1,T.sh2][(A.sh?1:0)+(n.b!=='solo'&&B.sh?1:0)]*(boostOn('shiny')?2:1)*(n.lvl>=5?1.5:1);
     openModal(`<h2>Nid ${i+1} (niveau ${n.lvl})</h2>
       <div class="flexr">${monCard(A)}${n.b==='solo'?'<div class="card">🧬<br>Gène miroir</div>':monCard(B)}</div>
       <p>Bébé attendu : <b>${esc(DEX[A.n].n===132&&n.b!=='solo'?DEX[baseOf(B.n,true)].name:DEX[baseOf(A.n,true)].name)}</b> · niveau de départ entre ${Math.max(1,Math.min(A.lv,B.lv)-2)} et ${Math.max(A.lv,B.lv)+2} (plus souvent au milieu)<br>${A.pk||B.pk?'🦠 Un parent a le Pokérus : le bébé l\'aura aussi.<br>':''}
@@ -653,7 +661,7 @@ function openBall(i){
   openModal(`<h2>Punching-ball ${i+1} (niveau ${b.lvl}) · ${b.mons.length}/${cap}</h2>
    <p class="muted">${ballRate(b).toFixed(1)} XP par seconde. Choisis une durée : le Pokémon revient tout seul à la fin avec toute son XP, même si le jeu est fermé. Le retirer avant la fin fait perdre l'XP accumulée.</p>
    <div class="grid">${b.mons.map(u=>{const m=mon(u),t=(b.tr||{})[u]||{t0:Date.now(),dur:3600000},pr=clamp((Date.now()-t.t0)/t.dur,0,1);return m?monCard(m,{extra:`<div class="bar"><i style="width:${pr*100}%"></i></div><span class="muted">${trainTxt(t.dur/60000)} · fin dans ${fmtT(t.t0+t.dur-Date.now())} · +${fmt(Math.round(ballRate(b)*t.dur/1000))} XP</span><button class="sm" data-act="unTrain" data-i="${i}" data-u="${u}">Retirer (XP perdue)</button>`}):''}).join('')}</div>
-   <h3 style="margin-top:12px">Ajouter un Pokémon</h3>
+   <h3 style="margin-top:12px">Ajouter un Pokémon ${b.mons.length<cap?`<button class="sm go" data-act="trainFill" data-i="${i}">⚡ Remplir automatiquement</button>`:''}</h3>
    ${b.mons.length>=cap?'<p class="muted">Plus de place. Améliore le punching-ball dans la Boutique.</p>':`<p>Durée : ${TRAIN_D.map(mn=>`<button class="sm ${(trainDur||60)===mn?'go':''}" data-act="trainDur" data-v="${mn}" data-i="${i}">${trainTxt(mn)}</button>`).join(' ')} <span class="muted">→ +${fmt(Math.round(ballRate(b)*(trainDur||60)*60))} XP</span></p>${filtHTML('ball')}<div class="grid" id="flist_ball">${ballList(i)}</div>`}`);
   pickState={ball:i};
 }
@@ -773,7 +781,7 @@ const SHOP=[
  {h:'Objets et boosts (temporaires)'},
  {id:'love',name:'Encens d\'amour',desc:'Pontes 2 fois plus rapides pendant 5 min (nouvelles pontes).',ic:'sprites/Graphics/Items/LUCKINCENSE.png',price:()=>250,buy:()=>addBoost('love',5)},
  {id:'mut',name:'Pierre mutagène',desc:'+15 % de chance de mutation pendant 5 min.',ic:'sprites/Graphics/Items/BERSERKGENE.png',price:()=>400,buy:()=>addBoost('mut',5)},
- {id:'shiny',name:'Charme chroma',desc:'Chance shiny ×3 pendant 10 min.',ic:'sprites/Graphics/Items/COMETSHARD.png',price:()=>1500,buy:()=>addBoost('shiny',10)},
+ {id:'shiny',name:'Charme chroma',desc:'Chance shiny ×2 pendant 10 min.',ic:'sprites/Graphics/Items/COMETSHARD.png',price:()=>1500,buy:()=>addBoost('shiny',10)},
  {id:'dna',name:'ADN légendaire',desc:'Seul moyen de faire pondre un légendaire, une seule fois (avec Métamorph ou un partenaire compatible). Le couple se sépare après la ponte et le légendaire est épuisé 24 h.',ic:'sprites/Graphics/Items/DNASPLICERS.png',price:()=>100000,buy:()=>{SAVE.items.dna=(SAVE.items.dna||0)+1}},
  {h:'Objets d\'évolution'},
  {id:'it_fire',name:ITEMS.fire.n,desc:ITEMS.fire.d,ic:ITDIR+ITEMS.fire.ic+'.png',price:()=>3000,buy:()=>invAdd('fire')},
@@ -1306,7 +1314,7 @@ async function arenaLoad(force){if(!CLOUD.db||ARENA.busy)return;if(!force&&ARENA
     if(!M.meta||M.meta.month!==monthKey()){await arenaMonthly(M);q=await CLOUD.db.collection('arena').get();M={};q.docs.forEach(d=>M[d.id]=Object.assign({id:d.id},d.data()))}
     if(!M.meta||M.meta.pnj!==2){const col=CLOUD.db.collection('arena');for(const id of Object.keys(M))if(id!=='meta'&&M[id]&&M[id].auto){await col.doc(id).delete();delete M[id]}
       await col.doc('meta').set({pnj:2},{merge:true});if(M.meta)M.meta.pnj=2}
-    ARENA.map=M;ARENA.err='';ARENA.t=Date.now();arenaAccrue()}
+    ARENA.map=M;ARENA.err='';ARENA.t=Date.now();arenaAccrue();arenaNotify()}
   catch(e){ARENA.err=errKind(e)}ARENA.busy=false;if(cur==='rank'&&onlineMode==='arena')renderRank()}
 /* nouveau mois : les champions sont destitués ; personne n'est placé automatiquement */
 async function arenaMonthly(M){const col=CLOUD.db.collection('arena'),first=!M.meta;
@@ -1377,7 +1385,8 @@ function renderArena(){const g=onlineGate();if(g)return g;if(!ARENA.map&&!ARENA.
    <h3>👑 Maître</h3><div class="arena">${seatCard('master')}</div>
    <h3>🎖️ Conseil 4</h3><div class="arena">${SEATS_C4.map(seatCard).join('')}</div>
    <h3>🏟️ Champions d'arène</h3><div class="arena">${SEATS_CH.map(seatCard).join('')}</div>
-   <h3>🎯 Experts de type</h3><div class="arena">${TYPES_ALL.map(t=>seatCard('x_'+t)).join('')}</div>`}
+   <h3>🎯 Experts de type</h3><div class="arena">${TYPES_ALL.map(t=>seatCard('x_'+t)).join('')}</div>
+   <h3>📜 Historique des défis</h3>${arenaLogHTML()}`}
 function arenaFight(id){if(!ARENA.map)return;const x=seatX(id);showTab('battle');AUTO=false;
   setupStage(MAXST);const M=B.M;B.stage=MAXST;B.arena={id,x,rule:seatRule(id)};B.units=[];
   (x.team||[]).forEach(t=>{if(!DEX[t.n])return;const e={n:t.n,lv:t.lv,g:t.g,sh:t.sh,bst:t.bst,pk:t.pk};const md=unitMode(DEX[t.n],M.bi);let tx=Math.floor((CW-t.x)/TW),ty=Math.floor(t.y/TW);if(tx<=EZ||!passable(M,ty*GW+tx,md)){tx=GW-3;ty=clamp(ty,1,GH-2)}B.units.push(mkUnit(e,1,tx*TW+TW/2,ty*TW+TW/2,M))});
@@ -1385,9 +1394,18 @@ function arenaFight(id){if(!ARENA.map)return;const x=seatX(id);showTab('battle')
 async function arenaWin(){const {id,x}=B.arena;try{const ref=CLOUD.db.collection('arena').doc(id);const cur0=await ref.get();
     if(cur0.exists&&cur0.data().uid!==x.uid){/* place prise entre-temps (ou bot remplacé par un joueur) */toast('Un autre joueur a pris cette place pendant ton combat !');return}
     const team=B.placed.map(p=>{const m=mon(p.u);return m?Object.assign(snapMon(m),{x:p.x,y:p.y}):null}).filter(Boolean);
-    await arenaClaim(id,team);const c=seatReward(id);SAVE.coins+=c;renderTop();toast(`🏟️ Tu deviens ${seatLabel(id)} ! +${fmt(c)} pièces`)}
+    await arenaClaim(id,team);arenaLog({t:Date.now(),s:id,c:myPseudo(),cu:CLOUD.user.uid,d:x.name,du:x.uid,w:1});const c=seatReward(id);SAVE.coins+=c;renderTop();toast(`🏟️ Tu deviens ${seatLabel(id)} ! +${fmt(c)} pièces`)}
   catch(e){toast('Erreur réseau : la place n\'a pas pu être prise')}}
-async function arenaLose(){const {id,x}=B.arena;try{const ref=CLOUD.db.collection('arena').doc(id);await CLOUD.db.runTransaction(async tr=>{const d=await tr.get(ref);if(d.exists&&d.data().uid===x.uid)tr.update(ref,{wins:(d.data().wins||0)+1})})}catch(e){}}
+/* historique des défis : document arena/log, 40 derniers */
+async function arenaLog(e){try{const ref=CLOUD.db.collection('arena').doc('log');await CLOUD.db.runTransaction(async tr=>{const d=await tr.get(ref);const L=(d.exists&&d.data().L)||[];L.push(e);tr.set(ref,{L:L.slice(-40)})})}catch(_){}}
+const agoTxt=t=>{const m=Math.max(0,Math.round((Date.now()-t)/60000));return m<60?'il y a '+m+' min':m<1440?'il y a '+Math.round(m/60)+' h':'il y a '+Math.round(m/1440)+' j'};
+function arenaLogHTML(){const me=CLOUD.user&&CLOUD.user.uid,L=((ARENA.map&&ARENA.map.log&&ARENA.map.log.L)||[]).slice().reverse().slice(0,15);
+  if(!L.length)return '<p class="muted">Aucun défi pour l\'instant.</p>';
+  return `<ul class="alog">${L.map(e=>{const mine=e.cu===me||e.du===me;return `<li class="${mine?'me':''}">${e.w?'🏆':'🛡️'} <small class="muted">${agoTxt(e.t)}</small> <b>${esc(e.c)}</b> ${e.w?'a battu':'a échoué contre'} <b>${esc(e.d)}</b> (${seatLabel(e.s)})${e.w?' et prend la place':''}</li>`}).join('')}</ul>`}
+function arenaNotify(){const me=CLOUD.user&&CLOUD.user.uid,L=(ARENA.map&&ARENA.map.log&&ARENA.map.log.L)||[];if(!me)return;const t0=SAVE.arLogT||0;
+  L.filter(e=>e.du===me&&e.t>t0).slice(-3).forEach(e=>toast(e.w?`⚔ ${esc(e.c)} t'a battu : tu as perdu ta place (${seatLabel(e.s)})`:`🛡️ ${esc(e.c)} t'a défié (${seatLabel(e.s)}) : tu as gardé ta place !`));
+  SAVE.arLogT=Date.now()}
+async function arenaLose(){const {id,x}=B.arena;arenaLog({t:Date.now(),s:id,c:myPseudo(),cu:CLOUD.user.uid,d:x.name,du:x.uid,w:0});try{const ref=CLOUD.db.collection('arena').doc(id);await CLOUD.db.runTransaction(async tr=>{const d=await tr.get(ref);if(d.exists&&d.data().uid===x.uid)tr.update(ref,{wins:(d.data().wins||0)+1})})}catch(e){}}
 
 /* ---------- hôtel des ventes ---------- */
 async function aucLoad(force){if(!CLOUD.db||AUC.busy)return;if(!force&&AUC.list&&Date.now()-AUC.t<15000)return;AUC.busy=true;
@@ -1519,20 +1537,25 @@ const ABIL={
  roughskin:['Peau Dure','Celui qui le frappe au corps à corps perd 12 % des dégâts infligés.',[318,319,443,444,445]],
  multiscale:['Multiécaille','Dégâts divisés par 2 tant qu\'il a tous ses PV.',[149,249]],
  regen:['Régé-Force','Récupère un peu de PV chaque seconde.',[79,80,199,465,590,591]],
+ sniper:['Sniper','Coups critiques plus fréquents (10 % au moins) et ×2,25 au lieu de ×1,5.',[15,116,117,223,224]],
+ cutecharm:['Joli Sourire','30 % de chance de charmer celui qui le frappe au corps à corps : il reste sous le charme 1,5 s.',[35,36,39,40,173,174,300,301,427,428]],
+ poisonpt:['Point Poison','30 % de chance d\'empoisonner celui qui le frappe au corps à corps (1,5 % de ses PV par seconde pendant 6 s).',[29,30,31,32,33,34,211,315,406,543,544,545]],
  static:['Statik','Celui qui le frappe au corps à corps peut être paralysé (attaque retardée).',[25,26,172,125,239,309,310,466]]};
 const ABIL_OF={};Object.entries(ABIL).forEach(([k,v])=>v[2].forEach(n=>ABIL_OF[n]=k));
 const abilHTML=n=>ABIL_OF[n]?`<span class="biome" title="${esc(ABIL[ABIL_OF[n]][1])}">✨ ${ABIL[ABIL_OF[n]][0]}</span>`:'';
 function abTxt(u,t,c){B.fx.push({k:'txt',x:u.x,y:u.y-46*u.scale,t:0,s:t,c:c||'#c9a0ff'})}
 function applyAbilities(){for(const u of B.units){u.ab=ABIL_OF[u.n]||null;if(!u.ab)continue;
-  if(u.ab==='camo')u.stealth=true;if(u.ab==='hugepower'||u.ab==='purepower')u.atk*=1.6;
+  if(u.ab==='camo')u.stealth=true;if(u.ab==='sniper')u.crit=Math.max(u.crit||0,.1);if(u.ab==='hugepower'||u.ab==='purepower')u.atk*=1.6;
   if(u.ab==='intim'){abTxt(u,'Intimidation !');B.units.forEach(v=>{if(v.team!==u.team&&!(v.intimN>=2)){v.atk*=.85;v.spa*=.85;v.intimN=(v.intimN||0)+1}})}}}
-function abilTick(dt){for(const u of B.units){if(!u.ab||u.hp<=0)continue;
+function abilTick(dt){for(const u of B.units){if(u.psn>0&&u.hp>0){u.psn-=dt;u.hp-=u.max*.015*dt;u.psT=(u.psT||0)+dt;if(u.psT>1.5){u.psT=0;abTxt(u,'☠','#a050c0')}if(u.hp<=0){u.hp=0;B.fx.push({k:'poof',x:u.x,y:u.y,t:0})}}if(!u.ab||u.hp<=0)continue;
   if(u.ab==='regen')u.hp=Math.min(u.max,u.hp+u.max*.008*dt);
   if(u.ab==='speedboost'){u.sbT=(u.sbT||0)+dt;if(u.sbT>=4){u.sbT=0;u.cdm=Math.max(.6,(u.cdm||1)*.93)}}}}
 function hit(a,d){if(d.hp<=0)return;
   if(a.stealth){a.stealth=false;abTxt(a,'Camouflage levé !')}
   if(a.ab==='truant'){a.loaf=!a.loaf;if(a.loaf){abTxt(a,'Flemme…','#b0b0b0');return}}
   if(d.ab==='static'&&!a.ranged&&rnd()<.3){a.cd+=.8;abTxt(a,'Paralysé !','#ffd23a')}
+  if(d.ab==='cutecharm'&&!a.ranged&&rnd()<.3){a.cd+=1.5;abTxt(a,'Sous le charme !','#ff7ab0')}
+  if(d.ab==='poisonpt'&&!a.ranged&&!(a.psn>0)&&rnd()<.3){a.psn=6;abTxt(a,'Empoisonné !','#a050c0')}
   if(d.dodge&&rnd()<d.dodge){B.fx.push({k:'txt',x:d.x,y:d.y-30,t:0,s:'Esquive !',c:'#9ad0ff'});return}
   let[v0,e0]=dmgCalc(a,d);const mt=a.mv&&a.mv.type;a.nAtk=(a.nAtk||0)+1;
   if(a.ab==='slowstart'&&a.nAtk<=5){v0*=.5;if(a.nAtk===1)abTxt(a,'Début Calme…','#b0b0b0')}
@@ -1541,13 +1564,13 @@ function hit(a,d){if(d.hp<=0)return;
   if(d.ab==='wonder'&&e0<=1){abTxt(d,'Garde Mystik !');return}
   if(d.ab==='levitate'&&mt==='sol'){abTxt(d,'Lévitation !');return}
   if(d.ab==='flashfire'&&mt==='feu'){if(!d.ff){d.ff=1;abTxt(d,'Torche !','#ff8a2a')}return}
-  if((d.ab==='waterabs'&&mt==='eau')||(d.ab==='voltabs'&&mt==='electrik')){d.hp=Math.min(d.max,d.hp+v0*.5);abTxt(d,d.ab==='waterabs'?'Absorb Eau !':'Absorb Volt !','#5fb86a');return}
+  if((d.ab==='waterabs'&&mt==='eau')||(d.ab==='voltabs'&&mt==='foudre')){d.hp=Math.min(d.max,d.hp+v0*.5);abTxt(d,d.ab==='waterabs'?'Absorb Eau !':'Absorb Volt !','#5fb86a');return}
   if(d.ab==='thickfat'&&(mt==='feu'||mt==='glace'))v0*=.5;if(d.ab==='multiscale'&&d.hp>=d.max)v0*=.5;
   if(d.ab==='sturdy'&&!d.sturdyUsed&&d.hp>=d.max&&v0>=d.hp){v0=d.hp-1;d.sturdyUsed=1;abTxt(d,'Fermeté !')}
   if(d.ab==='roughskin'&&!a.ranged){a.hp-=v0*.12;if(a.hp<=0){a.hp=0;B.fx.push({k:'poof',x:a.x,y:a.y,t:0})}}
   ABIL_HIT.v=v0;ABIL_HIT.e=e0;hit0(a,d);if(d.hp<=0&&a.ab==='moxie')a.kos=(a.kos||0)+1}
 const ABIL_HIT={v:null,e:null};
-function hit0(a,d){let v=ABIL_HIT.v,e=ABIL_HIT.e;if(a.crit&&rnd()<a.crit){v*=1.5;B.fx.push({k:'txt',x:d.x,y:d.y-44,t:0,s:'Coup critique !',c:'#ff8a2a'})}d.hp-=v;if(a.leech)a.hp=Math.min(a.max,a.hp+v*a.leech);if(a.mv&&rnd()<.18)B.fx.push({k:'txt',x:a.x,y:a.y-34*a.scale,t:0,s:a.mv.name,c:TCOL[a.mv.type]||'#fff'});d.flash=.12;B.fx.push({k:'txt',x:d.x+(rnd()*10-5),y:d.y-26*d.scale,t:0,s:Math.max(1,Math.round(v))+'',c:e>1?'#ff4a2a':e<1?'#8a8a8a':'#fff'});if(e>1&&rnd()<.4)B.fx.push({k:'txt',x:d.x,y:d.y-40,t:0,s:'Super efficace !',c:'#ffd23a'});B.fx.push({k:'hit',x:d.x,y:d.y-12,t:0,c:TCOL[(a.mv&&a.mv.type)||a.t1]||'#fff'});if(d.hp<=0){d.hp=0;B.fx.push({k:'poof',x:d.x,y:d.y,t:0})}}
+function hit0(a,d){let v=ABIL_HIT.v,e=ABIL_HIT.e;if(a.crit&&rnd()<a.crit){v*=a.ab==='sniper'?2.25:1.5;B.fx.push({k:'txt',x:d.x,y:d.y-44,t:0,s:'Coup critique !',c:'#ff8a2a'})}d.hp-=v;if(a.leech)a.hp=Math.min(a.max,a.hp+v*a.leech);if(a.mv&&rnd()<.18)B.fx.push({k:'txt',x:a.x,y:a.y-34*a.scale,t:0,s:a.mv.name,c:TCOL[a.mv.type]||'#fff'});d.flash=.12;B.fx.push({k:'txt',x:d.x+(rnd()*10-5),y:d.y-26*d.scale,t:0,s:Math.max(1,Math.round(v))+'',c:e>1?'#ff4a2a':e<1?'#8a8a8a':'#fff'});if(e>1&&rnd()<.4)B.fx.push({k:'txt',x:d.x,y:d.y-40,t:0,s:'Super efficace !',c:'#ffd23a'});B.fx.push({k:'hit',x:d.x,y:d.y-12,t:0,c:TCOL[(a.mv&&a.mv.type)||a.t1]||'#fff'});if(d.hp<=0){d.hp=0;B.fx.push({k:'poof',x:d.x,y:d.y,t:0})}}
 const FIGHT_T=120;
 function stepBattle(dt){
   B.t+=dt;B.fieldT-=dt;if(B.dmax)dmaxStep(dt);abilTick(dt);
@@ -1716,20 +1739,29 @@ function drawUnit(x,u,ghost){if(u.dmax){drawDmaxBoss(x,u);return}
   x.font='bold 9px sans-serif';x.textAlign='center';x.fillStyle='#fff';x.strokeStyle='#2a1a12';x.lineWidth=3;const lt=(u.boss?'👑 ':'')+'Nv'+u.lv;x.strokeText(lt,u.x,u.y+12);x.fillText(lt,u.x,u.y+12);
 }
 const LAYN={couloir:'Couloir',entonnoir:'Entonnoir',centre:'Rocher central',cretes:'Crêtes',eboulis:'Éboulis'};
-function hexMix(a,b,t){const h=c=>[1,3,5].map(k=>parseInt(c.slice(k,k+2),16));const A=h(a),B2=h(b);return 'rgb('+A.map((v,k)=>Math.round(v+(B2[k]-v)*t)).join(',')+')'}
+function hexMix(a,b,t){const h=c=>c[0]==='#'?[1,3,5].map(k=>parseInt(c.slice(k,k+2),16)):c.match(/\d+/g).slice(0,3).map(Number);const A=h(a),B2=h(b);return 'rgb('+A.map((v,k)=>Math.round(v+(B2[k]-v)*t)).join(',')+')'}
 function rockPal(bi){if(bi._rp)return bi._rp;const g=bi.g[0],ice=/glace|neige|givr|cristal/i.test(bi.name),lav=!!bi.lava;
   const st=ice?'#b9cfe0':lav?'#5a4a48':'#9a8f80';return bi._rp={top:hexMix(g,'#ffffff',.08),top2:hexMix(g,'#000000',.12),face:hexMix(st,'#000000',.05),face2:hexMix(st,'#000000',.3),edge:hexMix(st,'#000000',.55),lit:hexMix(st,'#ffffff',.35),st}}
 /* une case de falaise : dessus surélevé + face avant visible quand la case du dessous est libre */
+/* texture du dessus des falaises (par biome, mise en cache) : taches, touffes d'herbe ou cailloux */
+function cliffTopTex(bi){if(bi._ct)return bi._ct;const c=document.createElement('canvas');c.width=c.height=90;const g=c.getContext('2d'),P=rockPal(bi),R=rng(bi.hab*977+13);
+  g.fillStyle=P.top;g.fillRect(0,0,90,90);const lt=hexMix(P.top,'#ffffff',.12),md=hexMix(P.top,P.top2,.8);
+  for(let k=0;k<34;k++){const cx=R()*90,cy=R()*90,n=5+Math.floor(R()*7),col=R()<.6?md:lt;g.fillStyle=col;for(let q=0;q<n;q++)g.fillRect(Math.floor((cx+(R()-.5)*12)/3)*3,Math.floor((cy+(R()-.5)*9)/3)*3,3,3)}
+  const green=!isIce(bi)&&!isDry(bi)&&!isDark(bi)&&!isCave(bi),dk=hexMix(P.top2,'#000000',.35);
+  for(let k=0;k<22;k++){const x=Math.floor(4+R()*80),y=Math.floor(5+R()*80);if(green){g.fillStyle=dk;g.fillRect(x,y,1,3);g.fillRect(x+2,y-1,1,4);g.fillRect(x+4,y,1,3)}else{g.fillStyle=P.face2;g.fillRect(x,y,4,2);g.fillStyle=P.lit;g.fillRect(x,y,2,1)}}
+  return bi._ct=c}
 function drawRock(x,r,M){const P=rockPal(M.bi),H=18,px=r.x*TW,py=r.y*TW,R2=M.rock,at=(a,b)=>a>=0&&b>=0&&a<GW&&b<GH&&R2[b*GW+a]===1;
   if(r.v===2){const im=img(DECOR_IMG),L=rockSet(M.bi),key=L[(r.x*7+r.y*13)%L.length],m=DECOR[key];if(im.ok&&m){x.fillStyle='rgba(0,0,0,.22)';x.beginPath();x.ellipse(px+TW/2,py+TW-2,Math.min(16,m.w/2),5,0,0,7);x.fill();x.drawImage(im,m.x,m.y,m.w,m.h,Math.round(px+TW/2-m.w/2),Math.round(py+TW+1-m.h),m.w,m.h);return}const cx=px+TW/2,cy=py+TW/2+4,h=((r.x*73+r.y*151)%7)/7;x.fillStyle='rgba(0,0,0,.25)';x.beginPath();x.ellipse(cx+2,cy+7,13,5,0,0,7);x.fill();
     x.fillStyle=P.face2;x.beginPath();x.ellipse(cx,cy-2,12+h*3,11,0,0,7);x.fill();x.fillStyle=P.face;x.beginPath();x.ellipse(cx-1,cy-5,10+h*3,9,0,0,7);x.fill();
     x.fillStyle=P.lit;x.beginPath();x.ellipse(cx-4,cy-9,4,3,0,0,7);x.fill();x.strokeStyle=P.edge;x.lineWidth=2;x.beginPath();x.ellipse(cx,cy-3,12+h*3,11,0,0,7);x.stroke();return}
   const S=!at(r.x,r.y+1),N=!at(r.x,r.y-1),W=!at(r.x-1,r.y),E=!at(r.x+1,r.y);
   if(S){x.fillStyle='rgba(0,0,0,.22)';x.fillRect(px,py+TW,TW,5);const im=img(DECOR_IMG),fm=DECOR[faceKey(M.bi)];if(im.ok&&fm){const sx=fm.x+((r.x*TW)%Math.max(1,fm.w-TW));x.drawImage(im,sx,fm.y,Math.min(TW,fm.w),fm.h,px,py+TW-H,TW,H)}else{x.fillStyle=P.face;x.fillRect(px,py+TW-H,TW,H)}x.fillStyle=P.edge;x.fillRect(px,py+TW-2,TW,2)}
-  x.fillStyle=P.top;x.fillRect(px,py-H,TW,TW);x.fillStyle=P.top2;const hs=(r.x*31+r.y*17)%5;x.fillRect(px+4+hs,py-H+6,3,2);x.fillRect(px+16-hs,py-H+15,4,2);
+  x.drawImage(cliffTopTex(M.bi),(r.x%3)*TW,(r.y%3)*TW,TW,TW,px,py-H,TW,TW);
+  if(S){x.fillStyle='rgba(0,0,0,.14)';x.fillRect(px,py-H+TW-5,TW,4)}if(W){x.fillStyle='rgba(255,255,255,.08)';x.fillRect(px+2,py-H,3,TW)}if(E){x.fillStyle='rgba(0,0,0,.09)';x.fillRect(px+TW-5,py-H,3,TW)}
   x.fillStyle=P.edge;if(N)x.fillRect(px,py-H,TW,2);if(W)x.fillRect(px,py-H,2,TW+(S?H:0));if(E)x.fillRect(px+TW-2,py-H,2,TW+(S?H:0));if(S)x.fillRect(px,py+TW-H-1,TW,2);
   if(N){x.fillStyle=P.lit;x.fillRect(px+2,py-H+2,TW-4,2)}}
 function drawTree(x,t){if(typeof t.v==='string'){const m=DECOR[t.v],im=img(DECOR_IMG);if(!im.ok)return;const f=m.n>1?(Math.floor(performance.now()/170)+t.ph)%m.n:0;x.drawImage(im,m.x+f*(m.w+2),m.y,m.w,m.h,Math.round(t.x*TW+TW/2-m.w/2),Math.round(t.y*TW+TW+3-m.h),m.w,m.h);return}const im=img(TREE_IMG);const[c,r,k]=t.v;const sy=(r?264:0)+[0,50,100][k],sh=[50,50,57][k];const cx=t.x*TW+TW/2,by=t.y*TW+TW+4;
+  x.fillStyle='rgba(0,0,0,.2)';x.beginPath();x.ellipse(cx,by-5,k===1?17:20,6,0,0,7);x.fill();
   if(im.ok)x.drawImage(im,c*48,sy,48,sh,cx-36,by-sh*1.5,72,sh*1.5);else{x.fillStyle='#2f6a34';x.beginPath();x.arc(cx,by-30,18,0,7);x.fill()}}
 function drawBattle(){if(!B)return;const tr=B.trans;if(!tr){drawBattle0();return}
   const x=bcx();const q=clamp(tr.t/tr.d,0,1),e=q<.5?4*q*q*q:1-Math.pow(-2*q+2,3)/2,off=Math.round(CW*e);
@@ -1751,10 +1783,10 @@ function drawBattle0(){
     else if(f.k==='hit'){x.strokeStyle=f.c;x.globalAlpha=1-q;x.lineWidth=2;x.beginPath();x.arc(f.x,f.y,4+q*12,0,7);x.stroke();x.globalAlpha=1}
     else if(f.k==='poof'){x.fillStyle='rgba(255,255,255,'+(1-q)+')';for(let k=0;k<6;k++){const an=k/6*6.28;x.beginPath();x.arc(f.x+Math.cos(an)*q*16,f.y-10+Math.sin(an)*q*10,4*(1-q)+1,0,7);x.fill()}}});
   if(B.focus&&B.focus.hp>0){const f=B.focus,r=(f.dmax?70:16)*(1+.12*Math.sin(performance.now()/150)),cy=f.y-(f.dmax?90:14);x.strokeStyle='#ff2a2a';x.lineWidth=3;x.beginPath();x.arc(f.x,cy,r,0,7);x.stroke();x.beginPath();x.moveTo(f.x-r-6,cy);x.lineTo(f.x-r+6,cy);x.moveTo(f.x+r-6,cy);x.lineTo(f.x+r+6,cy);x.moveTo(f.x,cy-r-6);x.lineTo(f.x,cy-r+6);x.moveTo(f.x,cy+r-6);x.lineTo(f.x,cy+r+6);x.stroke()}
-  if(B.phase==='fight'&&!B.focus&&B.t<6){x.font='bold 13px sans-serif';x.textAlign='center';x.lineWidth=4;x.strokeStyle='#2a1a12';x.fillStyle='#fff';const s2='Clique sur un ennemi pour en faire la cible principale';x.strokeText(s2,CW/2,CH-12);x.fillText(s2,CW/2,CH-12)}
+  if(B.phase==='fight'&&!B.focus&&B.t<6){x.font='bold 13px sans-serif';x.textAlign='center';x.lineWidth=4;x.strokeStyle='#2a1a12';x.fillStyle='#fff';const s2=i18c('Clique sur un ennemi pour en faire la cible principale');x.strokeText(s2,CW/2,CH-12);x.fillText(s2,CW/2,CH-12)}
   if(B.phase==='fight'){const left=Math.max(0,(B.dmax?240:FIGHT_T)-B.t),mm=Math.floor(left/60),ss=Math.floor(left%60);x.font='bold 15px sans-serif';x.textAlign='left';x.lineWidth=4;x.strokeStyle='#2a1a12';x.fillStyle=left<15?'#ff5a4a':'#fff';const tx='⏱ '+mm+':'+String(ss).padStart(2,'0');x.strokeText(tx,10,22);x.fillText(tx,10,22)}
   if(B.dmax)drawDmaxHud(x);
-  if(B.phase==='place'&&!B.placed.length){x.font='bold 16px sans-serif';x.textAlign='center';x.lineWidth=4;x.strokeStyle='#2a1a12';x.fillStyle='#fff';const s='Choisis un Pokémon en bas, puis clique dans la zone bleue';x.strokeText(s,CW/2,26);x.fillText(s,CW/2,26)}
+  if(B.phase==='place'&&!B.placed.length){x.font='bold 16px sans-serif';x.textAlign='center';x.lineWidth=4;x.strokeStyle='#2a1a12';x.fillStyle='#fff';const s=i18c('Choisis un Pokémon en bas, puis clique dans la zone bleue');x.strokeText(s,CW/2,26);x.fillText(s,CW/2,26)}
 }
 let lastF=performance.now();
 function frame(now){const dt=Math.min(.05,(now-lastF)/1000);lastF=now;if(cur==='nursery')stepWalkers(dt);if(cur==='battle'&&B){if(B.trans){B.trans.t+=dt;if(B.trans.t>=B.trans.d){B.trans=null;renderBattleHead()}}else if(B.phase==='fight'){for(let k=0;k<bSpeed&&B.phase==='fight';k++)stepBattle(dt);}drawBattle()}requestAnimationFrame(frame)}
@@ -1931,6 +1963,9 @@ const ACT={
   hatch:(t)=>{const r=hatchOne(+t.dataset.i,+t.dataset.k);if(r){showHatch([r]);dirty=true;saveGame()}},
   hatchAll:()=>hatchAll(),
   ball:(t)=>openBall(+t.dataset.i),
+  trainFill:(t)=>{const only=t.dataset.i!=null&&t.dataset.i!==''?+t.dataset.i:null;let c=0;const F=freeMons().filter(m=>m.lv<100).sort((a,b)=>pc(b)-pc(a));
+    SAVE.balls.forEach((b,i)=>{if(only!=null&&i!==only)return;b.tr=b.tr||{};while(b.mons.length<BALL_SLOT[b.lvl]&&F.length){const m=F.shift();b.mons.push(m.u);b.tr[m.u]={t0:Date.now(),dur:(trainDur||60)*60000};c++}});
+    dirty=true;saveGame();toast(c?`⚡ ${c} Pokémon à l'entraînement (${trainTxt(trainDur||60)})`:'Aucune place libre ou aucun Pokémon libre');if(only!=null)openBall(only);else showTab(cur)},
   trainDur:(t)=>{trainDur=+t.dataset.v;openBall(+t.dataset.i)},
   train:(t)=>{const b=SAVE.balls[pickState.ball];if(b.mons.length<BALL_SLOT[b.lvl]){b.mons.push(+t.dataset.u);b.tr=b.tr||{};b.tr[+t.dataset.u]={t0:Date.now(),dur:(trainDur||60)*60000};dirty=true;saveGame();openBall(pickState.ball)}},
   unTrain:(t)=>{const b=SAVE.balls[+t.dataset.i];b.mons=b.mons.filter(u=>u!==+t.dataset.u);if(b.tr)delete b.tr[+t.dataset.u];dirty=true;saveGame();openBall(+t.dataset.i)},
@@ -2008,7 +2043,7 @@ const ACT={
   stPrev:()=>setupStage(B.stage-1),stNext:()=>setupStage(B.stage+1,null,true),stGo:(t)=>{const s2=+t.dataset.s;setupStage(s2,null,s2===B.stage+1)},stJump:()=>{const v=Math.round(+(($('stJump')||{}).value||0));if(v>=1)setupStage(v,null,v===B.stage+1)},
   nextStage:()=>{closeModal();setupStage(B.stage+1,null,true)},
   newCycle:()=>{SAVE.cycle=(SAVE.cycle||0)+1;SAVE.best=0;closeModal();saveGame();toast(`🔥 Mode Maître ${SAVE.cycle>1?SAVE.cycle:''} : les ennemis sont au niveau de ton meilleur Pokémon !`);setupStage(1);renderTop()},retry:()=>{closeModal();const keep=B.placed;setupStage(B.stage);B.placed=keep.filter(p=>mon(p.u)&&!monStatus(p.u));renderBattleHead();renderRoster()},
-  starter:(t)=>{const n=+t.dataset.n;addMon({n:132,lv:5,g:randGenes(5,15)});addMon({n:25,lv:5,g:randGenes(5,15)});addMon({n,lv:5,g:randGenes(8,18)});SAVE.tuto=0;closeModal();setTuto(1);dirty=true;saveGame()},
+  starter:(t)=>{const n=+t.dataset.n;addMon({n:132,lv:5,g:randGenes(5,15)});addMon({n:25,lv:5,g:randGenes(5,15)});addMon({n,lv:5,g:randGenes(8,18)});SAVE.tuto=0;closeModal();setTuto(1);dirty=true;saveGame();if(!SAVE.tour)setTimeout(tourStart,300)},
   cloud:()=>openCloud(),setPseudo:()=>setPseudo(),setTitle:(t)=>setTitle(t.dataset.t),rankReload:()=>{RANK.list=null;RANK.err='';rankLoad(true);renderRank()},showProfile:(t)=>showProfile(+t.dataset.i),signIn:()=>cloudSignIn(),signOut:()=>cloudSignOut()
 };
 document.addEventListener('click',e=>{const tb=e.target.closest('nav button[data-tab]');if(tb){showTab(tb.dataset.tab);return}const t=e.target.closest('[data-act]');if(t&&ACT[t.dataset.act]){ACT[t.dataset.act](t,e)}else if(e.target.id==='modal'&&SAVE.mons.length)closeModal()});
@@ -2038,7 +2073,7 @@ function loadJs(src){return new Promise((ok,ko)=>{const s=document.createElement
 async function cloudInit(){if(!cloudReady()||CLOUD.auth)return;
   try{const u='https://cdn.jsdelivr.net/npm/firebase@'+FB_VER+'/';await loadJs(u+'firebase-app-compat.js');await loadJs(u+'firebase-auth-compat.js');await loadJs(u+'firebase-firestore-compat.js');
     firebase.initializeApp(FB_CONFIG);CLOUD.auth=firebase.auth();CLOUD.db=firebase.firestore();CLOUD.on=true;CLOUD.auth.getRedirectResult().catch(()=>{});
-    CLOUD.auth.onAuthStateChanged(async u=>{CLOUD.user=u;if(u){await cloudPull();setTimeout(()=>arenaLoad(true),2500)}renderCloud()});setInterval(()=>{if(CLOUD.user)arenaLoad(true)},600000)}catch(e){CLOUD.err='Connexion impossible';renderCloud()}}
+    CLOUD.auth.onAuthStateChanged(async u=>{CLOUD.user=u;homeRender();if(u&&HOME.want){HOME.want=false;homeEnter()}if(u){await cloudPull();setTimeout(()=>arenaLoad(true),2500)}renderCloud()});setInterval(()=>{if(CLOUD.user)arenaLoad(true)},600000)}catch(e){CLOUD.err='Connexion impossible';renderCloud()}}
 async function cloudPull(){if(!CLOUD.user)return;CLOUD.busy=true;try{const d=await CLOUD.db.collection('saves').doc(CLOUD.user.uid).get();if(d.exists){const r=JSON.parse(d.data().data||'{}');if(progress(r)>progress(SAVE)){SAVE=Object.assign(newSave(),r);try{fixSave(SAVE)}catch(e){console.error(e)}showMig();dirty=true;showTab(cur)}}try{localStorage.setItem(SAVEKEY,saveJson())}catch(e){}await cloudPush(true)}catch(e){CLOUD.err='Erreur de synchronisation'}CLOUD.busy=false}
 async function cloudPush(now){if(!CLOUD.user||!CLOUD.db)return;clearTimeout(CLOUD.timer);const go=async()=>{try{await CLOUD.db.collection('saves').doc(CLOUD.user.uid).set({data:saveJson(),name:(CLOUD.user.displayName||'').split(' ')[0].slice(0,14),updated:firebase.firestore.FieldValue.serverTimestamp()});CLOUD.err='';profilePush()}catch(e){CLOUD.err='Erreur de sauvegarde'}};if(now)return go();CLOUD.timer=setTimeout(go,5000)}
 async function cloudSignIn(){if(!CLOUD.auth)return;const p=new firebase.auth.GoogleAuthProvider();p.setCustomParameters({prompt:'select_account'});try{await CLOUD.auth.signInWithPopup(p)}catch(e){if(e&&/popup|iframe|operation-not-supported/.test(e.code||''))CLOUD.auth.signInWithRedirect(p)}}
@@ -2061,7 +2096,7 @@ function renderProfile(){const st=SAVE.st,sh=SAVE.mons.filter(m=>m.sh).length,mu
 
 /* réglages propres à cet appareil (localStorage) */
 const OPTKEY='pte_options';
-const OPT=Object.assign({music:true,vol:50,jingles:true,show:30,speed:1},(()=>{try{return JSON.parse(localStorage.getItem(OPTKEY)||'{}')}catch(e){return {}}})());
+const OPT=Object.assign({music:true,vol:50,jingles:true,show:30,speed:1,lang:'fr'},(()=>{try{return JSON.parse(localStorage.getItem(OPTKEY)||'{}')}catch(e){return {}}})());
 function saveOpt(){try{localStorage.setItem(OPTKEY,JSON.stringify(OPT))}catch(e){}}
 function renderSettings(){
   $('tab-settings').innerHTML=`<div class="panel"><h3>⚙ Réglages</h3>
@@ -2069,6 +2104,8 @@ function renderSettings(){
    <div class="setrow"><label>Volume de la musique : <span id="volV">${OPT.vol}</span> %</label><input type="range" min="0" max="100" step="5" value="${OPT.vol}" id="optVol"></div>
    <div class="setrow"><label>Jingles (victoire de boss, shiny, mutation)</label><button class="sm ${OPT.jingles?'go':''}" data-act="optJingles">${OPT.jingles?'Activés':'Coupés'}</button></div>
    <div class="setrow"><label>Pokémon affichés dans la salle de jeu</label>${[10,20,30].map(v=>`<button class="sm ${OPT.show===v?'go':''}" data-act="optShow" data-v="${v}">${v}</button>`).join('')}<span class="muted">Moins de Pokémon = jeu plus fluide.</span></div>
+   <div class="setrow"><label>Langue / Language</label>${[['fr','🇫🇷 Français'],['en','🇬🇧 English']].map(([k,t])=>`<button class="sm ${OPT.lang===k?'go':''}" data-act="setLang" data-v="${k}">${t}</button>`).join('')}<span class="muted">${OPT.lang==='en'?'English: menus, buttons, home page and tutorial. Long descriptions are still in French.':''}</span></div>
+   <div class="setrow"><label>Tutoriel des onglets</label><button class="sm" data-act="tourStart">📖 Revoir le tutoriel</button></div>
    <div class="setrow"><label>Vitesse de combat par défaut</label>${[1,2,4].map(v=>`<button class="sm ${OPT.speed===v?'go':''}" data-act="optSpeed" data-v="${v}">×${v}</button>`).join('')}</div>
    <h3 style="margin-top:14px">Sauvegarde</h3>
    <p class="muted">Ta partie est sauvegardée automatiquement dans ce navigateur, et en ligne si tu es connecté avec Google.</p>
@@ -2097,12 +2134,77 @@ function jingle(k){if(!MUS.ok||!OPT.jingles)return;if(MUS.a)MUS.a.pause();const 
   const end=()=>{if(MUS.jingle===j){MUS.jingle=null;MUS.key=null;updateMusic()}};j.onended=end;j.onerror=end;setTimeout(end,9000);j.play().catch(end)}
 addEventListener('pointerdown',()=>{if(!MUS.ok){MUS.ok=true;updateMusic()}},{capture:true});
 
+/* =====================================================================
+   PAGE D'ACCUEIL, LANGUE, TUTORIEL DES ONGLETS
+   ===================================================================== */
+function i18c(t){return OPT.lang==='en'&&EN[t]||t}
+const LG=()=>OPT.lang==='en'?'en':'fr';const tr2=(fr,en)=>LG()==='en'?en:fr;
+const HOME={on:false,want:false};
+function homeShow(){HOME.on=true;let h=$('home');if(!h){h=document.createElement('div');h.id='home';document.body.appendChild(h)}h.hidden=false;homeRender()}
+function homeRender(){const h=$('home');if(!h||!HOME.on)return;const ok=cloudReady(),u=CLOUD.user;
+  h.innerHTML=`<div class="hbox"><img src="assets/logo.svg" alt="" class="hlogo"><h1>POKETABS<span>EGGS COLLECTOR</span></h1>
+   <p class="muted">${tr2('Élève, fais éclore et entraîne tes Pokémon, puis lance-les au combat.','Breed, hatch and train your Pokémon, then send them into battle.')}</p>
+   <div class="hlang">${[['fr','🇫🇷 Français'],['en','🇬🇧 English']].map(([k,t])=>`<button class="sm ${LG()===k?'go':''}" data-act="setLang" data-v="${k}">${t}</button>`).join('')}</div>
+   ${u?`<button class="go big" data-act="homeEnter">▶ ${tr2('Continuer en tant que','Continue as')} ${esc(u.displayName||u.email||'')}</button><button class="sm" data-act="homeOut">${tr2('Changer de compte','Switch account')}</button>`
+     :`<button class="go big" data-act="homeGoogle" ${ok&&CLOUD.auth?'':'disabled'}><b>G</b> ${tr2('Se connecter avec Google','Sign in with Google')}</button>`}
+   <button class="big" data-act="homeGuest">👤 ${tr2('Jouer en invité','Play as guest')}</button>
+   <p class="muted small">${u?'':ok?(CLOUD.auth?tr2('Avec Google, ta partie est sauvegardée en ligne et tu as accès au classement, à l\'arène et à l\'hôtel des ventes. En invité, la partie reste dans ce navigateur.','With Google, your game is saved online and you get the ranking, the arena and the auction house. As a guest, your game stays in this browser.'):tr2('Connexion à Google en cours…','Connecting to Google…')):tr2('La connexion Google marche seulement sur le site en ligne. Ici, joue en invité.','Google sign-in only works on the online site. Here, play as a guest.')}</p></div>`}
+function homeEnter(){HOME.on=false;const h=$('home');if(h)h.hidden=true;showTab(cur||'nursery');
+  if(!SAVE.mons.length)starterModal();else{if(SAVE.tuto>=1&&SAVE.tuto<6)setTip(TUTO[SAVE.tuto]);if(!SAVE.tour)setTimeout(tourStart,400)}}
+/* ---- traduction anglaise : textes exacts + quelques mots fréquents (le reste reste en français) ---- */
+const EN={"Nurserie":"Nursery","Pokémon":"Pokémon","Combat":"Battle","Boutique":"Shop","Pokédex":"Pokédex","Succès":"Achievements","🗺️ Aventures":"🗺️ Adventures","🌐 En ligne":"🌐 Online","Réglages":"Settings","⚙ Réglages":"⚙ Settings",
+"Eau":"Water","Plante":"Grass","Feu":"Fire","Normal":"Normal","Vol":"Flying","Poison":"Poison","Dragon":"Dragon","Insecte":"Bug","Roche":"Rock","Sol":"Ground","Spectre":"Ghost","Électrik":"Electric","Acier":"Steel","Fée":"Fairy","Glace":"Ice","Ténèbres":"Dark","Psy":"Psychic",
+"Tous les types":"All types","Nom (A à Z)":"Name (A to Z)","Niveau décroissant":"Level (high to low)","Niveau croissant":"Level (low to high)","PC décroissant":"CP (high to low)","PC croissant":"CP (low to high)","Favoris d'abord":"Favorites first","N° Pokédex":"Pokédex number","Plus récents":"Newest",
+"Libre":"Free","PV":"HP","Att":"Atk","Déf":"Def","Vit":"Spe","📋 Fiche":"📋 Info","Pas d'évolution":"No evolution","Fait évoluer certains Pokémon.":"Makes some Pokémon evolve.",
+"🗄️ Armoire à œufs":"🗄️ Egg cabinet","Salle de jeu":"Playroom","Nids":"Nests","Tout récupérer":"Collect all","⚡ Remplir les nids (plus forts)":"⚡ Fill nests (strongest)","Clique pour placer un couple":"Click to place a pair","Incubateurs":"Incubators","Tout faire éclore":"Hatch all","Tout remplir":"Fill all",
+"Entraînement":"Training","⚡ Remplir les punching-balls":"⚡ Fill punching bags","⚡ Remplir automatiquement":"⚡ Auto fill","Ranger un œuf du sac":"Store an egg from the bag","Clique sur un œuf de l'armoire pour le reprendre.":"Click an egg in the cabinet to take it back.","Clique sur un incubateur pour y placer des œufs.":"Click an incubator to put eggs in it.",
+"☑ Vendre des œufs":"☑ Sell eggs","Ordre du sac":"Bag order","Pas encore au Pokédex d'abord":"Not yet in Pokédex first","Plus rares d'abord":"Rarest first","Aucun œuf pour le moment.":"No eggs yet.","Un Pokémon à l'entraînement ne peut pas se reproduire ni combattre.":"A Pokémon in training can't breed or fight.",
+"⭐ = favori, toujours affiché dans la nurserie":"⭐ = favorite, always shown in the nursery","☑ Sélectionner plusieurs Pokémon":"☑ Select several Pokémon","Tableau":"Stage","Aller":"Go","Infos":"Info","Armée":"Army","Armée :":"Army:","Placement auto":"Auto place","Équipe…":"Team…","💾 Équipes":"💾 Teams","Vider":"Clear","⚔ Combat !":"⚔ Fight!","🔁 Auto OFF":"🔁 Auto OFF","🔁 Auto ON":"🔁 Auto ON","⤢ Plein écran":"⤢ Full screen","ℹ Bonus d'équipe":"ℹ Team bonuses","Lancer le défi":"Start the challenge",
+"Œufs":"Eggs","Œuf surprise":"Surprise egg","Œuf surprise rare":"Rare surprise egg","Nouveau nid":"New nest","Améliorer un nid":"Upgrade a nest","Nouvel incubateur":"New incubator","Améliorer un incubateur":"Upgrade an incubator","Remplissage automatique":"Auto fill","Possédé : non":"Owned: no","Nouveau punching-ball":"New punching bag","Améliorer un punching-ball":"Upgrade a punching bag","Agrandir la nurserie":"Bigger nursery","Agrandir le sac d'œufs":"Bigger egg bag","Place dans l'armée":"Army slot",
+"Objets et boosts (temporaires)":"Items and boosts (temporary)","Encens d'amour":"Love incense","Pierre mutagène":"Mutagen stone","Charme chroma":"Shiny charm","Objets d'évolution":"Evolution items","Œufs du moment":"Eggs of the moment","✨ Légendaire du jour":"✨ Legendary of the day","Légendaire":"Legendary","Marché du jour":"Today's market",
+"📖 Pokémon":"📖 Pokémon","🥚 Collection d'œufs":"🥚 Egg collection","📖 Récompenses du Pokédex":"📖 Pokédex rewards","(Pokémon possédés)":"(Pokémon owned)","Dresseur":"Trainer","🏆 Classement":"🏆 Ranking","🏟️ Arène":"🏟️ Arena","💰 Hôtel des ventes":"💰 Auction house","Actualiser":"Refresh","⚔ Défier":"⚔ Challenge","Prendre la place":"Take the seat","👑 Maître":"👑 Master","🎖️ Conseil 4":"🎖️ Elite Four","🏟️ Champions d'arène":"🏟️ Gym leaders","🎯 Experts de type":"🎯 Type experts","📜 Historique des défis":"📜 Challenge history","C'est toi !":"That's you!","Mettre à jour mon équipe":"Update my team",
+"🗺️ Expéditions":"🗺️ Expeditions","Nouvelle expédition":"New expedition","🎯 Missions du jour":"🎯 Daily missions","🎒 Sac d'objets":"🎒 Item bag","Récupérer le butin":"Collect the loot","Annuler":"Cancel","Aucune expédition en cours.":"No expedition running.",
+"Musique":"Music","Activée":"On","Coupée":"Off","Activés":"On","Coupés":"Off","Sauvegarde":"Save","Recommencer à zéro":"Start over","Effacer ma partie…":"Delete my game…","Tutoriel des onglets":"Tab tutorial","📖 Revoir le tutoriel":"📖 Replay the tutorial","Vitesse de combat par défaut":"Default battle speed","Pokémon affichés dans la salle de jeu":"Pokémon shown in the playroom","Jingles (victoire de boss, shiny, mutation)":"Jingles (boss win, shiny, mutation)","Moins de Pokémon = jeu plus fluide.":"Fewer Pokémon = smoother game.",
+"Se connecter":"Sign in","Se déconnecter":"Sign out","Retirer":"Remove","aucun":"none","Talent":"Ability","Déplacement":"Movement","Attaques":"Moves","Bonheur":"Happiness","Objet tenu":"Held item","Évolutions":"Evolutions","Terrestre":"Ground","Nage":"Swim","Lave":"Lava","OK":"OK","Suivant":"Next","Précédent":"Previous","Passer":"Skip","Fermer":"Close","Confirmer":"Confirm","Acheter":"Buy","Vendre":"Sell","Rejouer":"Retry","Continuer":"Continue"};
+const TUTO_EN=['',"Click the nest and place Ditto and Pikachu together: they will lay an egg.","An egg is ready! Click it above the nest to collect it.","Click the incubator to put your egg in it.","The egg is ready to hatch: click \"Hatch all\".","Well done! Go to the Battle tab and take on Stage 1 with your army.","Nice! Earn coins and buy nests, incubators and punching bags in the Shop to grow your army."];
+TUTO.forEach((t,i)=>{if(t)EN[t]=TUTO_EN[i]});Object.assign(EN,{"Choisis un Pokémon en bas, puis clique dans la zone bleue":"Pick a Pokémon below, then click in the blue zone","Clique sur un ennemi pour en faire la cible principale":"Click an enemy to make it the main target","Bienvenue dans PokeTabs Eggs Collector !":"Welcome to PokeTabs Eggs Collector!","Choisis aussi ton starter :":"Also pick your starter:","Tu reçois":"You get","et":"and","pour apprendre à faire des œufs.":"to learn how to make eggs."});
+const EN_W=[[/\bNv\b/g,'Lv'],[/\bPC\b/g,'CP'],[/\bpièces\b/g,'coins'],[/\bpièce\b/g,'coin'],[/\bTableau\b/g,'Stage'],[/\bPossédé :/g,'Owned:'],[/\bRelâcher\b/g,'Release'],[/\bœufs\b/g,'eggs'],[/\bœuf\b/g,'egg'],[/\bNid\b/g,'Nest'],[/\bIncubateur\b/g,'Incubator'],[/\bMes Pokémon\b/g,'My Pokémon'],[/\bSac d'œufs\b/g,'Egg bag'],[/\bGén\b/g,'Gen'],[/\bEnnemis\b/g,'Enemies'],[/\bVitesse\b/g,'Speed'],[/\bpossédés\b/g,'owned'],[/\bAméliorer\b/g,'Upgrade'],[/\bRécupérer\b/g,'Collect']];
+const I18N={obs:null,busy:false};
+function trNode(n){const v=n.nodeValue;if(!v||!/\S/.test(v))return;const t=v.trim();let o=EN[t];if(o!=null){if(o!==t)n.nodeValue=v.replace(t,o);return}let w=v;for(const[r,x]of EN_W)w=w.replace(r,x);if(w!==v)n.nodeValue=w}
+function trTree(root){if(LG()!=='en')return;if(root.nodeType===3){trNode(root);return}if(root.nodeType!==1||root.id==='home'||root.closest&&root.closest('#home'))return;const w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);let n;while(n=w.nextNode()){if(n.parentNode&&/^(SCRIPT|STYLE|TEXTAREA)$/.test(n.parentNode.nodeName))continue;trNode(n)}
+  root.querySelectorAll&&root.querySelectorAll('[title],[placeholder]').forEach(e=>{['title','placeholder'].forEach(a=>{const v=e.getAttribute(a);if(v&&EN[v])e.setAttribute(a,EN[v])})})}
+function i18nInit(){document.documentElement.lang=LG();if(I18N.obs){I18N.obs.disconnect();I18N.obs=null}if(LG()!=='en')return;trTree(document.body);
+  I18N.obs=new MutationObserver(L=>{if(I18N.busy)return;I18N.busy=true;try{for(const m of L){if(m.type==='characterData')trNode(m.target);else m.addedNodes.forEach(trTree)}}finally{I18N.busy=false}});
+  I18N.obs.observe(document.body,{childList:true,subtree:true,characterData:true})}
+function setLang(k){const was=LG();OPT.lang=k;saveOpt();if(was==='en'&&k==='fr'){location.reload();return}i18nInit();homeRender();if(cur==='settings')renderSettings();if(TOUR.on)tourRender()}
+/* ---- tutoriel des onglets (lancé une fois après le choix du starter, peut être passé) ---- */
+const TOUR_STEPS=[
+ {tab:'nursery',t:['🥚 Nurserie','🥚 Nursery'],x:['Le cœur du jeu. <b>Nids</b> : place un couple (mâle + femelle, ou avec Métamorph) pour qu\'il ponde des œufs. <b>Incubateurs</b> : mets-y les œufs pour les faire éclore. <b>Entraînement</b> : les punching-balls donnent de l\'XP à tes Pokémon (bouton ⚡ pour remplir tout seul). <b>Armoire</b> : expose tes plus beaux œufs. <b>Sac d\'œufs</b> : tes œufs en attente, que tu peux aussi vendre.','The heart of the game. <b>Nests</b>: place a pair (male + female, or with Ditto) to lay eggs. <b>Incubators</b>: put eggs there to hatch them. <b>Training</b>: punching bags give XP to your Pokémon (⚡ button fills them for you). <b>Cabinet</b>: show off your best eggs. <b>Egg bag</b>: your waiting eggs, which you can also sell.']},
+ {tab:'team',t:['📋 Pokémon','📋 Pokémon'],x:['Tous tes Pokémon. Clique sur <b>📋 Fiche</b> pour voir son talent, ses déplacements (vol, nage, lave), lui donner un objet ou le faire évoluer. <b>⭐</b> = favori. <b>☑ Sélectionner plusieurs</b> permet de relâcher en lot avec des filtres (doublons, niveau, type…).','All your Pokémon. Click <b>📋 Info</b> to see its ability and movement (fly, swim, lava), give it an item or evolve it. <b>⭐</b> = favorite. <b>☑ Select several</b> lets you release many at once with filters (duplicates, level, type…).']},
+ {tab:'battle',t:['⚔ Combat','⚔ Battle'],x:['Avance de tableau en tableau. Glisse tes Pokémon dans la zone bleue (ou <b>Placement auto</b>), puis <b>⚔ Combat !</b> Les combats sont automatiques et durent 2 minutes au plus. Clique sur un ennemi pour en faire la cible principale. Attention au terrain : eau, lave, boue et falaises. Un boss tous les 5 tableaux donne des œufs.','Go from stage to stage. Drag your Pokémon into the blue zone (or <b>Auto place</b>), then <b>⚔ Fight!</b> Battles are automatic and last 2 minutes at most. Click an enemy to make it the main target. Watch the terrain: water, lava, mud and cliffs. A boss every 5 stages gives eggs.']},
+ {tab:'shop',t:['🛒 Boutique','🛒 Shop'],x:['Achète des œufs (marché du jour, œufs du moment, légendaire du jour), des améliorations (nids, incubateurs, punching-balls, place dans l\'armée) et des objets. « Possédé » indique ce que tu as déjà.','Buy eggs (today\'s market, eggs of the moment, legendary of the day), upgrades (nests, incubators, punching bags, army slots) and items. "Owned" shows what you already have.']},
+ {tab:'dex',t:['📖 Pokédex','📖 Pokédex'],x:['Les espèces que tu as vues et possédées, avec des récompenses par palier, et ta collection d\'œufs avec la vitrine visible par les autres joueurs.','The species you have seen and owned, with rewards at each milestone, and your egg collection with a showcase other players can see.']},
+ {tab:'ach',t:['🏆 Succès','🏆 Achievements'],x:['Des objectifs qui rapportent des pièces et des titres à afficher à côté de ton nom.','Goals that give coins and titles to show next to your name.']},
+ {tab:'adv',t:['🗺️ Aventures','🗺️ Adventures'],x:['<b>Expéditions</b> : envoie des Pokémon explorer un biome pendant quelques heures pour ramener du butin. <b>Missions du jour</b>, <b>tableaux défi</b>, et l\'<b>Antre Dynamax</b> : des boss géants à abattre à plusieurs combats.','<b>Expeditions</b>: send Pokémon to explore a biome for a few hours and bring back loot. <b>Daily missions</b>, <b>challenge stages</b>, and the <b>Dynamax den</b>: giant bosses to take down over several fights.']},
+ {tab:'rank',t:['🌐 En ligne','🌐 Online'],x:['Avec un compte Google : le <b>classement</b>, l\'<b>arène</b> (champions d\'arène → Conseil 4 → Maître, des pièces par heure tant que tu tiens ta place, et les experts de type ont plus de shiny) et l\'<b>hôtel des ventes</b> pour échanger des Pokémon.','With a Google account: the <b>ranking</b>, the <b>arena</b> (gym leaders → Elite Four → Master, coins per hour while you hold your seat, and type experts get more shinies) and the <b>auction house</b> to trade Pokémon.']},
+ {tab:'profile',t:['👤 Profil','👤 Profile'],x:['Ton compte, ton pseudo, ta couleur et ton titre.','Your account, nickname, colour and title.']},
+ {tab:'settings',t:['⚙ Réglages','⚙ Settings'],x:['Musique, langue, vitesse de combat… Tu peux revoir ce tutoriel ici à tout moment. Bon jeu !','Music, language, battle speed… You can replay this tutorial here at any time. Have fun!']}];
+const TOUR={on:false,i:0};
+function tourStart(){TOUR.on=true;TOUR.i=0;tourRender()}
+function tourRender(){let el=$('tour');if(!el){el=document.createElement('div');el.id='tour';document.body.appendChild(el)}const st=TOUR_STEPS[TOUR.i],L=LG()==='en'?1:0;
+  document.querySelectorAll('nav button.tourhl').forEach(b=>b.classList.remove('tourhl'));const nb=document.querySelector(`nav button[data-tab="${st.tab}"]`);if(nb)nb.classList.add('tourhl');
+  if(cur!==st.tab)showTab(st.tab);el.hidden=false;
+  el.innerHTML=`<div class="tstep">${TOUR.i+1} / ${TOUR_STEPS.length}</div><h3>${st.t[L]}</h3><p>${st.x[L]}</p><div class="tbtn"><button class="sm" data-act="tourSkip">${tr2('Passer le tutoriel','Skip tutorial')}</button><span style="flex:1"></span>${TOUR.i?`<button class="sm" data-act="tourPrev">◀ ${tr2('Précédent','Previous')}</button>`:''}<button class="sm go" data-act="tourNext">${TOUR.i<TOUR_STEPS.length-1?tr2('Suivant','Next')+' ▶':tr2('Terminer','Finish')+' ✓'}</button></div>`}
+function tourEnd(){TOUR.on=false;const el=$('tour');if(el)el.hidden=true;document.querySelectorAll('nav button.tourhl').forEach(b=>b.classList.remove('tourhl'));SAVE.tour=1;dirty=true;saveGame();showTab('nursery')}
+Object.assign(ACT,{setLang:(t)=>setLang(t.dataset.v),homeEnter:()=>homeEnter(),homeGuest:()=>homeEnter(),homeGoogle:()=>{HOME.want=true;cloudSignIn()},homeOut:async()=>{HOME.want=true;try{await CLOUD.auth.signOut()}catch(e){}cloudSignIn()},
+  tourStart:()=>tourStart(),tourSkip:()=>tourEnd(),tourNext:()=>{if(TOUR.i>=TOUR_STEPS.length-1)tourEnd();else{TOUR.i++;tourRender()}},tourPrev:()=>{TOUR.i=Math.max(0,TOUR.i-1);tourRender()}});
+
 /* ---------- démarrage ---------- */
 SAVE=loadSave();
 tick();
 showTab('nursery');renderTop();
 showMig();
-if(!SAVE.mons.length)starterModal();else if(SAVE.tuto>=1&&SAVE.tuto<6)setTip(TUTO[SAVE.tuto]);
+i18nInit();homeShow();
 setInterval(tick,500);
 setInterval(saveGame,5000);
 window.addEventListener('beforeunload',()=>{try{localStorage.setItem(SAVEKEY,saveJson())}catch(e){}});

@@ -265,3 +265,33 @@ V00.31.00
                         migration : le Maître placé automatiquement (classement) passe au Conseil 4
    Revenu des places    par heure tenue : Maître 3 000, Conseil 4 1 500, Champions de 900 (n°1) à 340 (n°8), experts 0
                         versé une fois par jour, à la première connexion du jour (bandeau « en attente » dans l'onglet Arène)
+
+V00.32.00 (remplace les règles d'arène de la V00.31)
+   Placement auto       supprimé : personne n'est plus placé d'office au Conseil 4 ou Maître ; les places posées
+                        automatiquement sont retirées une fois (tout le monde commence par les champions d'arène)
+   Maître               boss PNJ fixe « Maître de la Ligue » (même équipe tout le temps) jusqu'à ce qu'un joueur du Conseil 4 le batte
+   Rangs                les 8 champions sont au même rang, les 4 membres du Conseil 4 aussi (bots de même niveau)
+                        un champion ne peut pas prendre une autre place de champion ; il monte au Conseil 4
+   Revenu par heure     Maître 3 000, Conseil 4 1 500, champion d'arène 600 ; versé une fois par jour
+   Prime de prise       Maître 300 000, Conseil 4 100 000, champion 30 000, expert 20 000
+   Cumul                une seule place parmi champion / Conseil 4 / Maître ; les places d'expert se cumulent
+                        (plusieurs types à la fois, en plus de la place)
+   Expert               chance de shiny ×2 pour les Pokémon de ses types (œufs des nids, boutique, boss, super œufs)
+
+V00.33.00
+   Shiny                0,4 % de base, 1 % avec un parent shiny, 2 % avec deux ; Charme chroma ×2 (au lieu de ×3),
+                        nid niveau 5 ×1,5, expert du type ×2, super œuf ×3
+   Niveau des bébés     plafonné au niveau du parent le plus fort (mutations comprises)
+   Talents              Sniper (Dardargnan, Hypotrempe, Hypocéan, Rémoraid, Octillery) : 10 % de critiques mini, critique ×2,25
+                        Joli Sourire (Mélofée, Mélodelfe, Rondoudou, Grodoudou, Mélo, Toudoudou, Skitty, Delcatty, Laporeille,
+                          Lockpin) : 30 % de charmer un attaquant au corps à corps (bloqué 1,5 s)
+                        Point Poison (lignée Nidoran, Qwilfish, Rozbouton, Rosélia, Venipatte, Scobolide, Brutapode) :
+                          30 % d'empoisonner un attaquant au corps à corps (1,5 % de ses PV par seconde pendant 6 s)
+   Correctif            Absorb Volt ne marchait jamais (mauvais nom de type) : corrigé
+   Arène                📜 Historique des défis (15 derniers, les tiens surlignés) ; message à la connexion quand
+                        quelqu'un t'a défié (place gardée ou perdue) ; document Firestore arena/log
+   Décors               palmiers et arbres de l'ancienne planche : plus d'ombre en rectangle gris (assets/trees_clean.png),
+                        ombre ovale douce à la place ; dessus des falaises texturé (taches, touffes d'herbe ou cailloux
+                        selon le biome) avec relief (bord sombre en bas, lumière à gauche)
+   Bestiaire            Bestiaire_PokeTabs.xlsx régénéré : 529 espèces, génération, talent, déplacement, PC avec stats lissées,
+                        taux de shiny ; ajouté au .gitignore
