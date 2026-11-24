@@ -129,6 +129,9 @@ h3{margin:0 0 8px;font-size:16px;display:flex;align-items:center;gap:10px}
 .banner.pk{background:#ffd1e8}
 /* ---------- combat ---------- */
 .bhead{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px}
+.bhrow{display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;width:100%}.bhrow.syn{justify-content:flex-start;gap:6px}
+.bhg{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:4px 8px;border:2px solid #dcc6a4;border-radius:12px;background:rgba(255,250,240,.7)}.bhg .lab{font-size:11px;font-weight:800;color:#9a7550;text-transform:uppercase;letter-spacing:.5px}
+.autosel{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;margin:8px 0;padding:8px;border:2px dashed #e0a030;border-radius:10px;background:#fffaf0}.autosel label{white-space:nowrap}
 .bhead .title{font-size:18px}
 .biome{font-size:12px;background:#fff;border:2px solid var(--ink);border-radius:8px;padding:2px 8px}
 body.fs main{max-width:none}body.fs{overflow:auto}
@@ -245,7 +248,7 @@ body.bfull .roster{flex:none;padding:6px 2px}
    POKETABS EGGS COLLECTOR  (V00.01.00)
    Réglages rapides : objet T ci-dessous (durées en secondes, chances en 0..1)
    ===================================================================== */
-const VERSION='V00.26.00';
+const VERSION='V00.29.00';
 const T={
   breed:45,        // durée de base d'une ponte (s)
   hatch:75,        // durée de base d'éclosion (s), modulée par l'espèce (stats totales et rareté)
@@ -320,7 +323,18 @@ const ovSrc=(n,sh)=>OVDIR+pad3(OV_MAP[n]||n)+(sh&&!NO_SHINY_SPR.has(n)?'s':'')+'
 function eggSrc(n){const b=baseOf(n,true);return EGG_HAS.has(b)?EGGDIR+EGG_FILE[b]+'.png':EGGDIR+'egg_base.png'}
 function eggH(n,s,cls='',attrs=''){const k=s/64;return `<span class="egg ${cls}" ${attrs} data-k="${k}" style="width:${s}px;height:${Math.round(s*68/64)}px"><img src="${typeof n==='string'?n:eggSrc(n)}" style="width:${160*k}px;left:-${48*k}px;top:-${44*k}px" alt="">${cls.includes('ck')?`<span class="ck" style="background-size:${800*k}px ${160*k}px"></span>`:''}</span>`}
 function tyHTML(d){return '<span class="types">'+[d.t1,d.t2].filter(Boolean).map(t=>`<span class="ty" style="background:${TCOL[t]||'#888'}">${TNAME[t]||t}</span>`).join('')+'</span>'}
-function sprHTML(n,sh,size=48,still=false,row=0){const w=size*4;return `<span class="spr${still?' still':''}" style="width:${size}px;height:${size}px;--w:-${w}px"><img loading="lazy" src="${ovSrc(n,sh)}" style="width:${w}px;height:${w}px;top:-${row*size}px" onerror="this.parentNode.classList.add('miss')" alt=""></span>`}
+/* boîte du contenu d'une planche (case du haut à gauche) : pour des tailles cohérentes quelle que soit la taille de la planche */
+const SPRC={};
+function sprBox(im){const src=im.src;if(SPRC[src])return SPRC[src];const fw=(im.naturalWidth||256)/4;let b={fw,x0:fw*.2,y0:fw*.25,w:fw*.6,h:fw*.6,cx:fw/2,by:fw*.86};
+  try{const c=document.createElement('canvas');c.width=fw;c.height=fw;const x=c.getContext('2d');x.drawImage(im,0,0,fw,fw,0,0,fw,fw);const d=x.getImageData(0,0,fw,fw).data;let x0=fw,y0=fw,x1=-1,y1=-1;
+    for(let y=0;y<fw;y++)for(let k=0;k<fw;k++)if(d[(y*fw+k)*4+3]>30){if(k<x0)x0=k;if(k>x1)x1=k;if(y<y0)y0=y;if(y>y1)y1=y}
+    if(x1>=0)b={fw,x0,y0,w:x1-x0+1,h:y1-y0+1,cx:(x0+x1+1)/2,by:y1+1}}catch(e){}
+  return SPRC[src]=b}
+/* zoom d'un sprite (en pixels d'écran par pixel source, pour une case de 64 affichée en "size") : même densité pour toutes les planches,
+   les grands légendaires pas trop petits, et tout tient dans la case */
+function sprZoom(b,n,size){let z=size/64;const c=Math.max(b.w,b.h);if(LEGEND.has(n)&&c<56)z*=Math.min(1.5,56/c);if(c*z>size*.98)z=size*.98/c;return z}
+function sprFix(im,n,size,row){const b=sprBox(im),z=sprZoom(b,n,size),W=b.fw*4*z;im.style.width=W+'px';im.style.height=W+'px';im.style.marginLeft=Math.round(size/2-b.cx*z)+'px';im.style.top=Math.round(size*.94-b.by*z-row*b.fw*z)+'px';im.parentNode.style.setProperty('--w',-W+'px')}
+function sprHTML(n,sh,size=48,still=false,row=0){const w=size*4;return `<span class="spr${still?' still':''}" style="width:${size}px;height:${size}px;--w:-${w}px"><img loading="lazy" src="${ovSrc(n,sh)}" style="width:${w}px;height:${w}px;top:-${row*size}px" onload="sprFix(this,${n},${size},${row})" onerror="this.parentNode.classList.add('miss')" alt=""></span>`}
 
 /* ---------- espèces, évolutions ---------- */
 /* évolutions officielles (pierres, bonheur, échange : niveau provisoire) et sexes */
@@ -349,8 +363,10 @@ const WEIRD_P=0.05;
 
 /* ---------- statistiques ---------- */
 const BST_K=['hp','atk','def','spa','spd'],BST_N={hp:'PV',atk:'Attaque',def:'Défense',spa:'Att. Spé',spd:'Vitesse'};
-function stats(m){const d=DEX[m.n],g=m.g,L=m.lv,f=(m.sh?1.1:1)*(m.pk?T.pkStat:1);const s=(b,x)=>Math.floor(((2*b+x)*L/100+5)*f);
-  const o={hp:Math.floor(((2*d.hp+g.hp)*L/100+L+10)*f),atk:s(d.atk,g.atk),def:s(d.def,g.def),spa:s(d.spa,g.atk),spd:s(d.spd,g.spd)};if(m.bst&&o[m.bst])o[m.bst]=Math.floor(o[m.bst]*T.bstMul);return o}
+/* stats de base lissées : on rapproche chaque stat de 75 (écart réduit d'un quart) pour réduire les différences de puissance */
+const SMOOTH=b=>Math.round(75+(b-75)*.75);
+function stats(m){const d=DEX[m.n],g=m.g,L=m.lv,f=(m.sh?1.1:1)*(m.pk?T.pkStat:1);const s=(b,x)=>Math.floor(((2*SMOOTH(b)+x)*L/100+5)*f);
+  const o={hp:Math.floor(((2*(d.hp<=1?1:SMOOTH(d.hp))+g.hp)*L/100+L+10)*f),atk:s(d.atk,g.atk),def:s(d.def,g.def),spa:s(d.spa,g.atk),spd:s(d.spd,g.spd)};if(m.bst&&o[m.bst])o[m.bst]=Math.floor(o[m.bst]*T.bstMul);return o}
 function pc(m){const s=stats(m);return s.hp+s.atk+s.def+s.spa+s.spd}
 const need=L=>Math.floor(10+6*L*Math.sqrt(L));
 
@@ -498,7 +514,7 @@ function renderNursery(){
     <div class="zone"><h3>Incubateurs <button class="sm go" data-act="hatchAll" ${anyReady?'':'disabled'}>Tout faire éclore</button>${SAVE.items.autofill?`<button class="sm" data-act="fillAll" ${SAVE.eggs.length?'':'disabled'}>Tout remplir</button>${prioHTML()}`:''}</h3><div class="row">${SAVE.incs.map(incHTML).join('')}</div></div>
     <div class="zone"><h3>Entraînement <span class="muted">Un Pokémon à l'entraînement ne peut pas se reproduire ni combattre.</span></h3><div class="row">${SAVE.balls.map(ballHTML).join('')}</div></div>
     <div class="zone"><h3>🗄️ Armoire à œufs <button class="sm go" data-act="cabOpen" ${cab().length>=CAB_MAX?'disabled':''}>Ranger un œuf du sac</button> <span class="muted">Clique sur un œuf de l'armoire pour le reprendre.</span></h3>${cabHTML(cab(),true)}</div>
-    <div class="zone"><h3>Sac d'œufs (${SAVE.eggs.length}/${bagCap()}) <span class="muted">Clique sur un incubateur pour y placer des œufs.</span></h3><div class="eggbag">${SAVE.eggs.map(eggChip).join('')||'<span class="muted">Aucun œuf pour le moment.</span>'}</div></div>
+    <div class="zone"><h3>Sac d'œufs (${SAVE.eggs.length}/${bagCap()}) <span class="muted">Clique sur un incubateur pour y placer des œufs.</span> ${eggSel?'':`<button class="sm" data-act="eselOn">☑ Vendre des œufs</button>`}</h3>${filtHTML('bag',EGG_SORTS)}${eggSel?eggSelHTML():''}<div class="eggbag">${applyEggFilt('bag').map(({e})=>eggSel?`<div class="eggchip" data-act="eggTog" data-id="${e.id}" style="cursor:pointer;${eggSel.has(e.id)?'outline:3px solid #e0a030;background:#fff1cc':''}">${eggH(e.n,40)}${esc(DEX[e.n].name)} <small>Nv ${e.lv}${e.sh?' ★':''} · ${fmt(eggVal(e))}</small></div>`:eggChip(e)).join('')||'<span class="muted">Aucun œuf'+(SAVE.eggs.length?' avec ce filtre.':' pour le moment.')+'</span>'}</div></div>
    </div></div>`;
   buildWalkers();liveNursery();
 }
@@ -534,7 +550,7 @@ let SHOW_MAX=30;
 const bagOf=l=>[20,30,40,60,80,100,150,200][l]||200+50*(l-7);
 const bagCap=()=>bagOf(SAVE.bagLvl||0),bagFull=()=>SAVE.eggs.length>=bagCap();
 /* ajoute un œuf au sac (et à la collection d'œufs) ; force=true pour les cadeaux exceptionnels */
-function addEgg(e,force){if(!force&&bagFull())return false;SAVE.eggs.push(e);dexSee(e.n);SAVE.eg=SAVE.eg||{};SAVE.eg[e.n]=(SAVE.eg[e.n]||0)+1;return true}
+function addEgg(e,force){if(!force&&bagFull())return false;if(e.n===132&&MK_FORCE!==132){const P=EGG_SPECIES.filter(x=>x!==132&&!LEGEND.has(x)&&eggMethod(x)==='marche');e.n=pick(P);e.sx=rollSex(e.n)}else if(!['boutique','nid','legende','arceus'].includes(e.src)&&!LEGEND.has(e.n)&&rnd()<1e-6){e.n=132;e.sx=null;toast('✨ Un œuf de Métamorph ! (1 chance sur 1 000 000)')}SAVE.eggs.push(e);dexSee(e.n);SAVE.eg=SAVE.eg||{};SAVE.eg[e.n]=(SAVE.eg[e.n]||0)+1;return true}
 const bagMsg=()=>toast(`🎒 Sac d'œufs plein (${SAVE.eggs.length}/${bagCap()}) : couve des œufs ou agrandis le sac dans la Boutique.`);
 const capOf=l=>Math.min(1000,l<=0?30:l===1?50:100+50*(l-2));
 const monCap=()=>capOf(SAVE.capLvl||0);
@@ -678,11 +694,34 @@ function renderTeam(){
 }
 const relVal=m=>Math.max(5,Math.round(m.lv*4*(m.sh?5:1)));
 /* sélection multiple pour relâcher plusieurs Pokémon d'un coup */
-let teamSel=null;
+let teamSel=null,eggSel=null;
+const AUTOSEL={team:{sh:'no',leg:'no',lv:'',pc:'',dup:false,t:'',fav:true},bag:{sh:'no',leg:'no',lv:'',dup:false,t:'',nw:true}};
+function autoSelHTML(k){const a=AUTOSEL[k],sel=(f,o)=>`<select data-as="${k}" data-k="${f}">${o.map(([v,t])=>`<option value="${v}" ${a[f]===v?'selected':''}>${t}</option>`).join('')}</select>`,yn=[['any','peu importe'],['only','seulement'],['no','jamais']];
+  return `<div class="autosel"><b>🎯 Sélection auto</b><span class="muted">parmi ${k==='team'?'les Pokémon':'les œufs'} affichés (recherche et type du filtre compris)</span>
+   <label>Shiny ${sel('sh',yn)}</label><label>Légendaires ${sel('leg',yn)}</label>
+   <label>Niveau ≤ <input type="number" min="1" data-as="${k}" data-k="lv" value="${esc(a.lv)}" placeholder="—" style="width:64px"></label>
+   ${k==='team'?`<label>PC ≤ <input type="number" min="1" data-as="team" data-k="pc" value="${esc(a.pc)}" placeholder="—" style="width:74px"></label>`:''}
+   <label>Type ${sel('t',[['','tous'],...TYPES_ALL.map(t=>[t,TNAME[t]||t])])}</label>
+   <label><input type="checkbox" data-as="${k}" data-k="dup" ${a.dup?'checked':''}> Seulement les doublons (garde le meilleur de chaque espèce)</label>
+   ${k==='team'?`<label><input type="checkbox" data-as="team" data-k="fav" ${a.fav?'checked':''}> Garder les favoris ⭐</label>`:`<label><input type="checkbox" data-as="bag" data-k="nw" ${a.nw?'checked':''}> Garder les espèces pas encore obtenues</label>`}
+   <button class="sm go" data-act="autoSel" data-k="${k}">Sélectionner</button></div>`}
+function autoPick(k){const a=AUTOSEL[k],lv=+a.lv||0,pcM=+a.pc||0;
+  let L=k==='team'?applyFilt(SAVE.mons.slice(),'team').filter(m=>!monStatus(m.u)):applyEggFilt('bag').map(x=>x.e);
+  L=L.filter(x=>(a.sh==='any'||(a.sh==='only')===!!x.sh)&&(a.leg==='any'||(a.leg==='only')===LEGEND.has(x.n))&&(!lv||x.lv<=lv)&&(!a.t||DEX[x.n].t1===a.t||DEX[x.n].t2===a.t)
+    &&(k!=='team'||((!pcM||pc(x)<=pcM)&&(!a.fav||!x.fav)))&&(k!=='bag'||!a.nw||(SAVE.dex[x.n]&&SAVE.dex[x.n].o)));
+  if(a.dup){const all=k==='team'?SAVE.mons:SAVE.eggs,best={},sc=x=>k==='team'?pc(x)+(x.sh?1e7:0)+(x.fav?1e8:0):x.lv+(x.sh?1e7:0);all.forEach(x=>{const v=sc(x);if(!best[x.n]||v>best[x.n].v)best[x.n]={x,v}});L=L.filter(x=>best[x.n].x!==x)}
+  return L}
+document.addEventListener('change',e=>{const t=e.target;if(!t.dataset||!t.dataset.as)return;AUTOSEL[t.dataset.as][t.dataset.k]=t.type==='checkbox'?t.checked:t.value});
+document.addEventListener('input',e=>{const t=e.target;if(!t.dataset||!t.dataset.as||t.type==='checkbox')return;AUTOSEL[t.dataset.as][t.dataset.k]=t.value});
+const eggVal=e=>rp(eggPrice(e.n)*.3);
+function eggSelHTML(){const L=SAVE.eggs.filter(e=>eggSel.has(e.id)),tot=L.reduce((a,e)=>a+eggVal(e),0),shn=L.filter(e=>e.sh).length;
+  return `<div class="panel selbar"><b>${L.length} œuf${L.length>1?'s':''} sélectionné${L.length>1?'s':''}</b> · +${fmt(tot)} pièces${shn?` · <span style="color:#c0392b">dont ${shn} shiny</span>`:''}
+   ${autoSelHTML('bag')}<button class="sm" data-act="eselAll">Tout sélectionner (affichés)</button><button class="sm" data-act="eselNone">Tout désélectionner</button><button class="go sm" data-act="eselSell" ${L.length?'':'disabled'}>Vendre la sélection</button><button class="sm" data-act="eselOff">Annuler</button></div>`}
+FILT_R.bag=()=>renderNursery();
 function teamSelHTML(){if(!teamSel)return `<div class="flexr" style="margin:8px 0"><button class="sm" data-act="tselOn">☑ Sélectionner plusieurs Pokémon</button></div>`;
   const L=[...teamSel].map(mon).filter(Boolean),tot=L.reduce((a,m)=>a+relVal(m),0),fav=L.filter(m=>m.fav).length;
   return `<div class="panel selbar"><b>${L.length} sélectionné${L.length>1?'s':''}</b> · +${fmt(tot)} pièces${fav?` · <span style="color:#c0392b">dont ${fav} favori${fav>1?'s':''}</span>`:''}
-   <button class="sm" data-act="tselAll">Tout sélectionner (affichés, sauf favoris)</button><button class="sm" data-act="tselWeak">Les 10 plus faibles</button><button class="sm" data-act="tselNone">Tout désélectionner</button>
+   ${autoSelHTML('team')}<button class="sm" data-act="tselAll">Tout sélectionner (affichés, sauf favoris)</button><button class="sm" data-act="tselWeak">Les 10 plus faibles</button><button class="sm" data-act="tselNone">Tout désélectionner</button>
    <button class="go sm" data-act="tselRelease" ${L.some(m=>!monStatus(m.u))?'':'disabled'}>Relâcher la sélection</button>${L.some(isKO)?`<button class="go sm" data-act="tselHeal">💊 Soigner les K.O. sélectionnés${healCost(L)?' ('+fmt(healCost(L))+' pièces)':''}</button>`:''}<button class="sm" data-act="tselOff">Annuler</button></div>`}
 function teamSelRelease(){const L=[...teamSel].map(mon).filter(m=>m&&!monStatus(m.u));if(!L.length)return;const tot=L.reduce((a,m)=>a+relVal(m),0);const us=new Set(L.map(m=>m.u));
   SAVE.coins+=tot;SAVE.mons=SAVE.mons.filter(m=>!us.has(m.u));teamSel=null;closeModal();toast(`${L.length} Pokémon relâchés (+${fmt(tot)} pièces)`);dirty=true;saveGame();renderTop();renderTeam()}
@@ -760,10 +799,12 @@ const lowInc=()=>SAVE.incs.filter(n=>n.lvl<7).sort((a,b)=>a.lvl-b.lvl)[0];
 const lowBall=()=>SAVE.balls.filter(n=>n.lvl<5).sort((a,b)=>a.lvl-b.lvl)[0];
 function addBoost(k,min){SAVE.boosts[k]=Math.max(Date.now(),SAVE.boosts[k]||0)+min*60000}
 function icHTML(ic){if(ic.startsWith(EGGDIR))return eggH(ic,48);const m=/^(.*)#(\d)$/.exec(ic);if(!m)return `<img src="${ic}" alt="" onerror="this.style.display='none'">`;const k=+m[2];if(m[1].includes('incubators'))return `<span style="display:block;width:46px;height:74px;background:url(${m[1]}) -${k*46}px 0/368px 74px no-repeat;image-rendering:pixelated"></span>`;return `<span style="display:block;width:44px;height:48px;background:url(${m[1]}) -${k*44}px 0 no-repeat;image-rendering:pixelated"></span>`}
+function ownedOf(it){const id=it.id;if(!id)return null;if(id.startsWith('it_')){const k=id.slice(3),eq=SAVE.mons.filter(m=>m.item===k).length;return invN(k)+(eq?` (+ ${eq} équipé${eq>1?'s':''})`:'')}
+  return {mirror:()=>SAVE.items.mirror||0,dna:()=>SAVE.items.dna||0,nest:()=>SAVE.nests.length+' / 6',inc:()=>SAVE.incs.length+' / 6',ball:()=>SAVE.balls.length+' / 6',cap:()=>monCap()+' places',bag:()=>bagCap()+' places',army:()=>SAVE.army+' / 15',autofill:()=>SAVE.items.autofill?'oui':'non'}[id]?.()??null}
 function renderShop(){
   let h='',open=false;
   SHOP.forEach((it,i)=>{if(it.h){if(open)h+='</div>';h+=`<h3 style="margin:16px 0 8px">${it.h}</h3><div class="shop">`;open=true;return}
-    const mx=it.max&&it.max(),p=it.price();const extra=it.id==='mirror'?` (tu en as ${SAVE.items.mirror})`:boostOn(it.id)?` · actif encore ${fmtT(SAVE.boosts[it.id]-Date.now())}`:'';
+    const mx=it.max&&it.max(),p=it.price();const own=ownedOf(it);const extra=(own!=null?`<br><b class="own">Possédé : ${own}</b>`:'')+(boostOn(it.id)?` · actif encore ${fmtT(SAVE.boosts[it.id]-Date.now())}`:'');
     h+=`<div class="item"><div class="ic">${icHTML(it.ic)}</div><div class="tx"><b>${it.name}</b>${typeof it.desc==='function'?it.desc():it.desc}${extra}</div><button class="go" data-act="buy" data-i="${i}" ${mx||SAVE.coins<p?'disabled':''}>${mx?(it.id==='autofill'&&!SAVE.items.autofill?'2e incubateur requis':it.id==='autofill'?'Débloqué':'Max'):`<span class="price">${COIN}${fmt(p)}</span>`}</button></div>`});
   if(open)h+='</div>';
   h+=dealsHTML();
@@ -800,7 +841,7 @@ function dealPrice(d){return rp(eggPrice(d.n)*DEAL_OFF)}
 function dealsHTML(){const D=dealsNow(),left=DEAL_MS-(Date.now()%DEAL_MS);
   return `<h3 style="margin:22px 0 8px">Œufs du moment <span class="muted">-30 % · nouveaux œufs dans ${fmtT(left)}${D.list.some(x=>x.leg)?' · ✨ un œuf légendaire est disponible !':''}</span></h3><div class="market">${D.list.map((d,i)=>{const p=dealPrice(d),dd=DEX[d.n];return `<div class="mk ${d.leg?'leg':''}">${d.leg?'<span class="lg">Légendaire</span>':`<span class="lg" style="background:#9ad0ff">Gén ${d.gen}</span>`}${eggH(d.n,44)}<b>#${pad3(d.n)} ${esc(dd.name)}</b>${tyHTML(dd)}<button class="go sm" data-act="buyDeal" data-i="${i}" ${d.sold||SAVE.coins<p?'disabled':''}>${d.sold?'Vendu':`<span class="price">${COIN}${fmt(p)}</span>`}</button></div>`}).join('')}</div>`}
 function buyDeal(i){const D=dealsNow(),d=D.list[i];if(!d||d.sold)return;const p=dealPrice(d);if(SAVE.coins<p)return;if(bagFull()){bagMsg();return}SAVE.coins-=p;d.sold=1;addEgg(eggOf(d.n));SAVE.st.buy=(SAVE.st.buy||0)+1;toast(`🥚 Œuf de <b>${esc(DEX[d.n].name)}</b> acheté !`);dirty=true;saveGame();renderTop();renderShop()}
-function buyEgg(n){if(n!==132&&!marketToday().list.includes(n))return;MK_FORCE=n;const p=eggPrice(n);if(SAVE.coins<p)return;if(bagFull()){bagMsg();return}SAVE.coins-=p;addEgg(eggOf(n));SAVE.st.buy=(SAVE.st.buy||0)+1;toast(`🥚 Œuf de <b>${esc(DEX[n].name)}</b> acheté ! Il est dans le sac d'œufs.`);dirty=true;saveGame();renderTop();renderMarket()}
+function buyEgg(n){if(n!==132&&!marketToday().list.includes(n))return;MK_FORCE=n;const p=eggPrice(n);if(SAVE.coins<p)return;if(bagFull()){bagMsg();return}SAVE.coins-=p;addEgg(eggOf(n));MK_FORCE=0;SAVE.st.buy=(SAVE.st.buy||0)+1;toast(`🥚 Œuf de <b>${esc(DEX[n].name)}</b> acheté ! Il est dans le sac d'œufs.`);dirty=true;saveGame();renderTop();renderMarket()}
 function buy(i){const it=SHOP[i];const p=it.price();if((it.max&&it.max())||SAVE.coins<p)return;SAVE.coins-=p;it.buy();toast(`Acheté : <b>${it.name}</b>`);dirty=true;saveGame();renderShop();renderTop()}
 
 /* =====================================================================
@@ -868,6 +909,15 @@ const BIOMES=[
  {name:'Jardin des saules',g:['#88c070','#7cb464','#94cc7c'],sh:'#c8c090',liq:'#5ab0c8',liq2:'#3a94ac',trees:[[1,1,0],[2,1,0]],dens:.05,types:['eau','plante','fee'],fl:['#ffffff','#a0d0ff']},
  {name:'Gouffre de glace',g:['#d6e6f2','#cadcea','#e2eefa'],sh:'#a8bccc',liq:'#3a6a9a',liq2:'#24507e',trees:[[8,0,2],[7,0,2]],dens:.03,types:['glace','dragon','acier'],fl:['#ffffff']}];
 BIOMES.forEach((b,i)=>b.hab=i);
+/* nouveaux arbres animés (A = feuillus, P = sapins, O = chênes, C0 = cerisier) ; les palmiers et décors spéciaux gardent l'ancienne planche */
+const DECOR={"A0":{"x":0,"y":0,"w":63,"h":96,"n":8},"A1":{"x":0,"y":98,"w":64,"h":96,"n":8},"A2":{"x":0,"y":196,"w":63,"h":96,"n":8},"A3":{"x":0,"y":294,"w":63,"h":96,"n":8},"A4":{"x":0,"y":392,"w":63,"h":96,"n":8},"P0":{"x":0,"y":490,"w":66,"h":90,"n":8},"P1":{"x":0,"y":582,"w":66,"h":90,"n":8},"P2":{"x":0,"y":674,"w":66,"h":90,"n":8},"P3":{"x":0,"y":766,"w":66,"h":90,"n":8},"P4":{"x":0,"y":858,"w":66,"h":90,"n":8},"O0":{"x":0,"y":950,"w":78,"h":92,"n":8},"O1":{"x":0,"y":1044,"w":79,"h":92,"n":8},"O2":{"x":0,"y":1138,"w":78,"h":92,"n":8},"O3":{"x":0,"y":1232,"w":79,"h":92,"n":8},"C0":{"x":648,"y":1232,"w":52,"h":70,"n":1},"R0":{"x":702,"y":1232,"w":29,"h":34,"n":1},"R1":{"x":733,"y":1232,"w":27,"h":26,"n":1},"R2":{"x":762,"y":1232,"w":32,"h":38,"n":1},"R3":{"x":796,"y":1232,"w":30,"h":32,"n":1},"D0":{"x":828,"y":1232,"w":29,"h":34,"n":1},"D1":{"x":859,"y":1232,"w":27,"h":26,"n":1},"D2":{"x":888,"y":1232,"w":30,"h":32,"n":1},"V0":{"x":920,"y":1232,"w":29,"h":34,"n":1},"V1":{"x":951,"y":1232,"w":27,"h":26,"n":1},"B0":{"x":980,"y":1232,"w":31,"h":27,"n":1},"B1":{"x":0,"y":1326,"w":16,"h":25,"n":1},"B2":{"x":18,"y":1326,"w":19,"h":18,"n":1},"I0":{"x":39,"y":1326,"w":31,"h":27,"n":1},"I1":{"x":72,"y":1326,"w":14,"h":24,"n":1},"I2":{"x":88,"y":1326,"w":31,"h":26,"n":1},"I3":{"x":121,"y":1326,"w":19,"h":19,"n":1},"FR":{"x":142,"y":1326,"w":52,"h":22,"n":1},"FB":{"x":196,"y":1326,"w":40,"h":16,"n":1},"FI":{"x":238,"y":1326,"w":40,"h":16,"n":1}},DECOR_IMG='assets/decor.png';
+const NEW_TREES={'Plaines':['A0','A3','O0'],'Forêt profonde':['P0','P1','O1','A0'],'Toundra gelée':['P4','A2','O3'],'Ruines de Mew':['O1','A3'],'Prairie fleurie':['A3','O0','C0'],'Montagnes':['P0','P1','P2'],
+ 'Volcan':['P3','A4'],'Marais brumeux':['P1','P2','A1'],'Cimetière':['P1',[6,1,0],[6,1,2]],'Banquise':['P4','A2'],'Jungle':[[1,0,1],[0,0,1],'O1','A0'],'Savane':['O0','A1',[4,0,0]],
+ 'Forêt automnale':['O2','A4','P3','P2'],'Cerisaie':['C0','C0','A3'],'Forêt ancienne':['O1','P0','O0'],'Jardin des saules':[[1,1,0],[2,1,0],'O1'],'Gouffre de glace':['P4','O3']};
+BIOMES.forEach(b=>{if(NEW_TREES[b.name])b.trees=NEW_TREES[b.name]});
+const isIce=bi=>/glace|neige|Banquise|Toundra|cristal|givr/i.test(bi.name),isDry=bi=>/Désert|Mesa|Canyon|Savane/i.test(bi.name),isDark=bi=>!!bi.lava||/Volcan|Cimetière/i.test(bi.name),isCave=bi=>/Grotte|Antre/i.test(bi.name);
+const rockSet=bi=>isIce(bi)?['I0','I1','I2','I3']:isDry(bi)?['D0','D1','D2']:isDark(bi)?['V0','V1','R2']:isCave(bi)?['B0','B1','B2']:['R0','R1','R2','R3'];
+const faceKey=bi=>isIce(bi)?'FI':isDry(bi)||isCave(bi)?'FB':'FR';
 /* Ordre de l'aventure : chaque biome a son légendaire (boss du tableau 10), choisi pour coller au biome.
    Les biomes sont rangés pour que les légendaires soient de plus en plus forts :
    rang 1 (total officiel 580 : oiseaux, bêtes, Regi), rang 2 (600 : fabuleux et Latias/Latios), rang 3 (680 : grands légendaires).
@@ -954,8 +1004,14 @@ function genMap(stage){
       for(let y=0;y<GH;y++){if(Math.abs(y-g1)<=1||(g2>=0&&Math.abs(y-g2)<=1))continue;for(let k=0;k<w;k++)setC(x+k,y,1)}}boulders(2)}
   else if(lay==='eboulis')boulders(8+Math.floor(RK()*7));
   else if(stage>2&&!bi.temple&&RK()<.5)boulders(1+Math.floor(RK()*3));
+  /* boue : flaques ou gué dans la rivière ; les terrestres passent mais ralentis */
+  const mud=new Uint8Array(GW*GH),RM=rng(stage*977+41);
+  if(stage>1&&!bi.temple&&!bi.lava&&!isIce(bi)&&!BLK&&RM()<.5){
+    if(RM()<.4&&liq.some(v=>v)){const y0=2+Math.floor(RM()*(GH-6)),h=2+Math.floor(RM()*3);for(let y=y0;y<y0+h&&y<GH;y++)for(let x=0;x<GW;x++){const i=I(x,y);if(liq[i]){liq[i]=0;bridge[i]=0;mud[i]=1}}}
+    const np=1+Math.floor(RM()*3);for(let k=0;k<np;k++){const cx=3+RM()*(GW-6),cy=1.5+RM()*(GH-3),rx=1+RM()*1.6,ry=.8+RM()*1.4;
+      for(let y=0;y<GH;y++)for(let x=0;x<GW;x++){const i=I(x,y);if(((x-cx)/rx)**2+((y-cy)/ry)**2<=1&&!liq[i]&&!rock[i]&&!bridge[i]&&!voidc[i])mud[i]=1}}}
   const trees=[];
-  for(let y=2;y<GH;y++)for(let x=1;x<GW-1;x++){if(rock[I(x,y)])continue;const zone=x<=PZ||x>=EZ;const p=bi.dens*(zone?.35:1);if(R()<p){const v=bi.trees[Math.floor(R()*bi.trees.length)];if(v[2]===2&&y<3)continue;if(!nearLiq(x,y)&&!nearB(x,y)&&!voidc[I(x,y)]&&!(x>0&&voidc[I(x-1,y)])&&!voidc[I(x+1,y)]&&trees.every(t=>Math.max(Math.abs(t.x-x),Math.abs(t.y-y))>=2)){tree[I(x,y)]=1;trees.push({x,y,v})}}}
+  for(let y=2;y<GH;y++)for(let x=1;x<GW-1;x++){if(rock[I(x,y)]||mud[I(x,y)]||(y+1<GH&&mud[I(x,y+1)]))continue;const zone=x<=PZ||x>=EZ;const p=bi.dens*(zone?.35:1);if(R()<p){const v=bi.trees[Math.floor(R()*bi.trees.length)],big=typeof v==='string';if((v[2]===2||big)&&y<3)continue;const clearUp=!big||(()=>{for(let dy=-3;dy<=0;dy++)for(let dx=-1;dx<=1;dx++){const xx=x+dx,yy=y+dy;if(xx<0||yy<0||xx>=GW)continue;const j=I(xx,yy);if(liq[j]||rock[j]||voidc[j]||bridge[j])return false}return true})();if(clearUp&&!nearLiq(x,y)&&!nearB(x,y)&&!voidc[I(x,y)]&&!(x>0&&voidc[I(x-1,y)])&&!voidc[I(x+1,y)]&&trees.every(t=>{const tb=big||typeof t.v==='string';return Math.abs(t.x-x)>=(tb?3:2)||Math.abs(t.y-y)>=(tb?3:2)})){tree[I(x,y)]=1;trees.push({x,y,v,ph:Math.floor(R()*8)})}}}
   /* vérifie qu'un Pokémon terrestre peut aller de la zone du joueur à celle des ennemis ; sinon ajoute un pont */
   let RCK=false;const walk=i=>!tree[i]&&!(RCK&&rock[i])&&(!liq[i]||bridge[i]);
   const reach=()=>{const seen=new Uint8Array(GW*GH),q=[];for(let y=0;y<GH;y++){const i=I(1,y);if(walk(i)){seen[i]=1;q.push(i)}}
@@ -968,7 +1024,7 @@ function genMap(stage){
   if(!BLK&&!reach()){rock.fill(0);lay=null}
   if(!BLK&&!reach()){for(let k=trees.length-1;k>=0;k--){const t=trees[k];if(t.x>PZ&&t.x<EZ){tree[I(t.x,t.y)]=0;trees.splice(k,1)}}}
   const rocks=[];for(let i=0;i<GW*GH;i++)if(rock[i])rocks.push({x:i%GW,y:(i/GW)|0,v:rock[i]});
-  const M={stage,bi,liq,tree,bridge,trees,voidc,rock,rocks,lay,blk:BLK,seed:stage*31+5,cliff:rocks.some(r=>r.v===1)};M.cv=drawTerrain(M);return M;
+  const M={stage,bi,liq,tree,bridge,trees,voidc,rock,rocks,lay,blk:BLK,seed:stage*31+5,cliff:rocks.some(r=>r.v===1),mud,hasMud:mud.some(v=>v)};M.cv=drawTerrain(M);return M;
 }
 function drawTemple(x){
   /* dalles */
@@ -991,7 +1047,7 @@ function drawTerrain(M){
   const cv=document.createElement('canvas');cv.width=CW;cv.height=CH;const x=cv.getContext('2d');const bi=M.bi;
   const im=x.createImageData(CW,CH),D=im.data;const nz=noiseFn(M.seed),nz2=noiseFn(M.seed+7);
   const hex=h=>[parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)];
-  const G=bi.g.map(hex),S=hex(bi.sh),L1=hex(bi.liq),L2=hex(bi.liq2);
+  const G=bi.g.map(hex),S=hex(bi.sh),L1=hex(bi.liq),L2=hex(bi.liq2),MUD=['#6e4b2c','#5a3b21','#8a6a48','#7d6040'].map(hex);
   const lq=(tx,ty)=>tx<0||ty<0||tx>=GW||ty>=GH?0:M.liq[ty*GW+tx];
   for(let py=0;py<CH;py+=2)for(let px=0;px<CW;px+=2){
     const fx=px/TW-.5,fy=py/TW-.5,ix=Math.floor(fx),iy=Math.floor(fy),ax=fx-ix,ay=fy-iy;
@@ -1000,7 +1056,9 @@ function drawTerrain(M){
     w+=(nz(px/22,py/22)-.5)*.3+(nz2(px/7,py/7)-.5)*.08;
     let c;
     if(w>.72)c=L2;else if(w>.5)c=L1;else if(w>.38){c=S}
-    else{const n=nz2(px/64,py/64)+(nz(px/11,py/11)-.5)*.18;c=n<.32?G[1]:n>.7?G[2]:G[0]}
+    else{const n=nz2(px/64,py/64)+(nz(px/11,py/11)-.5)*.18;c=n<.32?G[1]:n>.7?G[2]:G[0];
+      if(M.hasMud){const md=(tx,ty)=>tx<0||ty<0||tx>=GW||ty>=GH?0:M.mud[ty*GW+tx];let m=md(ix,iy)*(1-sx)*(1-sy)+md(ix+1,iy)*sx*(1-sy)+md(ix,iy+1)*(1-sx)*sy+md(ix+1,iy+1)*sx*sy;m+=(nz(px/16+40,py/16)-.5)*.5+(nz2(px/6+9,py/6)-.5)*.12;
+        if(m>.62)c=nz2(px/9,py/9)>.64?MUD[2]:nz(px/13,py/13)>.58?MUD[1]:MUD[0];else if(m>.3){const t=Math.pow((m-.3)/.32,1.4);c=[0,1,2].map(k=>Math.round(c[k]*(1-t)+MUD[3][k]*t))}}}
     for(let dy=0;dy<2;dy++)for(let dx=0;dx<2;dx++){const o=((py+dy)*CW+px+dx)*4;D[o]=c[0];D[o+1]=c[1];D[o+2]=c[2];D[o+3]=255}
   }
   x.putImageData(im,0,0);
@@ -1012,8 +1070,10 @@ function drawTerrain(M){
   /* reflets dans le liquide */
   const R=rng(M.seed+3);x.fillStyle='rgba(255,255,255,.35)';
   for(let i=0;i<GW*GH;i++)if(M.liq[i]&&!M.bridge[i]&&R()<.35){const tx=i%GW,ty=Math.floor(i/GW);x.fillRect(tx*TW+4+R()*14|0,ty*TW+6+R()*16|0,6,2)}
+  /* reflets humides sur la boue */
+  if(M.hasMud){x.fillStyle='rgba(255,240,210,.28)';for(let i=0;i<GW*GH;i++)if(M.mud[i]&&R()<.5){const tx=i%GW,ty=(i/GW)|0;x.fillRect(tx*TW+4+R()*16|0,ty*TW+5+R()*16|0,4+R()*4|0,2)}}
   /* fleurs et touffes */
-  for(let k=0;k<160;k++){const tx=Math.floor(R()*GW),ty=Math.floor(R()*GH),i=ty*GW+tx;if(M.liq[i]||M.tree[i]||(M.voidc&&M.voidc[i]))continue;const px=tx*TW+R()*TW|0,py=ty*TW+R()*TW|0;if(R()<.5){x.fillStyle='rgba(0,0,0,.12)';x.fillRect(px,py,2,4);x.fillRect(px+3,py+1,2,3)}else{x.fillStyle=pick(bi.fl);x.fillRect(px,py,3,3);x.fillStyle='rgba(0,0,0,.15)';x.fillRect(px,py+3,3,1)}}
+  for(let k=0;k<160;k++){const tx=Math.floor(R()*GW),ty=Math.floor(R()*GH),i=ty*GW+tx;if(M.liq[i]||M.tree[i]||(M.voidc&&M.voidc[i])||(M.mud&&M.mud[i]))continue;const px=tx*TW+R()*TW|0,py=ty*TW+R()*TW|0;if(R()<.5){x.fillStyle='rgba(0,0,0,.12)';x.fillRect(px,py,2,4);x.fillRect(px+3,py+1,2,3)}else{x.fillStyle=pick(bi.fl);x.fillRect(px,py,3,3);x.fillStyle='rgba(0,0,0,.15)';x.fillRect(px,py+3,3,1)}}
   /* ponts */
   for(let ty=0;ty<GH;ty++){const xs=[];for(let tx=0;tx<GW;tx++)if(M.bridge[ty*GW+tx])xs.push(tx);if(!xs.length)continue;
     const x0=xs[0]*TW-10,x1=(xs[xs.length-1]+1)*TW+10,y0=ty*TW+3,h=TW-6;
@@ -1025,7 +1085,10 @@ function drawTerrain(M){
   return cv;
 }
 /* --- passabilité et champs de déplacement --- */
-function unitMode(d,bi){const ty=[d.t1,d.t2];if(ty.includes('vol')||d.t1==='spectre')return 'fly';if(bi.lava?ty.includes('feu'):ty.includes('eau'))return 'swim';return 'ground'}
+/* volent aussi : Pokémon qui lévitent ou qui ont des ailes ; ne volent pas : oiseaux coureurs sans ailes */
+const FLY_EXTRA=new Set([49,81,82,109,110,151,201,251,269,313,314,329,330,337,338,343,344,358,374,375,380,381,385,433,436,437,455,462,479,480,481,482,488,577,578,579,599,600,601,602,603,604,615,623,635,738,790]);
+const NO_FLY=new Set([84,85,566]);
+function unitMode(d,bi){const ty=[d.t1,d.t2],n=d.n;if(!NO_FLY.has(n)&&(ty.includes('vol')||d.t1==='spectre'||FLY_EXTRA.has(n)))return 'fly';if(bi.lava?ty.includes('feu'):ty.includes('eau'))return 'swim';return 'ground'}
 function passable(M,i,mode){if(M.rock&&M.rock[i]===1)return false;if(mode==='fly')return true;if(M.rock&&M.rock[i])return false;if(M.voidc&&M.voidc[i])return false;if(M.tree[i])return false;if(M.liq[i]&&!M.bridge[i])return mode==='swim';return true}
 function buildField(M,sources,mode){const F=new Float32Array(GW*GH).fill(Infinity);const q=[];sources.forEach(i=>{if(F[i]!==0){F[i]=0;q.push(i)}});
   for(let h=0;h<q.length;h++){const i=q[h],x=i%GW,y=(i/GW)|0;for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){if(!dx&&!dy)continue;const nx=x+dx,ny=y+dy;if(nx<0||ny<0||nx>=GW||ny>=GH)continue;const j=ny*GW+nx;if(!passable(M,j,mode))continue;if(dx&&dy&&(!passable(M,y*GW+nx,mode)||!passable(M,ny*GW+x,mode)))continue;const c=F[i]+(dx&&dy?1.414:1);if(c<F[j]){F[j]=c;q.push(j)}}}return F}
@@ -1064,16 +1127,21 @@ function setupStage(st,defi,anim){
 function mkUnit(m,team,x,y,M){const s=stats(m),d=DEX[m.n];const boss=!!m.boss;
   return{m,team,n:m.n,sh:m.sh,x,y,hp:s.hp*T.hpMul*(boss?3:1),max:s.hp*T.hpMul*(boss?3:1),atk:s.atk,spa:s.spa,def:s.def,spd:s.spd,lv:m.lv,t1:d.t1,t2:d.t2,mode:unitMode(d,M.bi),ranged:RANGED.has(d.t1)||d.spa>d.atk+15,cd:rnd()*.6,dir:team?1:2,fr:0,ft:0,moving:false,boss,scale:boss?1.45:1,flash:0,tgt:null,tt:0,lunge:0}}
 function renderBattleHead(){
-  if(!B)return;if(B.dmax){renderDmaxHead();return}const bi=B.M.bi,used=B.placed.length;
-  $('bhead').innerHTML=`<button class="sm" data-act="bfull" title="Plein écran">${document.body.classList.contains('bfull')?'⤡ Quitter':'⤢ Plein écran'}</button>${(()=>{const lk=B.phase==='fight'||!!B.arena||!!B.defi||!!B.trans,last=Math.min(MAXST,SAVE.best+1);return `<button class="sm" data-act="stGo" data-s="1" title="Premier tableau" ${lk||B.stage<=1?'disabled':''}>⏮</button><button class="sm" data-act="stGo" data-s="${B.stage-10}" title="10 tableaux en arrière" ${lk||B.stage<=1?'disabled':''}>⏪</button><button class="sm" data-act="stPrev" title="Tableau précédent" ${lk||B.stage<=1?'disabled':''}>◀</button>`})()}<span class="title">${B.arena?'🏟️ '+seatLabel(B.arena.id)+' contre '+esc(B.arena.x.name)+' ('+ruleTxt(B.arena.rule)+') · ':''}${B.defi?'🎯 DÉFI : '+esc(B.defi.txt)+' · ':''}${SAVE.cycle?'Maître '+(SAVE.cycle>1?SAVE.cycle+' ':'')+'· ':''}Tableau ${B.stage}/${MAXST}${B.stage%PER_BIOME===0?' · BOSS LÉGENDAIRE':B.stage%5===0?' · BOSS':''}</span>${(()=>{const lk=B.phase==='fight'||!!B.arena||!!B.defi||!!B.trans,last=Math.min(MAXST,SAVE.best+1),nx=lk||B.stage>=last;return `<button class="sm" data-act="stNext" title="Tableau suivant" ${nx?'disabled':''}>▶</button><button class="sm" data-act="stGo" data-s="${B.stage+10}" title="10 tableaux en avant" ${nx?'disabled':''}>⏩</button><button class="sm" data-act="stGo" data-s="${last}" title="Dernier tableau atteint (${last})" ${nx?'disabled':''}>⏭</button><input id="stJump" type="number" min="1" max="${last}" placeholder="N°" style="width:62px" ${lk?'disabled':''} title="Aller au tableau…"><button class="sm" data-act="stJump" ${lk?'disabled':''}>Aller</button>`})()}
-   <span class="biome">${bi.temple?"Temple d'Arceus · combat final":bi.valley?'Vallée des légendes · '+(B.stage-MAXST+5)+'/5':bi.victory?'Route Victoire · '+((B.stage-1)%PER_BIOME+1)+'/'+(PER_BIOME-5):'Biome '+(Math.floor((B.stage-1)/PER_BIOME)+1)+'/'+(BIOMES.length-1)+' : '+bi.name+' · '+((B.stage-1)%PER_BIOME+1)+'/'+PER_BIOME}</span>${B.M.lay?`<span class="biome" title="Falaises : personne ne passe, même les volants. Rochers : seuls les volants passent.">⛰ ${LAYN[B.M.lay]}</span>`:''}${B.M.blk?`<span class="biome" style="background:#ffd98a">⚠ ${B.M.blk==='vide'?'Crevasse : seuls les volants passent':B.M.blk==='lave'?'Lave sans pont : Pokémon Feu ou volants':'Rivière sans pont : nageurs ou volants'}</span>`:''}<span class="biome">Ennemis : ${B.units.filter(u=>u.team).length} · Nv ≈ ${enemyLv(B.stage)}</span>
-   ${B.phase==='place'?`<span>Armée : <b>${used}/${SAVE.army}</b></span><button class="sm" data-act="autoPlace">Placement auto</button>${presetSelHTML()}<button class="sm" data-act="presets" title="Enregistrer ou charger une équipe">💾 Équipes</button><button class="sm" data-act="clearPlace">Vider</button><button class="sm" data-act="speed" title="Vitesse du combat (x1, x2, x4), gardée pour les combats suivants">Vitesse ×${bSpeed}</button><button class="go" data-act="fight" ${used?'':'disabled'}>⚔ Combat !</button>`:''}
-   <button class="sm ${AUTO?'go':''}" data-act="autoRun" title="Rejoue automatiquement les tableaux suivants avec la même armée, jusqu'à une défaite">🔁 Auto ${AUTO?'ON':'OFF'}</button>${B.phase==='fight'?`<button class="sm" data-act="speed">Vitesse ×${bSpeed}</button><button class="sm" data-act="flee">Abandonner</button>`:''}${synHTML(B.placed)}`;
+  if(!B)return;if(B.dmax){renderDmaxHead();return}const bi=B.M.bi,used=B.placed.length,lk=B.phase==='fight'||!!B.arena||!!B.defi||!!B.trans,last=Math.min(MAXST,SAVE.best+1),nx=lk||B.stage>=last;
+  const nav=`<button class="sm" data-act="stGo" data-s="1" title="Premier tableau" ${lk||B.stage<=1?'disabled':''}>⏮</button><button class="sm" data-act="stGo" data-s="${B.stage-10}" title="10 tableaux en arrière" ${lk||B.stage<=1?'disabled':''}>⏪</button><button class="sm" data-act="stPrev" title="Tableau précédent" ${lk||B.stage<=1?'disabled':''}>◀</button>
+   <span class="title">${B.arena?'🏟️ '+seatLabel(B.arena.id)+' contre '+esc(B.arena.x.name)+' ('+ruleTxt(B.arena.rule)+') · ':''}${B.defi?'🎯 DÉFI : '+esc(B.defi.txt)+' · ':''}${SAVE.cycle?'Maître '+(SAVE.cycle>1?SAVE.cycle+' ':'')+'· ':''}Tableau ${B.stage}/${MAXST}${B.stage%PER_BIOME===0?' · BOSS LÉGENDAIRE':B.stage%5===0?' · BOSS':''}</span>
+   <button class="sm" data-act="stNext" title="Tableau suivant" ${nx?'disabled':''}>▶</button><button class="sm" data-act="stGo" data-s="${B.stage+10}" title="10 tableaux en avant" ${nx?'disabled':''}>⏩</button><button class="sm" data-act="stGo" data-s="${last}" title="Dernier tableau atteint (${last})" ${nx?'disabled':''}>⏭</button><input id="stJump" type="number" min="1" max="${last}" placeholder="N°" style="width:62px" ${lk?'disabled':''} title="Aller au tableau…"><button class="sm" data-act="stJump" ${lk?'disabled':''}>Aller</button>`;
+  const info=`<span class="biome">${bi.temple?"Temple d'Arceus · combat final":bi.valley?'Vallée des légendes · '+(B.stage-MAXST+5)+'/5':bi.victory?'Route Victoire · '+((B.stage-1)%PER_BIOME+1)+'/'+(PER_BIOME-5):'Biome '+(Math.floor((B.stage-1)/PER_BIOME)+1)+'/'+(BIOMES.length-1)+' : '+bi.name+' · '+((B.stage-1)%PER_BIOME+1)+'/'+PER_BIOME}</span>${B.M.hasMud?`<span class="biome" title="La boue ralentit les Pokémon qui ne volent pas">🟤 Boue</span>`:''}${B.M.lay?`<span class="biome" title="Falaises : personne ne passe, même les volants. Rochers : seuls les volants passent.">⛰ ${LAYN[B.M.lay]}</span>`:''}${B.M.blk?`<span class="biome" style="background:#ffd98a">⚠ ${B.M.blk==='vide'?'Crevasse : seuls les volants passent':B.M.blk==='lave'?'Lave sans pont : Pokémon Feu ou volants':'Rivière sans pont : nageurs ou volants'}</span>`:''}<span class="biome">Ennemis : ${B.units.filter(u=>u.team).length} · Nv ≈ ${enemyLv(B.stage)}</span>`;
+  const army=B.phase==='place'?`<span>Armée : <b>${used}/${SAVE.army}</b></span><button class="sm" data-act="autoPlace">Placement auto</button>${presetSelHTML()}<button class="sm" data-act="presets" title="Enregistrer ou charger une équipe">💾 Équipes</button><button class="sm" data-act="clearPlace">Vider</button>`:`<span>Armée : <b>${B.units.filter(u=>u.team===0&&u.hp>0).length}/${used}</b> debout</span>`;
+  const fight=`<button class="sm" data-act="speed" title="Vitesse du combat (x1, x2, x4), gardée pour les combats suivants">Vitesse ×${bSpeed}</button>${B.phase==='place'?`<button class="go" data-act="fight" ${used?'':'disabled'}>⚔ Combat !</button>`:''}<button class="sm ${AUTO?'go':''}" data-act="autoRun" title="Rejoue automatiquement les tableaux suivants avec la même armée, jusqu'à une défaite">🔁 Auto ${AUTO?'ON':'OFF'}</button>${B.phase==='fight'?`<button class="sm" data-act="flee">Abandonner</button>`:''}<button class="sm" data-act="bfull" title="Plein écran">${document.body.classList.contains('bfull')?'⤡ Quitter':'⤢ Plein écran'}</button>`;
+  $('bhead').innerHTML=`<div class="bhrow"><div class="bhg"><span class="lab">Tableau</span>${nav}</div><div class="bhg"><span class="lab">Infos</span>${info}</div></div>
+   <div class="bhrow"><div class="bhg"><span class="lab">Armée</span>${army}</div><div class="bhg"><span class="lab">Combat</span>${fight}</div></div>
+   <div class="bhrow syn">${synHTML(B.placed)}</div>`;
 }
 FILT_R.roster=()=>renderRoster();
 function renderRoster(){
   if(!B)return;const L=applyFilt(SAVE.mons.slice(),'roster');
-  $('roster').innerHTML=B.phase!=='place'?'':filtHTML('roster')+pg(L,'roster',m=>{const busy=monStatus(m.u),on=B.placed.some(p=>p.u===m.u);return `<div class="rcard ${busy?'busy':''} ${on?'on':''} ${battleSel===m.u?'sel':''}" data-act="rsel" data-u="${m.u}" title="${statusTxt(busy)}">${sprHTML(m.n,m.sh,48)}<div>${esc(DEX[m.n].name)}</div><div>Nv ${m.lv}${m.sh?' ★':''}</div><div class="muted">${busy?statusTxt(busy):'PC '+pc(m)}</div></div>`})||'<p>Aucun Pokémon.</p>';
+  $('roster').innerHTML=B.phase!=='place'?'':filtHTML('roster')+pg(L,'roster',m=>{const busy=monStatus(m.u),on=B.placed.some(p=>p.u===m.u);return `<div class="rcard ${busy?'busy':''} ${on?'on':''} ${battleSel===m.u?'sel':''}" data-act="rsel" data-u="${m.u}" ${busy?'':'draggable="true"'} title="${statusTxt(busy)}">${sprHTML(m.n,m.sh,48)}<div>${esc(DEX[m.n].name)}</div><div>Nv ${m.lv}${m.sh?' ★':''}</div><div class="muted">${busy?statusTxt(busy):'PC '+pc(m)}</div></div>`})||'<p>Aucun Pokémon.</p>';
 }
 function canvasPos(e){const r=$('bcv').getBoundingClientRect(),k=Math.min(r.width/CW,r.height/CH),ox=(r.width-CW*k)/2,oy=(r.height-CH*k)/2;return[(e.clientX-r.left-ox)/k,(e.clientY-r.top-oy)/k]}
 document.addEventListener('fullscreenchange',()=>{const fs=!!document.fullscreenElement;document.body.classList.toggle('fs',fs);const b=$('fsBtn');if(b)b.textContent=fs?'🗗':'⛶';if(!fs&&document.body.classList.contains('bfull')){document.body.classList.remove('bfull');if(typeof B!=='undefined'&&B)renderBattleHead()}});
@@ -1123,6 +1191,7 @@ function openMonInfo(u){const m=mon(u);if(!m)return;const d=DEX[m.n],hap=m.hap==
   const held=Object.keys(inv).filter(id=>ITEMS[id]&&ITEMS[id].k==='held');
   const evs=(EVO[m.n]||[]).map(([to,l,c])=>`<li>${esc(DEX[to].name)}${c&&(c.startsWith('stone')||c.startsWith('hap'))?'':' au niveau '+l}${condTxt(c)}</li>`).join('');
   openModal(`<h2>${esc(d.name)} <small class="muted">Nv ${m.lv}</small></h2><div class="flexr">${monCard(m)}<div style="flex:1;min-width:240px">
+   ${ABIL_OF[m.n]?`<p><b>Talent</b> : ✨ <b>${ABIL[ABIL_OF[m.n]][0]}</b> · ${ABIL[ABIL_OF[m.n]][1]}</p>`:''}
    <p><b>Attaques</b> : ${movesOf(m).map(x=>`<span class="ty" style="background:${TCOL[x.type]}">${esc(x.name)} · ${x.pow}</span>`).join(' ')}</p>
    <p><b>Bonheur</b> : <span class="hapbar"><i style="width:${hap/255*100}%"></i></span> ${hap}/255${hap>=HAP_EVO?' 💖':''}</p>
    <p><b>Objet tenu</b> : ${m.item?`${itIc(m.item)} ${ITEMS[m.item].n} <button class="sm" data-act="unHold" data-u="${u}">Retirer</button>`:'aucun'}${held.length?`<br>${held.map(id=>`<button class="sm" data-act="hold" data-u="${u}" data-id="${id}">${itIc(id,18)} ${ITEMS[id].n} (${inv[id]})</button>`).join(' ')}`:''}</p>
@@ -1380,7 +1449,7 @@ function startFight(){
   B.placed=B.placed.filter(p=>{const m=mon(p.u);return m&&!monStatus(p.u)});
   B.units=B.units.filter(u=>u.team===1);
   B.placed.forEach(p=>B.units.push(mkUnit(mon(p.u),0,p.x,p.y,B.M)));
-  applySyn();
+  applySyn();applyAbilities();
   /* Métamorph se transforme en l'ennemi le plus fort */
   const foes=B.units.filter(u=>u.team===1).sort((a,b)=>b.max-a.max);
   B.units.filter(u=>u.n===132).forEach(u=>{const f=foes[0];if(!f)return;const fake={n:f.n,lv:u.lv,g:u.m.g,sh:u.sh};const s=stats(fake),d=DEX[f.n];Object.assign(u,{n:f.n,atk:s.atk,spa:s.spa,def:s.def,spd:s.spd,t1:d.t1,t2:d.t2,mode:unitMode(d,B.M.bi),ranged:RANGED.has(d.t1)||d.spa>d.atk+15});B.fx.push({k:'txt',x:u.x,y:u.y-30,t:0,s:'Morphing !',c:'#c03cff'})});
@@ -1411,9 +1480,59 @@ const moveTier=lv=>lv<20?0:lv<40?1:lv<60?2:3;
 function pickMove(a,d){const ts=[a.t1,a.t2].filter(Boolean);let best=ts[0],be=-1;ts.forEach(t=>{const e=typeEff(t,d.t1,d.t2);if(e>be){be=e;best=t}});const tier=moveTier(a.lv),phys=!a.ranged;return{type:best,eff:be,pow:MOVE_POW[tier],name:(MOVES[best]||MOVES.neutre)[tier][phys?0:1]}}
 function movesOf(m){const d=DEX[m.n],phys=d.atk>=d.spa,t=moveTier(m.lv);return[d.t1,d.t2].filter(Boolean).map(ty=>({type:ty,name:(MOVES[ty]||MOVES.neutre)[t][phys?0:1],pow:MOVE_POW[t]}))}
 function dmgCalc(a,d){const mv=pickMove(a,d);a.mv=mv;const P=a.ranged?a.spa:a.atk;const base=((2*a.lv/5+2)*T.pow*(mv.pow/75)*P/Math.max(1,d.def))/50+2;const e=mv.eff;return[base*e*(.85+rnd()*.15)*(a.boss?1.25:1)*(a.dmgm||1),e]}
-function hit(a,d){if(d.hp<=0)return;if(d.dodge&&rnd()<d.dodge){B.fx.push({k:'txt',x:d.x,y:d.y-30,t:0,s:'Esquive !',c:'#9ad0ff'});return}let[v,e]=dmgCalc(a,d);if(a.crit&&rnd()<a.crit){v*=1.5;B.fx.push({k:'txt',x:d.x,y:d.y-44,t:0,s:'Coup critique !',c:'#ff8a2a'})}d.hp-=v;if(a.leech)a.hp=Math.min(a.max,a.hp+v*a.leech);if(a.mv&&rnd()<.18)B.fx.push({k:'txt',x:a.x,y:a.y-34*a.scale,t:0,s:a.mv.name,c:TCOL[a.mv.type]||'#fff'});d.flash=.12;B.fx.push({k:'txt',x:d.x+(rnd()*10-5),y:d.y-26*d.scale,t:0,s:Math.max(1,Math.round(v))+'',c:e>1?'#ff4a2a':e<1?'#8a8a8a':'#fff'});if(e>1&&rnd()<.4)B.fx.push({k:'txt',x:d.x,y:d.y-40,t:0,s:'Super efficace !',c:'#ffd23a'});B.fx.push({k:'hit',x:d.x,y:d.y-12,t:0,c:TCOL[(a.mv&&a.mv.type)||a.t1]||'#fff'});if(d.hp<=0){d.hp=0;B.fx.push({k:'poof',x:d.x,y:d.y,t:0})}}
+/* talents inspirés des vrais jeux, seulement pour certains Pokémon */
+const ABIL={
+ camo:['Camouflage','Invisible et impossible à cibler jusqu\'à sa première attaque ou au premier coup reçu.',[352]],
+ truant:['Absentéisme','Ne frappe qu\'une fois sur deux : il paresse un tour sur deux.',[287,289]],
+ slowstart:['Début Calme','Ses 5 premières attaques font 2 fois moins de dégâts.',[486]],
+ wonder:['Garde Mystik','Seules les attaques super efficaces le blessent.',[292]],
+ intim:['Intimidation','Au début du combat, l\'Attaque des ennemis baisse de 15 %.',[24,58,59,128,130,210,234,262,373]],
+ levitate:['Lévitation','Insensible aux attaques de type Sol.',[92,93,94,109,110,200,201,329,330,337,338,343,344,355,358,380,381,429,433,436,437,455,479,480,481,482,488,602,603,604,615,635]],
+ thickfat:['Isograisse','Les attaques Feu et Glace ne lui font que moitié de dégâts.',[143,220,221,241,363,364,365,446,473]],
+ flashfire:['Torche','Les attaques Feu ne lui font rien et renforcent ses attaques de 25 %.',[37,38,77,78,136,228,229,485,607,608,609]],
+ waterabs:['Absorb Eau','Les attaques Eau le soignent au lieu de le blesser.',[60,61,62,131,134,186,194,195,226,458]],
+ voltabs:['Absorb Volt','Les attaques Électrik le soignent au lieu de le blesser.',[135,170,171]],
+ sturdy:['Fermeté','Survit une fois avec 1 PV à un coup qui l\'aurait mis K.O. alors qu\'il avait tous ses PV.',[74,75,76,95,185,208,213,227,299,304,305,306,410,411,438,476]],
+ hugepower:['Coloforce','Attaque physique multipliée par 1,6.',[183,184,298]],
+ purepower:['Force Pure','Attaque physique multipliée par 1,6.',[307,308]],
+ speedboost:['Turbo','Attaque un peu plus vite toutes les 4 secondes.',[193,291,469]],
+ moxie:['Impudence','+10 % d\'Attaque à chaque ennemi mis K.O. (5 fois au plus).',[551,552,553,559,560]],
+ guts:['Cran','Attaque +35 % quand il lui reste moins de la moitié de ses PV.',[66,67,68,214,216,217,276,277,532,533,534]],
+ roughskin:['Peau Dure','Celui qui le frappe au corps à corps perd 12 % des dégâts infligés.',[318,319,443,444,445]],
+ multiscale:['Multiécaille','Dégâts divisés par 2 tant qu\'il a tous ses PV.',[149,249]],
+ regen:['Régé-Force','Récupère un peu de PV chaque seconde.',[79,80,199,465,590,591]],
+ static:['Statik','Celui qui le frappe au corps à corps peut être paralysé (attaque retardée).',[25,26,172,125,239,309,310,466]]};
+const ABIL_OF={};Object.entries(ABIL).forEach(([k,v])=>v[2].forEach(n=>ABIL_OF[n]=k));
+const abilHTML=n=>ABIL_OF[n]?`<span class="biome" title="${esc(ABIL[ABIL_OF[n]][1])}">✨ ${ABIL[ABIL_OF[n]][0]}</span>`:'';
+function abTxt(u,t,c){B.fx.push({k:'txt',x:u.x,y:u.y-46*u.scale,t:0,s:t,c:c||'#c9a0ff'})}
+function applyAbilities(){for(const u of B.units){u.ab=ABIL_OF[u.n]||null;if(!u.ab)continue;
+  if(u.ab==='camo')u.stealth=true;if(u.ab==='hugepower'||u.ab==='purepower')u.atk*=1.6;
+  if(u.ab==='intim'){abTxt(u,'Intimidation !');B.units.forEach(v=>{if(v.team!==u.team&&!(v.intimN>=2)){v.atk*=.85;v.spa*=.85;v.intimN=(v.intimN||0)+1}})}}}
+function abilTick(dt){for(const u of B.units){if(!u.ab||u.hp<=0)continue;
+  if(u.ab==='regen')u.hp=Math.min(u.max,u.hp+u.max*.008*dt);
+  if(u.ab==='speedboost'){u.sbT=(u.sbT||0)+dt;if(u.sbT>=4){u.sbT=0;u.cdm=Math.max(.6,(u.cdm||1)*.93)}}}}
+function hit(a,d){if(d.hp<=0)return;
+  if(a.stealth){a.stealth=false;abTxt(a,'Camouflage levé !')}
+  if(a.ab==='truant'){a.loaf=!a.loaf;if(a.loaf){abTxt(a,'Flemme…','#b0b0b0');return}}
+  if(d.ab==='static'&&!a.ranged&&rnd()<.3){a.cd+=.8;abTxt(a,'Paralysé !','#ffd23a')}
+  if(d.dodge&&rnd()<d.dodge){B.fx.push({k:'txt',x:d.x,y:d.y-30,t:0,s:'Esquive !',c:'#9ad0ff'});return}
+  let[v0,e0]=dmgCalc(a,d);const mt=a.mv&&a.mv.type;a.nAtk=(a.nAtk||0)+1;
+  if(a.ab==='slowstart'&&a.nAtk<=5){v0*=.5;if(a.nAtk===1)abTxt(a,'Début Calme…','#b0b0b0')}
+  if(a.ab==='guts'&&a.hp<a.max/2)v0*=1.35;if(a.ab==='moxie'&&a.kos)v0*=1+.1*Math.min(5,a.kos);if(a.ab==='flashfire'&&a.ff)v0*=1.25;
+  if(d.stealth){d.stealth=false;abTxt(d,'Camouflage levé !')}
+  if(d.ab==='wonder'&&e0<=1){abTxt(d,'Garde Mystik !');return}
+  if(d.ab==='levitate'&&mt==='sol'){abTxt(d,'Lévitation !');return}
+  if(d.ab==='flashfire'&&mt==='feu'){if(!d.ff){d.ff=1;abTxt(d,'Torche !','#ff8a2a')}return}
+  if((d.ab==='waterabs'&&mt==='eau')||(d.ab==='voltabs'&&mt==='electrik')){d.hp=Math.min(d.max,d.hp+v0*.5);abTxt(d,d.ab==='waterabs'?'Absorb Eau !':'Absorb Volt !','#5fb86a');return}
+  if(d.ab==='thickfat'&&(mt==='feu'||mt==='glace'))v0*=.5;if(d.ab==='multiscale'&&d.hp>=d.max)v0*=.5;
+  if(d.ab==='sturdy'&&!d.sturdyUsed&&d.hp>=d.max&&v0>=d.hp){v0=d.hp-1;d.sturdyUsed=1;abTxt(d,'Fermeté !')}
+  if(d.ab==='roughskin'&&!a.ranged){a.hp-=v0*.12;if(a.hp<=0){a.hp=0;B.fx.push({k:'poof',x:a.x,y:a.y,t:0})}}
+  ABIL_HIT.v=v0;ABIL_HIT.e=e0;hit0(a,d);if(d.hp<=0&&a.ab==='moxie')a.kos=(a.kos||0)+1}
+const ABIL_HIT={v:null,e:null};
+function hit0(a,d){let v=ABIL_HIT.v,e=ABIL_HIT.e;if(a.crit&&rnd()<a.crit){v*=1.5;B.fx.push({k:'txt',x:d.x,y:d.y-44,t:0,s:'Coup critique !',c:'#ff8a2a'})}d.hp-=v;if(a.leech)a.hp=Math.min(a.max,a.hp+v*a.leech);if(a.mv&&rnd()<.18)B.fx.push({k:'txt',x:a.x,y:a.y-34*a.scale,t:0,s:a.mv.name,c:TCOL[a.mv.type]||'#fff'});d.flash=.12;B.fx.push({k:'txt',x:d.x+(rnd()*10-5),y:d.y-26*d.scale,t:0,s:Math.max(1,Math.round(v))+'',c:e>1?'#ff4a2a':e<1?'#8a8a8a':'#fff'});if(e>1&&rnd()<.4)B.fx.push({k:'txt',x:d.x,y:d.y-40,t:0,s:'Super efficace !',c:'#ffd23a'});B.fx.push({k:'hit',x:d.x,y:d.y-12,t:0,c:TCOL[(a.mv&&a.mv.type)||a.t1]||'#fff'});if(d.hp<=0){d.hp=0;B.fx.push({k:'poof',x:d.x,y:d.y,t:0})}}
+const FIGHT_T=120;
 function stepBattle(dt){
-  B.t+=dt;B.fieldT-=dt;if(B.dmax)dmaxStep(dt);
+  B.t+=dt;B.fieldT-=dt;if(B.dmax)dmaxStep(dt);abilTick(dt);
   const alive=B.units.filter(u=>u.hp>0);
   if(B.focus&&B.focus.hp<=0)B.focus=null;
   if(B.fieldT<=0){B.Ffoc=null;if(B.focus){const src=[clamp(Math.floor(B.focus.y/TW),0,GH-1)*GW+clamp(Math.floor(B.focus.x/TW),0,GW-1)];B.Ffoc={};['ground','swim','fly'].forEach(md=>B.Ffoc[md]=buildField(B.M,src,md))}}
@@ -1421,7 +1540,7 @@ function stepBattle(dt){
   for(const u of alive){
     if(u.heal)u.hp=Math.min(u.max,u.hp+u.max*u.heal*dt);
     u.cd-=dt;u.flash=Math.max(0,u.flash-dt);u.lunge=Math.max(0,u.lunge-dt);u.tt-=dt;
-    if(u.team===0&&B.focus&&B.focus.hp>0)u.tgt=B.focus;else if(!u.tgt||u.tgt.hp<=0||u.tt<=0||(u.team===0&&u.tgt.team===1&&u.focusT)){u.focusT=0;u.tt=.3;let best=null,bd=1e9;for(const v of alive)if(v.team!==u.team&&v.hp>0){const dd=Math.hypot(v.x-u.x,v.y-u.y);if(dd<bd){bd=dd;best=v}}u.tgt=best}
+    if(u.team===0&&B.focus&&B.focus.hp>0)u.tgt=B.focus;else if(!u.tgt||u.tgt.hp<=0||u.tt<=0||(u.team===0&&u.tgt.team===1&&u.focusT)){u.focusT=0;u.tt=.3;let best=null,bd=1e9;for(const v of alive)if(v.team!==u.team&&v.hp>0&&!v.stealth){const dd=Math.hypot(v.x-u.x,v.y-u.y);if(dd<bd){bd=dd;best=v}}if(!best)for(const v of alive)if(v.team!==u.team&&v.hp>0){best=v;break}u.tgt=best}
     const t=u.tgt;if(!t){u.moving=false;continue}
     const dx=t.x-u.x,dy=t.y-u.y,dist=Math.hypot(dx,dy);const range=u.rng||(u.ranged?125:20+10*(u.scale+t.scale));
     u.moving=false;
@@ -1430,7 +1549,7 @@ function stepBattle(dt){
     else{const F=(u.team===0&&t===B.focus&&B.Ffoc)?B.Ffoc[u.mode]:B.F[u.team][u.mode],tx=clamp(Math.floor(u.x/TW),0,GW-1),ty=clamp(Math.floor(u.y/TW),0,GH-1);let gx=t.x,gy=t.y;
       if(u.mode!=='fly'||B.M.cliff){let bi=-1,bv=F[ty*GW+tx];for(let oy=-1;oy<=1;oy++)for(let ox=-1;ox<=1;ox++){const nx=tx+ox,ny=ty+oy;if(nx<0||ny<0||nx>=GW||ny>=GH)continue;const j=ny*GW+nx;if(F[j]<bv-.01){bv=F[j];bi=j}}
         if(bi>=0&&F[ty*GW+tx]>1.5){gx=(bi%GW)*TW+TW/2;gy=Math.floor(bi/GW)*TW+TW/2}else if(!isFinite(F[ty*GW+tx])){continue}}
-      const ddx=gx-u.x,ddy=gy-u.y,dd=Math.hypot(ddx,ddy)||1,sp=(28+u.spd*.4)*dt;u.x+=ddx/dd*Math.min(sp,dd);u.y+=ddy/dd*Math.min(sp,dd);u.moving=true;u.dir=Math.abs(ddx)>Math.abs(ddy)?(ddx<0?1:2):(ddy<0?3:0)}
+      const ddx=gx-u.x,ddy=gy-u.y,dd=Math.hypot(ddx,ddy)||1,sp=(28+u.spd*.4)*dt*(u.mode!=='fly'&&B.M.mud&&B.M.mud[clamp(Math.floor(u.y/TW),0,GH-1)*GW+clamp(Math.floor(u.x/TW),0,GW-1)]?.45:1);u.x+=ddx/dd*Math.min(sp,dd);u.y+=ddy/dd*Math.min(sp,dd);u.moving=true;u.dir=Math.abs(ddx)>Math.abs(ddy)?(ddx<0?1:2):(ddy<0?3:0)}
     if(!u.anchor)for(const v of alive)if(v!==u){const ox=u.x-v.x,oy=u.y-v.y,d2=Math.hypot(ox,oy),min=14*(u.scale+v.scale)/2+6;if(d2>0&&d2<min){const f=(min-d2)/min*30*dt;const nx=u.x+ox/d2*f,ny=u.y+oy/d2*f,i=clamp(Math.floor(ny/TW),0,GH-1)*GW+clamp(Math.floor(nx/TW),0,GW-1);if(passable(B.M,i,u.mode)){u.x=nx;u.y=ny}}}
     u.x=clamp(u.x,6,CW-6);u.y=clamp(u.y,10,CH-4);
     if(u.moving){u.ft+=dt;if(u.ft>.14){u.ft=0;u.fr=(u.fr+1)%4}}else u.fr=0;
@@ -1439,7 +1558,7 @@ function stepBattle(dt){
   B.fx=B.fx.filter(f=>(f.t+=dt)<(f.k==='txt'?.9:.4));
   const a0=B.units.some(u=>u.team===0&&u.hp>0),a1=B.units.some(u=>u.team===1&&u.hp>0);
   if(B.dmax&&a0&&!a1){dmaxKill();if(SAVE.dmax.chain)return}
-  if(!a0||!a1||B.t>(B.dmax?240:180))endFight(a0&&!a1);
+  if(!a0||!a1||B.t>(B.dmax?240:FIGHT_T))endFight(a0&&!a1);
 }
 function endFight(win){if(B.dmax){dmaxEnd(win);return}
   B.phase='end';const st=B.stage,first=win&&st>SAVE.best&&!B.defi&&!B.arena;
@@ -1447,7 +1566,7 @@ function endFight(win){if(B.dmax){dmaxEnd(win);return}
   let drop=null;
   if(win){coins=Math.round((30+st*20)*(st%5===0?2.5:1)*(first?1:.5)*(B.placed.some(p=>{const m=mon(p.u);return m&&m.item==='amuletcoin'})?1.5:1));if(B.defi||B.arena)coins=0;SAVE.coins+=coins;if(first){SAVE.best=st;SAVE.maxBest=Math.max(SAVE.maxBest||0,st+(SAVE.cycle||0)*MAXST)}SAVE.st.wins=(SAVE.st.wins||0)+1;if(B.units.some(u=>u.boss)){SAVE.st.boss=(SAVE.st.boss||0)+1;B.units.filter(u=>u.boss).forEach(u=>[DEX[u.n].t1,DEX[u.n].t2].filter(Boolean).forEach(t=>SAVE.st['bt_'+t]=(SAVE.st['bt_'+t]||0)+1));if(rnd()<.35){drop=rollItem();invAdd(drop)}}
     /* récompense de boss : œuf niveau 5 (boss de mi-biome) ou super œuf rare niveau 10 (boss de fin de biome) */
-    const boss=B.arena?null:B.units.find(u=>u.boss);if(boss){const own=baseOf(boss.n),mk=(n,lv)=>{const sh=rnd()<T.sh0;return{id:SAVE.uid++,n,sx:rollSex(n),lv:lv+(sh?T.mutLv:0),g:randGenes(8,24),sh,mut:0,bst:sh?pick(BST_K):null,src:'boss'}};
+    const boss=B.arena?null:B.units.find(u=>u.boss);if(boss){const own0=baseOf(boss.n),own=own0===132?0:own0,mk=(n,lv)=>{const sh=rnd()<T.sh0;return{id:SAVE.uid++,n,sx:rollSex(n),lv:lv+(sh?T.mutLv:0),g:randGenes(8,24),sh,mut:0,bst:sh?pick(BST_K):null,src:'boss'}};
     /* œuf du boss lui-même : 10 % pour un légendaire, 35 % sinon ; sinon super œuf (tous les 10 tableaux) ou œuf niveau 5 du biome */
     egg=st===MAXST&&first?legendEgg():LEGEND.has(boss.n)?(rnd()<.1&&EGG_HAS.has(own)?Object.assign(eggOf(own),{src:'legende'}):superEgg()):EGG_HAS.has(own)&&rnd()<.35?mk(own,st%10===0?10:5):st%10===0?superEgg():(()=>{const P=EGG_SPECIES.filter(x=>!LEGEND.has(x)&&x!==132&&eggMethod(x)==='marche'&&(HAB[x]?HAB[x].includes(B.M.bi.hab):(B.M.bi.types.includes(DEX[x].t1)||B.M.bi.types.includes(DEX[x].t2))));const n=P.length?pick(P):pick(EGG_SPECIES.filter(x=>eggMethod(x)==='marche'&&x!==132));const sh=rnd()<T.sh0;return{id:SAVE.uid++,n,sx:rollSex(n),lv:5+(sh?T.mutLv:0),g:randGenes(5,20),sh,mut:0,bst:sh?pick(BST_K):null,src:'boss'}})();if(!addEgg(egg,egg.src==='arceus'||egg.src==='legende')){const v=rp(eggPrice(egg.n)*.3);SAVE.coins+=v;egg.sold=v}}
     if(SAVE.tuto>=5&&SAVE.tuto<6)setTuto(6)}
@@ -1571,7 +1690,7 @@ function drawUnit(x,u,ghost){if(u.dmax){drawDmaxBoss(x,u);return}
   x.strokeStyle=u.team?'#e0604f':'#5f9be8';x.lineWidth=2;x.beginPath();x.ellipse(u.x,u.y,13*u.scale,6*u.scale,0,0,7);x.stroke();
   if(ghost)x.globalAlpha=.85;
   /* planches de 256 px (cases de 64) ou de 512 px (cases de 128, grands légendaires) */
-  if(im.ok){const fw=(im.naturalWidth||256)/4,S=s*(fw>64?1.6:1),dx=Math.round(u.x-S/2+lx),dy=Math.round(u.y-S*50/62);x.drawImage(im,u.fr*fw,u.dir*fw,fw,fw,dx,dy,S,S);
+  if(im.ok){const b=sprBox(im),fw=b.fw,z=sprZoom(b,u.n,s*1.6)/1.6,S=fw*z,dx=Math.round(u.x-b.cx*z+lx),dy=Math.round(u.y+2-b.by*z);if(u.stealth)x.globalAlpha=u.team?0:.35;x.drawImage(im,u.fr*fw,u.dir*fw,fw,fw,dx,dy,S,S);
     if(u.flash>0){x.globalCompositeOperation='lighter';x.globalAlpha=.6;x.drawImage(im,u.fr*fw,u.dir*fw,fw,fw,dx,dy,S,S);x.globalAlpha=1;x.globalCompositeOperation='source-over'}}
   else{x.fillStyle=TCOL[u.t1]||'#aaa';x.beginPath();x.arc(u.x,u.y-12,10*u.scale,0,7);x.fill()}
   x.globalAlpha=1;
@@ -1583,16 +1702,16 @@ function hexMix(a,b,t){const h=c=>[1,3,5].map(k=>parseInt(c.slice(k,k+2),16));co
 function rockPal(bi){if(bi._rp)return bi._rp;const g=bi.g[0],ice=/glace|neige|givr|cristal/i.test(bi.name),lav=!!bi.lava;
   const st=ice?'#b9cfe0':lav?'#5a4a48':'#9a8f80';return bi._rp={top:hexMix(g,'#ffffff',.08),top2:hexMix(g,'#000000',.12),face:hexMix(st,'#000000',.05),face2:hexMix(st,'#000000',.3),edge:hexMix(st,'#000000',.55),lit:hexMix(st,'#ffffff',.35),st}}
 /* une case de falaise : dessus surélevé + face avant visible quand la case du dessous est libre */
-function drawRock(x,r,M){const P=rockPal(M.bi),H=13,px=r.x*TW,py=r.y*TW,R2=M.rock,at=(a,b)=>a>=0&&b>=0&&a<GW&&b<GH&&R2[b*GW+a]===1;
-  if(r.v===2){const cx=px+TW/2,cy=py+TW/2+4,h=((r.x*73+r.y*151)%7)/7;x.fillStyle='rgba(0,0,0,.25)';x.beginPath();x.ellipse(cx+2,cy+7,13,5,0,0,7);x.fill();
+function drawRock(x,r,M){const P=rockPal(M.bi),H=18,px=r.x*TW,py=r.y*TW,R2=M.rock,at=(a,b)=>a>=0&&b>=0&&a<GW&&b<GH&&R2[b*GW+a]===1;
+  if(r.v===2){const im=img(DECOR_IMG),L=rockSet(M.bi),key=L[(r.x*7+r.y*13)%L.length],m=DECOR[key];if(im.ok&&m){x.fillStyle='rgba(0,0,0,.22)';x.beginPath();x.ellipse(px+TW/2,py+TW-2,Math.min(16,m.w/2),5,0,0,7);x.fill();x.drawImage(im,m.x,m.y,m.w,m.h,Math.round(px+TW/2-m.w/2),Math.round(py+TW+1-m.h),m.w,m.h);return}const cx=px+TW/2,cy=py+TW/2+4,h=((r.x*73+r.y*151)%7)/7;x.fillStyle='rgba(0,0,0,.25)';x.beginPath();x.ellipse(cx+2,cy+7,13,5,0,0,7);x.fill();
     x.fillStyle=P.face2;x.beginPath();x.ellipse(cx,cy-2,12+h*3,11,0,0,7);x.fill();x.fillStyle=P.face;x.beginPath();x.ellipse(cx-1,cy-5,10+h*3,9,0,0,7);x.fill();
     x.fillStyle=P.lit;x.beginPath();x.ellipse(cx-4,cy-9,4,3,0,0,7);x.fill();x.strokeStyle=P.edge;x.lineWidth=2;x.beginPath();x.ellipse(cx,cy-3,12+h*3,11,0,0,7);x.stroke();return}
   const S=!at(r.x,r.y+1),N=!at(r.x,r.y-1),W=!at(r.x-1,r.y),E=!at(r.x+1,r.y);
-  if(S){x.fillStyle='rgba(0,0,0,.22)';x.fillRect(px,py+TW,TW,5);x.fillStyle=P.face;x.fillRect(px,py+TW-H,TW,H);x.fillStyle=P.face2;for(let k=3;k<TW;k+=7)x.fillRect(px+k,py+TW-H+2,2,H-3);x.fillStyle=P.edge;x.fillRect(px,py+TW-2,TW,2)}
+  if(S){x.fillStyle='rgba(0,0,0,.22)';x.fillRect(px,py+TW,TW,5);const im=img(DECOR_IMG),fm=DECOR[faceKey(M.bi)];if(im.ok&&fm){const sx=fm.x+((r.x*TW)%Math.max(1,fm.w-TW));x.drawImage(im,sx,fm.y,Math.min(TW,fm.w),fm.h,px,py+TW-H,TW,H)}else{x.fillStyle=P.face;x.fillRect(px,py+TW-H,TW,H)}x.fillStyle=P.edge;x.fillRect(px,py+TW-2,TW,2)}
   x.fillStyle=P.top;x.fillRect(px,py-H,TW,TW);x.fillStyle=P.top2;const hs=(r.x*31+r.y*17)%5;x.fillRect(px+4+hs,py-H+6,3,2);x.fillRect(px+16-hs,py-H+15,4,2);
   x.fillStyle=P.edge;if(N)x.fillRect(px,py-H,TW,2);if(W)x.fillRect(px,py-H,2,TW+(S?H:0));if(E)x.fillRect(px+TW-2,py-H,2,TW+(S?H:0));if(S)x.fillRect(px,py+TW-H-1,TW,2);
   if(N){x.fillStyle=P.lit;x.fillRect(px+2,py-H+2,TW-4,2)}}
-function drawTree(x,t){const im=img(TREE_IMG);const[c,r,k]=t.v;const sy=(r?264:0)+[0,50,100][k],sh=[50,50,57][k];const cx=t.x*TW+TW/2,by=t.y*TW+TW+4;
+function drawTree(x,t){if(typeof t.v==='string'){const m=DECOR[t.v],im=img(DECOR_IMG);if(!im.ok)return;const f=m.n>1?(Math.floor(performance.now()/170)+t.ph)%m.n:0;x.drawImage(im,m.x+f*(m.w+2),m.y,m.w,m.h,Math.round(t.x*TW+TW/2-m.w/2),Math.round(t.y*TW+TW+3-m.h),m.w,m.h);return}const im=img(TREE_IMG);const[c,r,k]=t.v;const sy=(r?264:0)+[0,50,100][k],sh=[50,50,57][k];const cx=t.x*TW+TW/2,by=t.y*TW+TW+4;
   if(im.ok)x.drawImage(im,c*48,sy,48,sh,cx-36,by-sh*1.5,72,sh*1.5);else{x.fillStyle='#2f6a34';x.beginPath();x.arc(cx,by-30,18,0,7);x.fill()}}
 function drawBattle(){if(!B)return;const tr=B.trans;if(!tr){drawBattle0();return}
   const x=bcx();const q=clamp(tr.t/tr.d,0,1),e=q<.5?4*q*q*q:1-Math.pow(-2*q+2,3)/2,off=Math.round(CW*e);
@@ -1606,7 +1725,7 @@ function drawBattle0(){
   x.drawImage(B.M.cv,0,0);
   if(B.phase==='place'){const pz=PZB();x.fillStyle='rgba(95,155,232,.08)';x.fillRect(0,0,(pz+1)*TW,CH);x.strokeStyle='rgba(60,120,220,.75)';x.setLineDash([6,6]);x.lineWidth=2;x.strokeRect(1,1,(pz+1)*TW-2,CH-2);if(!B.dmax){x.strokeStyle='rgba(224,96,79,.6)';x.strokeRect(EZ*TW+1,1,CW-EZ*TW-2,CH-2)}x.setLineDash([])}
   const D=[];B.M.trees.forEach(t=>D.push({y:t.y*TW+TW,f:()=>drawTree(x,t)}));(B.M.rocks||[]).forEach(r=>D.push({y:r.y*TW+TW-1,f:()=>drawRock(x,r,B.M)}));
-  if(B.phase==='place'){B.units.forEach(u=>D.push({y:u.y,f:()=>drawUnit(x,u)}));B.placed.forEach(p=>{const m=mon(p.u);if(m){const u={x:p.x,y:p.y,n:m.n,sh:m.sh,fr:0,dir:2,scale:1,team:0,lv:m.lv,lunge:0,flash:0,t1:DEX[m.n].t1};D.push({y:p.y,f:()=>drawUnit(x,u,true)})}})}
+  if(B.phase==='place'){B.units.forEach(u=>D.push({y:u.y,f:()=>drawUnit(x,u)}));B.placed.forEach(p=>{const m=mon(p.u);if(m){const dg=B.drag&&B.drag.moved&&B.drag.u===p.u;const u={x:dg?B.drag.x:p.x,y:dg?B.drag.y:p.y,n:m.n,sh:m.sh,fr:0,dir:2,scale:1,team:0,lv:m.lv,lunge:0,flash:0,t1:DEX[m.n].t1};D.push({y:p.y,f:()=>drawUnit(x,u,true)})}})}
   else B.units.forEach(u=>{if(u.hp>0)D.push({y:u.y,f:()=>drawUnit(x,u)})});
   D.sort((a,b)=>a.y-b.y).forEach(d=>d.f());
   B.proj.forEach(p=>{x.fillStyle=p.c;x.beginPath();x.arc(p.x,p.y,4,0,7);x.fill();x.fillStyle='rgba(255,255,255,.8)';x.beginPath();x.arc(p.x-1,p.y-1,1.6,0,7);x.fill()});
@@ -1615,6 +1734,7 @@ function drawBattle0(){
     else if(f.k==='poof'){x.fillStyle='rgba(255,255,255,'+(1-q)+')';for(let k=0;k<6;k++){const an=k/6*6.28;x.beginPath();x.arc(f.x+Math.cos(an)*q*16,f.y-10+Math.sin(an)*q*10,4*(1-q)+1,0,7);x.fill()}}});
   if(B.focus&&B.focus.hp>0){const f=B.focus,r=(f.dmax?70:16)*(1+.12*Math.sin(performance.now()/150)),cy=f.y-(f.dmax?90:14);x.strokeStyle='#ff2a2a';x.lineWidth=3;x.beginPath();x.arc(f.x,cy,r,0,7);x.stroke();x.beginPath();x.moveTo(f.x-r-6,cy);x.lineTo(f.x-r+6,cy);x.moveTo(f.x+r-6,cy);x.lineTo(f.x+r+6,cy);x.moveTo(f.x,cy-r-6);x.lineTo(f.x,cy-r+6);x.moveTo(f.x,cy+r-6);x.lineTo(f.x,cy+r+6);x.stroke()}
   if(B.phase==='fight'&&!B.focus&&B.t<6){x.font='bold 13px sans-serif';x.textAlign='center';x.lineWidth=4;x.strokeStyle='#2a1a12';x.fillStyle='#fff';const s2='Clique sur un ennemi pour en faire la cible principale';x.strokeText(s2,CW/2,CH-12);x.fillText(s2,CW/2,CH-12)}
+  if(B.phase==='fight'){const left=Math.max(0,(B.dmax?240:FIGHT_T)-B.t),mm=Math.floor(left/60),ss=Math.floor(left%60);x.font='bold 15px sans-serif';x.textAlign='left';x.lineWidth=4;x.strokeStyle='#2a1a12';x.fillStyle=left<15?'#ff5a4a':'#fff';const tx='⏱ '+mm+':'+String(ss).padStart(2,'0');x.strokeText(tx,10,22);x.fillText(tx,10,22)}
   if(B.dmax)drawDmaxHud(x);
   if(B.phase==='place'&&!B.placed.length){x.font='bold 16px sans-serif';x.textAlign='center';x.lineWidth=4;x.strokeStyle='#2a1a12';x.fillStyle='#fff';const s='Choisis un Pokémon en bas, puis clique dans la zone bleue';x.strokeText(s,CW/2,26);x.fillText(s,CW/2,26)}
 }
@@ -1837,6 +1957,13 @@ const ACT={
     toast(c?`💞 ${c} couple${c>1?'s':''} placé${c>1?'s':''} dans les nids`:'Aucun couple compatible disponible');renderNursery()},
   tselOn:()=>{teamSel=new Set();renderTeam()},tselOff:()=>{teamSel=null;renderTeam()},
   tsel:(t)=>{const u=+t.dataset.u;if(!teamSel)return;teamSel.has(u)?teamSel.delete(u):teamSel.add(u);const y=scrollY;renderTeam();scrollTo(0,y)},
+  autoSel:(t)=>{const k=t.dataset.k,L=autoPick(k);if(k==='team'){teamSel=new Set(L.map(m=>m.u));renderTeam()}else{eggSel=new Set(L.map(e=>e.id));renderNursery()}toast(`🎯 ${L.length} ${k==='team'?'Pokémon':'œuf'+(L.length>1?'s':'')} sélectionné${L.length>1?'s':''}`)},
+  eselOn:()=>{eggSel=new Set();renderNursery()},eselOff:()=>{eggSel=null;renderNursery()},eselNone:()=>{eggSel=new Set();renderNursery()},
+  eselAll:()=>{eggSel=new Set(applyEggFilt('bag').map(x=>x.e.id));renderNursery()},
+  eggTog:(t)=>{const id=+t.dataset.id;if(eggSel.has(id))eggSel.delete(id);else eggSel.add(id);renderNursery()},
+  eselSell:()=>{const L=SAVE.eggs.filter(e=>eggSel.has(e.id));if(!L.length)return;const tot=L.reduce((a,e)=>a+eggVal(e),0),shn=L.filter(e=>e.sh).length;
+    openModal(`<h2>Vendre ${L.length} œuf${L.length>1?'s':''} ?</h2><p>+${fmt(tot)} pièces.${shn?` <b style="color:#c0392b">Attention : ${shn} œuf${shn>1?'s':''} shiny !</b>`:''}</p><div class="flexr"><button class="go" data-act="eselSellOk">Vendre</button><button data-act="closeM">Annuler</button></div>`)},
+  eselSellOk:()=>{const L=SAVE.eggs.filter(e=>eggSel.has(e.id)),tot=L.reduce((a,e)=>a+eggVal(e),0);SAVE.eggs=SAVE.eggs.filter(e=>!eggSel.has(e.id));SAVE.coins+=tot;eggSel=null;closeModal();toast(`${L.length} œufs vendus (+${fmt(tot)} pièces)`);dirty=true;saveGame();renderTop();renderNursery()},
   tselAll:()=>{applyFilt(SAVE.mons.slice(),'team').forEach(m=>{if(!m.fav&&!monStatus(m.u))teamSel.add(m.u)});renderTeam()},
   tselNone:()=>{teamSel=new Set();renderTeam()},
   tselWeak:()=>{SAVE.mons.filter(m=>!m.fav&&!monStatus(m.u)).sort((a,b)=>pc(a)-pc(b)).slice(0,10).forEach(m=>teamSel.add(m.u));renderTeam()},
@@ -1867,7 +1994,15 @@ const ACT={
   cloud:()=>openCloud(),setPseudo:()=>setPseudo(),setTitle:(t)=>setTitle(t.dataset.t),rankReload:()=>{RANK.list=null;RANK.err='';rankLoad(true);renderRank()},showProfile:(t)=>showProfile(+t.dataset.i),signIn:()=>cloudSignIn(),signOut:()=>cloudSignOut()
 };
 document.addEventListener('click',e=>{const tb=e.target.closest('nav button[data-tab]');if(tb){showTab(tb.dataset.tab);return}const t=e.target.closest('[data-act]');if(t&&ACT[t.dataset.act]){ACT[t.dataset.act](t,e)}else if(e.target.id==='modal'&&SAVE.mons.length)closeModal()});
-$('bcv').addEventListener('click',e=>{const[x,y]=canvasPos(e);if(B&&B.phase==='fight'){let best=null,bd=40;for(const u of B.units)if(u.team===1&&u.hp>0){const d=Math.hypot(u.x-x,(u.y-14*u.scale)-y)*(u.dmax?.35:1);if(d<bd){bd=d;best=u}}
+/* glisser-déposer : depuis la liste vers le terrain, ou d'une case à l'autre sur le terrain (hors du terrain = retiré) */
+document.addEventListener('dragstart',e=>{const c=e.target.closest&&e.target.closest('.rcard[draggable]');if(!c)return;e.dataTransfer.setData('text/plain',c.dataset.u);e.dataTransfer.effectAllowed='move'});
+$('bcv').addEventListener('dragover',e=>{if(B&&B.phase==='place')e.preventDefault()});
+$('bcv').addEventListener('drop',e=>{e.preventDefault();if(!B||B.phase!=='place')return;const u=+e.dataTransfer.getData('text/plain');if(!u)return;const[x,y]=canvasPos(e);battleSel=u;const i=B.placed.findIndex(p=>p.u===u);const old=i>=0?B.placed.splice(i,1)[0]:null;placeAt(x,y);if(old&&!B.placed.some(p=>p.u===u)){B.placed.push(old);renderBattleHead();renderRoster()}});
+$('bcv').addEventListener('pointerdown',e=>{if(!B||B.phase!=='place')return;const[x,y]=canvasPos(e);const p=B.placed.find(p=>Math.hypot(p.x-x,p.y-y)<16);if(!p)return;B.drag={u:p.u,x,y,sx:x,sy:y,moved:false};try{$('bcv').setPointerCapture(e.pointerId)}catch(_){}});
+window.addEventListener('pointermove',e=>{if(!B||!B.drag)return;const[x,y]=canvasPos(e);B.drag.x=x;B.drag.y=y;if(Math.hypot(x-B.drag.sx,y-B.drag.sy)>8)B.drag.moved=true});
+window.addEventListener('pointerup',e=>{if(!B||!B.drag)return;const d=B.drag;B.drag=null;if(!d.moved)return;B.dragEnd=Date.now();const[x,y]=canvasPos(e);const i=B.placed.findIndex(p=>p.u===d.u);const old=i>=0?B.placed.splice(i,1)[0]:null;
+  if(x<0||y<0||x>CW||y>CH){renderBattleHead();renderRoster();return}const keep=battleSel;battleSel=d.u;placeAt(x,y);if(old&&!B.placed.some(p=>p.u===d.u))B.placed.push(old);battleSel=keep;renderBattleHead();renderRoster()});
+$('bcv').addEventListener('click',e=>{if(B&&B.dragEnd&&Date.now()-B.dragEnd<300)return;const[x,y]=canvasPos(e);if(B&&B.phase==='fight'){let best=null,bd=40;for(const u of B.units)if(u.team===1&&u.hp>0){const d=Math.hypot(u.x-x,(u.y-14*u.scale)-y)*(u.dmax?.35:1);if(d<bd){bd=d;best=u}}
   if(best&&best!==B.focus){B.focus=best;B.fieldT=0;B.units.forEach(u=>{if(u.team===0)u.focusT=1});B.fx.push({k:'txt',x:best.x,y:best.y-40*best.scale,t:0,s:'🎯 Cible !',c:'#ff4a2a'})}else{B.focus=null;B.units.forEach(u=>{if(u.team===0)u.focusT=1})}return}placeAt(x,y)});
 function starterModal(){const S=[1,4,7,152,155,158,252,255,258,387,390,393].filter(n=>EGG_HAS.has(n));
   openModal(`<h2>Bienvenue dans PokeTabs Eggs Collector !</h2><p>Tu reçois <b>Métamorph</b> et <b>Pikachu</b> pour apprendre à faire des œufs. Choisis aussi ton starter :</p><div class="grid">${S.map(n=>`<div class="card pick" data-act="starter" data-n="${n}">${sprHTML(n,false,64)}<span class="nm">${esc(DEX[n].name)}</span>${tyHTML(DEX[n])}</div>`).join('')}</div>`);

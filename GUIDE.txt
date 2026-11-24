@@ -1,4 +1,4 @@
-POKETABS EGGS COLLECTOR - GUIDE RAPIDE (V00.25.00)
+POKETABS EGGS COLLECTOR - GUIDE RAPIDE (V00.28.00)
 
 1. AVANT DE LANCER LE JEU (une seule fois)
    Double-clique sur INSTALLER_SPRITES.bat.
@@ -180,3 +180,64 @@ V00.25.00
    Nids                 stock d'œufs en attente : 1 (niveaux 1-2), 2 (niveaux 3-4), 3 (niveau 5) ; la ponte continue tant que le stock n'est pas plein
    eggRoom()            récupérer un œuf demande une place libre : Pokémon + œufs du sac + œufs en couveuse + bébés en attente < capacité
                         de la nurserie, et une place dans le sac ; sinon l'œuf reste au nid et la ponte s'arrête quand le stock est plein
+
+V00.26.00
+   Marché du jour       toujours 7 Pokémon par génération : s'il n'y a pas assez d'œufs « Marché » dans une génération (6G : 4),
+                        le marché est complété avec les autres œufs de cette génération ; étiquette « Gén N » sur chaque carte
+   Multi Exp (60 000)   objet à tenir : XP x2 (sprite Graphics/Items/EXPSHARE.png)
+   Œuf Chance (15 000)  objet à tenir : +50 % d'XP, maintenant aussi en boutique ; les deux s'équipent depuis 📋 Fiche
+
+V00.27.00
+   Glisser-déposer      onglet Combat : glisser un Pokémon de la liste vers le terrain, ou d'une case à l'autre ;
+                        le lâcher hors du terrain le retire de l'armée (le clic marche toujours)
+   assets/decor.png     nouvel atlas de décors (DECOR) tiré des tilesets de Métamorph :
+                          A0-A4 feuillus animés (MoEtr+.gif), P0-P4 sapins animés (ShjMSK.gif), O0-O3 chênes animés (6IJhSS.gif),
+                          C0 cerisier (cherryblossom_edits_), R0-R3 rochers gris, D0-D2 rochers du désert, V0-V1 rochers sombres
+                          (town_on_bridges), B0-B2 et I0-I3 rochers bruns et de glace (_mixed_cave_tileset),
+                          FR / FB / FI textures de face des falaises
+   NEW_TREES            arbres par biome ; les palmiers, champignons et saules gardent l'ancienne planche
+                        règles d'or : grands arbres espacés de 3 cases, jamais au-dessus de l'eau, d'un pont ou d'une falaise,
+                        jamais coupés en haut de la carte
+
+V00.28.00
+   Sélection auto       onglet Pokémon (☑ Sélectionner plusieurs) et Nurserie > Sac d'œufs (☑ Vendre des œufs) :
+                        critères combinés shiny, légendaires, niveau ≤, PC ≤, type, doublons (garde le meilleur de chaque espèce),
+                        garder les favoris / les espèces pas encore obtenues ; ne porte que sur ce qui est affiché (recherche et filtre)
+                        vente des œufs : 30 % du prix du marché, confirmation (alerte si shiny)
+   En-tête du combat    rangé par catégorie : Tableau (gauche) / Infos (droite), Armée (gauche) / Combat (droite), puis les bonus d'équipe
+   Boue                 flaques et gués dans la rivière (la moitié des cartes environ, pas en glace ni lave) ;
+                        les Pokémon qui ne volent pas passent mais à 45 % de leur vitesse ; transitions douces avec l'herbe
+   Métamorph            uniquement à la boutique, ou très rarement (1 sur 1 000 000) à la place d'un œuf aléatoire (boss, super œuf…)
+   Vol                  volent aussi : Pokémon qui lévitent ou ont des ailes (Magnéti, Smogo, Aéromite, Vibraninf, Séléroc, Solaroc,
+                        Balbuto, Archéodong, Motisma, Créfadet, Lumivole, Muciole, Mew, Celebi, Jirachi, Latias, Latios…) ;
+                        ne volent pas : Doduo, Dodrio, Arkéapti
+
+V00.29.00
+   Chrono de combat     2 min par combat (4 min dans la tanière Dynamax) ; décompte ⏱ m:ss en haut du terrain, rouge sous 15 s ;
+                        temps écoulé = défaite
+   Taille des sprites   la taille est calculée sur le contenu réel de la planche (et plus sur la taille du fichier) :
+                        même densité de pixels pour tous, légendaires agrandis jusqu'à 56 px de contenu mini (max ×1,5)
+                        corrige Necrozma, Lugia, Mewtwo trop petits (cartes, fiches et terrain)
+   Boutique             chaque article affiche « Possédé : x » (objets en sac + équipés, nids x/6, armée x/15, etc.)
+   Lissage des stats    chaque stat de base est rapprochée de 75 de 25 % : écarts de puissance réduits
+                        (niveau 50 : Magicarpe ≈ 344 PC, Mewtwo ≈ 650, Arceus ≈ 660) ; Munja garde 1 PV
+   Talents              inspirés des vrais jeux, seulement pour certains Pokémon (visible dans la 📋 Fiche) :
+                          Camouflage (Kecleon) invisible jusqu'à ce qu'il attaque ou soit touché, ignoré par le ciblage
+                          Absentéisme (Monaflèmit, Monaflèmit… Parecool non) une attaque sur deux « Flemme… »
+                          Début Calme (Regigigas) ses 5 premières attaques font moitié dégâts
+                          Garde Mystik (Munja) ne prend que les coups super efficaces
+                          Intimidation (Arbok, Caninos, Arcanin, Tauros, Léviator, Granbull, Cerfrousse, Grahyèna, Drattak)
+                            baisse l'Attaque des ennemis de 15 % (2 fois max par ennemi)
+                          Lévitation (spectres flottants, Séléroc, Solaroc, Motisma…) immunisé contre Sol
+                          Isograisse (Ronflex, Mammochon…) Feu et Glace ×0,5
+                          Torche (Caninos/Arcanin non, Ponyta, Galopa, Héricendre…) immunisé au Feu puis +25 %
+                          Absorb Eau / Absorb Volt (Lanturn, Raichu…) soigne au lieu de blesser
+                          Fermeté (Racaillou, Gravalanch, Grolem, Magnéti…) survit à 1 PV si PV pleins
+                          Coloforce / Force Pure (Marill, Azumarill, Azurill / Méditikka, Charmina) Attaque ×1,6
+                          Turbo (Yanma, Ninjask…) recharge de plus en plus vite
+                          Impudence (Insécateur, Scarabrute…) +10 % par K.O., 5 max
+                          Cran (Machoc, Ursaring…) ×1,35 sous la moitié des PV
+                          Peau Dure (Carvanha, Sharpedo…) renvoie 12 % des coups au corps à corps
+                          Multiécaille (Dracolosse, Lugia) dégâts ×0,5 à PV pleins
+                          Régé-Force (Leveinard, Ramoloss…) régénère 0,8 % des PV par seconde
+                          Statik (Pikachu, Élektek…) 30 % de chance de ralentir un attaquant au corps à corps
