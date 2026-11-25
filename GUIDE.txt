@@ -338,3 +338,63 @@ V00.37.00
                         stick droit = faire défiler ; la souris reprend la main dès qu'elle bouge
    Placement auto       utilise seulement les Pokémon affichés par le filtre de type et la recherche par nom sous le terrain
                         (et respecte les règles de la place d'arène)
+
+V00.38.00
+   XP des victoires     calculée sur le niveau moyen des ennemis (et plus seulement sur le numéro du tableau) :
+                        en mode Maître, le tableau 1 a des ennemis au niveau de ton meilleur Pokémon, donc il donne
+                        autant d'XP qu'un tableau normal de ce niveau ; +10 % par mode Maître terminé
+                        exemple : ennemis niveau 100 → environ 3 500 XP par victoire (il faut 6 010 XP pour passer du niveau 100 au 101)
+                        les tableaux normaux ne changent pas
+
+V00.39.00
+   Fiche (📋)           nouveau tableau 📊 Stats : pour PV, Attaque, Att. Spé, Défense, Vitesse : base officielle → base en jeu,
+                        gène, valeur réelle, barre, et ce que ça donne en combat :
+                          PV : PV réels sur le terrain
+                          Attaque / Att. Spé : dégâts par coup (celle qui ne sert pas est grisée)
+                          Défense : % des dégâts reçus face à un Pokémon moyen et nombre de coups pour être K.O.
+                          Vitesse : temps entre deux attaques et cases par seconde
+                        + style (corps à corps / à distance) et dégâts par seconde ; ★ = stat de la super mutation
+
+V00.40.00
+   Placement auto       suit maintenant aussi le tri choisi sous le terrain (PC ou niveau, croissant ou décroissant,
+                        favoris, n°, récents, nom), en plus du filtre de type et de la recherche par nom :
+                        ex. Dragon + Niveau décroissant = les dragons les plus forts ; Niveau croissant = les plus faibles
+
+V00.41.00
+   Mode Maître          les ennemis ne dépendent plus du niveau de ton meilleur Pokémon : ils sont toujours plus forts
+                        qu'Arceus (Nv 252 au tableau 1000) ; niveau = Nv d'Arceus + niveau normal du tableau
+                        → Nv 258 au tableau 1, Nv 415 au tableau 500, Nv 501 au tableau 1000
+                        chaque nouveau mode Maître ajoute encore le niveau d'Arceus (Maître 2 : Nv 510 au tableau 1)
+                        l'XP suit ces niveaux (≈ 16 000 XP par victoire au tableau 1 du mode Maître)
+
+V00.42.00
+   Mode Maître I à V    chaque fois que tu bats Arceus en mode Maître, tu passes au suivant : Maître I, II, III, IV, V (max)
+                        niveaux des ennemis : I = 258 → 501 · II = 510 → 753 · III = 762 → 999 · IV et V = 999 partout
+   Niveau maximum       999 pour tous les Pokémon (l'XP s'arrête à 999)
+   Arène                niveau maximum des Pokémon de l'équipe : champion 100, Conseil 4 500, Maître 999 (experts 999) ;
+                        un Pokémon au-dessus ne peut pas servir pour prendre la place (placement refusé, auto le saute)
+                        un membre du Conseil 4 ou un Maître battu attend 24 h avant de retenter le Conseil 4 ou le Maître
+
+V00.43.00
+   Niveau max           le plafond 999 ne concerne que les Pokémon sauvages des tableaux ; tes Pokémon n'ont plus de limite
+                        (l'arène garde ses limites : champion 100, Conseil 4 500, Maître 999)
+   Placement auto       tri par niveau départagé par le PC (et l'inverse) ; message qui rappelle le filtre et le tri utilisés ;
+                        les Pokémon occupés (nid, entraînement, expédition, K.O., repos) sont ignorés
+
+V00.44.00
+   Modes précédents     dès le mode Maître I, un menu « Mode » apparaît à gauche de la navigation des tableaux (onglet Combat) :
+                        Normal, Maître I, II… et le mode actuel ; un mode déjà terminé a ses 1000 tableaux ouverts
+                        (récompenses de tableau déjà fait, l'XP suit le niveau des ennemis de ce mode)
+   Niveau max           999 pour tes Pokémon comme pour les sauvages (retour à la règle de la V00.42)
+
+V00.45.00
+   Mode Maître = suite  le tableau 1 du Maître I compte comme le tableau 1001, Maître II tableau 1 = 2001, etc.
+                        pour les pièces et l'XP (les niveaux des ennemis suivaient déjà) : tout continue d'augmenter
+                        pièces d'un tableau : 30 + 20 × tableau compté (×2,5 sur les boss), ex. Normal 1000 → Maître I 1 : 20 010 → 20 050
+                        … Maître V tableau 1000 : environ 120 000 pièces
+                        récompense des missions du jour : suit aussi ton record total (plus bloquée à 500)
+   Maître IV            ennemis et boss avec des gènes parfaits (31 partout), 1 ennemi de plus par tableau,
+                        œufs de boss 2 fois plus souvent shiny
+   Maître V             gènes parfaits, 2 ennemis de plus, boss avec 2 fois plus de PV, un talent pour chaque ennemi,
+                        œufs de boss 3 fois plus souvent shiny
+   Succès et titres     « Maître III » (vaincre Arceus en Maître III, 500 000 pièces) et « Maître V » (2 000 000 pièces)

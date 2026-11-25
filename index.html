@@ -223,6 +223,9 @@ html,body{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 @media (max-height:500px){header{position:static}}
 #gpc{position:fixed;left:0;top:0;width:26px;height:26px;margin:-4px 0 0 -4px;z-index:9999;pointer-events:none;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 26 26'%3E%3Cpath d='M3 2 L3 21 L8 16 L12 24 L15 23 L11 15 L18 15 Z' fill='%23ffd23a' stroke='%233a2a1a' stroke-width='2' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat;filter:drop-shadow(1px 2px 0 rgba(0,0,0,.4))}
 #gpc[hidden]{display:none}.gphov{outline:3px solid #ffb02a!important;outline-offset:2px}
+.statbox{margin:4px 0 8px}.stt{border-collapse:collapse;width:100%;font-size:13px}.stt th{text-align:left;font-size:11px;color:#8a6a3a;padding:2px 4px}.stt td{padding:3px 4px;border:0;border-top:1px dashed #e0cda8;vertical-align:middle;background:none}
+.stt td.num{text-align:right;white-space:nowrap}.stt td.big{font-weight:800;font-size:15px}.stt td.bar{width:26%}.stt td.bar i{display:block;height:10px;border-radius:5px;border:1px solid rgba(0,0,0,.25)}.stt td.eff{font-size:12px}.stt tr.off td{opacity:.45}
+@media (max-width:760px){.stt td.bar{display:none}.stt{font-size:12px}}
 </style>
 </head>
 <body>
@@ -273,7 +276,7 @@ html,body{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
    POKETABS EGGS COLLECTOR  (V00.01.00)
    Réglages rapides : objet T ci-dessous (durées en secondes, chances en 0..1)
    ===================================================================== */
-const VERSION='V00.38.00';
+const VERSION='V00.46.00';
 const T={
   breed:45,        // durée de base d'une ponte (s)
   hatch:75,        // durée de base d'éclosion (s), modulée par l'espèce (stats totales et rareté)
@@ -425,7 +428,7 @@ function addMon(o){const m=Object.assign({u:SAVE.uid++,xp:0,mut:0,sh:false,born:
 function randGenes(a,b){const g={};GK.forEach(k=>g[k]=ri(a,b));return g}
 
 /* ---------- niveaux et évolution ---------- */
-function gainXP(m,x){m.xp+=x*(m.pk?T.pkXp:1)*(m.item==='luckyegg'?1.5:m.item==='expshare'?2:1);let up=false;while(m.xp>=need(m.lv)){m.xp-=need(m.lv);m.lv++;up=true}if(up){dirty=true;checkEvo(m)}}
+function gainXP(m,x){m.xp+=x*(m.pk?T.pkXp:1)*(m.item==='luckyegg'?1.5:m.item==='expshare'?2:1);let up=false;while(m.lv<LV_MAX&&m.xp>=need(m.lv)){m.xp-=need(m.lv);m.lv++;up=true}if(m.lv>=LV_MAX){m.lv=LV_MAX;m.xp=0}if(up){dirty=true;checkEvo(m)}}
 function checkEvo(m,quiet){let ev=null;for(let k=0;k<4;k++){const t=evoOpts(m);if(!t.length)break;const old=DEX[m.n].name;m.n=pick(t)[0];SAVE.st.evo=(SAVE.st.evo||0)+1;dexOwn(m.n,m.sh);ev=[old,DEX[m.n].name]}if(ev&&!quiet)toast(`✨ ${ev[0]} évolue en <b>${ev[1]}</b> !`);if(ev)dirty=true;return ev}
 
 /* ---------- œufs ---------- */
@@ -694,7 +697,7 @@ function filtHTML(ctx,sorts){const f=FILT[ctx]||(FILT[ctx]={q:'',t:'',s:(sorts||
   return `<div class="filt"><input id="fq_${ctx}" data-fq="${ctx}" placeholder="🔍 Rechercher un nom…" value="${esc(f.q)}"><select data-ft="${ctx}"><option value="">Tous les types</option>${TYPES_ALL.map(t=>`<option value="${t}" ${f.t===t?'selected':''}>${esc(TNAME[t]||t)}</option>`).join('')}</select><select data-fs="${ctx}">${(sorts||MON_SORTS).map(([k,t])=>`<option value="${k}" ${f.s===k?'selected':''}>${t}</option>`).join('')}</select></div>`}
 function applyFilt(L,ctx){const f=FILT[ctx]||(FILT[ctx]={q:'',t:'',s:'pc'}),q=norm(f.q.trim());
   L=L.filter(m=>(!f.t||DEX[m.n].t1===f.t||DEX[m.n].t2===f.t)&&(!q||norm(DEX[m.n].name).includes(q)));
-  const S={pc:(a,b)=>pc(b)-pc(a),pcA:(a,b)=>pc(a)-pc(b),lv:(a,b)=>b.lv-a.lv,lvA:(a,b)=>a.lv-b.lv,fav:(a,b)=>(b.fav?1:0)-(a.fav?1:0)||pc(b)-pc(a),dex:(a,b)=>a.n-b.n||b.lv-a.lv,new:(a,b)=>(b.born||0)-(a.born||0),name:(a,b)=>DEX[a.n].name.localeCompare(DEX[b.n].name)}[f.s]||((a,b)=>pc(b)-pc(a));
+  const S={pc:(a,b)=>pc(b)-pc(a)||b.lv-a.lv,pcA:(a,b)=>pc(a)-pc(b)||a.lv-b.lv,lv:(a,b)=>b.lv-a.lv||pc(b)-pc(a),lvA:(a,b)=>a.lv-b.lv||pc(a)-pc(b),fav:(a,b)=>(b.fav?1:0)-(a.fav?1:0)||pc(b)-pc(a),dex:(a,b)=>a.n-b.n||b.lv-a.lv,new:(a,b)=>(b.born||0)-(a.born||0),name:(a,b)=>DEX[a.n].name.localeCompare(DEX[b.n].name)}[f.s]||((a,b)=>pc(b)-pc(a));
   return L.sort(S)}
 /* œufs : mêmes filtres (nom, type) + tri propre aux œufs */
 const EGG_SORTS=[['bag','Ordre du sac'],['new','Pas encore au Pokédex d\'abord'],['rar','Plus rares d\'abord'],['name','Nom (A à Z)'],['lv','Niveau décroissant']];
@@ -991,7 +994,13 @@ const bestLevel=()=>Math.max(5,...SAVE.mons.map(m=>m.lv));
 function finalForm(n,R){for(let k=0;k<4;k++){const t=evoTargets(n);if(!t.length)break;n=t[Math.floor(R()*t.length)]}return n}
 /* niveau ennemi : de 2 au tableau 1 jusqu'à 100 au tableau 240 ; en mode Maître, niveau du meilleur Pokémon du joueur */
 /* niveau des ennemis sans plafond : ~17 au tableau 10, ~62 au 100, ~107 au 250, ~250 au 1000 */
-function enemyLv(stage){return SAVE.cycle?bestLevel():Math.max(3,Math.round(3+3.4*Math.pow(stage,.62)))}
+/* mode Maître : chaque tableau est plus fort qu'Arceus (boss final du tableau 1000), puis la courbe normale s'ajoute ; +1 Arceus par mode Maître */
+const LV_MAX=999,MAX_CYCLE=5,ROMAN=['','I','II','III','IV','V'];const cycName=c=>'Maître '+(ROMAN[c]||c);
+const lvCurve=st=>Math.max(3,Math.round(3+3.4*Math.pow(st,.62)));const ARCEUS_LV=()=>lvCurve(MAXST)+3;
+/* mode joué (on peut rejouer un mode Maître précédent ou le mode normal) */
+const effSt=st=>PCY()*MAXST+st;
+const PCY=()=>{const c=SAVE.cycle||0;return SAVE.pc!=null&&SAVE.pc>=0&&SAVE.pc<c?SAVE.pc:c};const stBest=()=>PCY()<(SAVE.cycle||0)?MAXST:SAVE.best;const cycLbl=c=>c?cycName(c):'Normal';
+function enemyLv(stage){const c=PCY();return Math.min(LV_MAX,c?ARCEUS_LV()*c+lvCurve(stage):lvCurve(stage))}
 const IMG={};function img(src){if(!IMG[src]){const i=new Image();i.onload=()=>i.ok=1;i.onerror=()=>i.bad=1;i.src=src;IMG[src]=i}return IMG[src]}
 function noiseFn(seed){const R=rng(seed);const P=new Float32Array(64*64).map(()=>R());const v=(x,y)=>P[((y&63)*64)+(x&63)];
   return(x,y)=>{const xi=Math.floor(x),yi=Math.floor(y),xf=x-xi,yf=y-yi,sx=xf*xf*(3-2*xf),sy=yf*yf*(3-2*yf);const a=v(xi,yi),b=v(xi+1,yi),c=v(xi,yi+1),d=v(xi+1,yi+1);return a+(b-a)*sx+(c-a)*sy+(a-b-c+d)*sx*sy}}
@@ -1129,47 +1138,49 @@ function buildField(M,sources,mode){const F=new Float32Array(GW*GH).fill(Infinit
 /* plus le niveau dépasse le seuil d'évolution, plus la forme évoluée est probable */
 function evolveTo(n,lv,R){for(let k=0;k<3;k++){const t=evoTargets(n);if(!t.length)break;const L=evoLevel(n);const p=lv<L-4?0:lv<L?.12:clamp(.45+(lv-L)*.06,0,.95);if(R()>=p)break;n=t[Math.floor(R()*t.length)]}return n}
 function genEnemies(stage,M){
-  const cyc=SAVE.cycle||0,R=rng(stage*131+7+cyc*7919),bi=M.bi,lv=enemyLv(stage);
-  const cnt=Math.min(3+Math.floor(stage/5),14),rarCap=cyc?2:stage<15?1:2,gmax=cyc?31:Math.min(31,8+Math.floor(stage/2)),gmin=cyc?15:Math.min(20,Math.floor(stage/8));
+  const cyc=PCY(),R=rng(stage*131+7+cyc*7919),bi=M.bi,lv=enemyLv(stage);
+  const cnt=Math.min(3+Math.floor(stage/5),14)+(cyc>=5?2:cyc>=4?1:0),rarCap=cyc?2:stage<15?1:2,gmax=cyc?31:Math.min(31,8+Math.floor(stage/2)),gmin=cyc>=4?31:cyc?15:Math.min(20,Math.floor(stage/8));
   const inHab=d=>HAB[d.n]?HAB[d.n].includes(bi.hab):(bi.types.includes(d.t1)||bi.types.includes(d.t2));
   const base=EGG_SPECIES.map(n=>DEX[n]).filter(d=>!LEGEND.has(d.n)&&d.n!==132);
   let pool=base.filter(d=>d.rar<=rarCap&&inHab(d));
   if(pool.length<3)pool=base.filter(d=>d.rar<=Math.max(rarCap,2)&&(inHab(d)||bi.types.includes(d.t1)||bi.types.includes(d.t2)));
   if(pool.length<3)pool=base.filter(d=>d.rar<=2);
   const list=[];
-  if(bi.victory||bi.valley){const P=bi.valley?LEGEND_POOL:VICTORY_POOL;for(let k=0;k<(bi.valley?Math.min(cnt,8):cnt);k++){const l=Math.max(1,lv+Math.floor(R()*3)-1);list.push({n:P[Math.floor(R()*P.length)],lv:l,g:randGenesR(R,20,31),sh:false})}
-    if(stage%5===0){const P2=bi.valley?[FINAL_BOSS]:VICTORY_POOL.slice(0,8);list[0]={n:P2[Math.floor(R()*P2.length)],lv:lv+3,g:randGenesR(R,25,31),sh:R()<.1,boss:1}}
+  if(bi.victory||bi.valley){const P=bi.valley?LEGEND_POOL:VICTORY_POOL;for(let k=0;k<(bi.valley?Math.min(cnt,8+(cyc>=5?2:cyc>=4?1:0)):cnt);k++){const l=Math.max(1,lv+Math.floor(R()*3)-1);list.push({n:P[Math.floor(R()*P.length)],lv:l,g:randGenesR(R,cyc>=4?31:20,31),sh:false})}
+    if(stage%5===0){const P2=bi.valley?[FINAL_BOSS]:VICTORY_POOL.slice(0,8);list[0]={n:P2[Math.floor(R()*P2.length)],lv:lv+3,g:randGenesR(R,cyc>=4?31:25,31),sh:R()<.1,boss:1,hpx:cyc>=5?2:1}}
     return list}
   for(let k=0;k<cnt;k++){const b=pool[Math.floor(R()*pool.length)].n,l=Math.max(1,lv+Math.floor(R()*3)-1);list.push({n:cyc?finalForm(b,R):evolveTo(b,l,R),lv:l,g:randGenesR(R,gmin,gmax),sh:false})}
   if(stage%5===0){const legend=stage%PER_BIOME===0;const ok=d=>legend?LEGEND.has(d.n)&&d.n!==150:d.rar>=2&&!LEGEND.has(d.n)&&d.n!==132;let bp=EGG_SPECIES.map(n=>DEX[n]).filter(d=>ok(d)&&inHab(d));if(!bp.length)bp=EGG_SPECIES.map(n=>DEX[n]).filter(d=>ok(d)&&(bi.types.includes(d.t1)||bi.types.includes(d.t2)));if(!bp.length)bp=EGG_SPECIES.map(n=>DEX[n]).filter(ok);
-    if(!legend){const W=[];bp.forEach(d=>{W.push(d);if(eggMethod(d.n)==='boss')W.push(d,d)});bp=W}const b=legend?legendBoss(stage):bp[Math.floor(R()*bp.length)].n,l=lv+3;list[0]={n:legend?b:cyc?finalForm(b,R):evolveTo(b,l+6,R),lv:l,g:randGenesR(R,10,31),sh:R()<.1,boss:1}}
+    if(!legend){const W=[];bp.forEach(d=>{W.push(d);if(eggMethod(d.n)==='boss')W.push(d,d)});bp=W}const b=legend?legendBoss(stage):bp[Math.floor(R()*bp.length)].n,l=lv+3;list[0]={n:legend?b:cyc?finalForm(b,R):evolveTo(b,l+6,R),lv:l,g:randGenesR(R,cyc>=4?31:10,31),sh:R()<.1,boss:1,hpx:cyc>=5?2:1}}
   return list;
 }
 function randGenesR(R,a,b){const g={};GK.forEach(k=>g[k]=a+Math.floor(R()*(b-a+1)));return g}
 /* --- état du combat --- */
 let B=null,battleSel=null,bSpeed=1,AUTO_SPEED=null;/* bSpeed reprend le réglage au début de chaque combat */
 function setupStage(st,defi,anim){
-  st=clamp(st,1,Math.min(MAXST,SAVE.best+1));let snap=null;const cv0=$('bcv');if(anim&&B&&cv0&&cv0.width&&cur==='battle'){snap=document.createElement('canvas');snap.width=CW;snap.height=CH;snap.getContext('2d').drawImage(cv0,0,0,CW,CH)}const M=genMap(st);
-  const E=genEnemies(st,M);if(defi)E.forEach(e=>{e.lv+=defi.plus||5});
+  st=clamp(st,1,defi?MAXST:Math.min(MAXST,stBest()+1));let snap=null;const cv0=$('bcv');if(anim&&B&&cv0&&cv0.width&&cur==='battle'){snap=document.createElement('canvas');snap.width=CW;snap.height=CH;snap.getContext('2d').drawImage(cv0,0,0,CW,CH)}const M=genMap(st);
+  let E=genEnemies(st,M);if(defi&&defi.elv)E=E.filter(e=>!e.boss).slice(0,defi.max||armyMax());if(defi){const RD=rng(st*41+(defi.elv||1));E.forEach(e=>{if(defi.elv){e.lv=Math.min(LV_MAX,defi.elv+Math.floor(RD()*3));e.n=evolveTo(baseOf(e.n),e.lv,RD);if(!(PCY()>=4))e.g=randGenesR(RD,8,24)}else e.lv+=defi.plus||5})}
   const free=[];for(let y=1;y<GH-1;y++)for(let x=EZ+1;x<GW-1;x++)free.push([x,y]);
   const R=rng(st*77+3);
   const units=E.map(e=>{const d=DEX[e.n],mode=unitMode(d,M.bi);let k=0,p;do{p=free.splice(Math.floor(R()*free.length),1)[0];k++}while(p&&!passable(M,p[1]*GW+p[0],mode)&&k<50);dexSee(e.n);return mkUnit(e,1,p[0]*TW+TW/2,p[1]*TW+TW/2,M)});
-  bSpeed=AUTO&&AUTO_SPEED?AUTO_SPEED:(typeof OPT!=='undefined'&&OPT.mspd)?OPT.mspd:st<=SAVE.best?4:((typeof OPT!=='undefined'&&OPT.speed)||1);B={stage:st,defi:defi||null,M,units,proj:[],fx:[],phase:'place',placed:[],t:0,fieldT:0,F:null,res:null,trans:snap?{t:0,d:1.15,prev:snap}:null};
-  battleSel=null;renderBattleHead();renderRoster();
+  bSpeed=AUTO&&AUTO_SPEED?AUTO_SPEED:(typeof OPT!=='undefined'&&OPT.mspd)?OPT.mspd:st<=stBest()?4:((typeof OPT!=='undefined'&&OPT.speed)||1);B={stage:st,defi:defi||null,M,units,proj:[],fx:[],phase:'place',placed:[],t:0,fieldT:0,F:null,res:null,trans:snap?{t:0,d:1.15,prev:snap}:null};
+  battleSel=null;renderBattleHead();renderRoster();if(typeof renderTop==='function'&&$('stN'))renderTop();
 }
 function mkUnit(m,team,x,y,M){const s=stats(m),d=DEX[m.n];const boss=!!m.boss;
-  return{m,team,n:m.n,sh:m.sh,x,y,hp:s.hp*T.hpMul*(boss?3:1),max:s.hp*T.hpMul*(boss?3:1),atk:s.atk,spa:s.spa,def:s.def,spd:s.spd,lv:m.lv,t1:d.t1,t2:d.t2,mode:unitMode(d,M.bi),ranged:RANGED.has(d.t1)||d.spa>d.atk+15,cd:rnd()*.6,dir:team?1:2,fr:0,ft:0,moving:false,boss,scale:boss?1.45:1,flash:0,tgt:null,tt:0,lunge:0}}
+  return{m,team,n:m.n,sh:m.sh,x,y,hp:s.hp*T.hpMul*(boss?3:1)*(m.hpx||1),max:s.hp*T.hpMul*(boss?3:1)*(m.hpx||1),atk:s.atk,spa:s.spa,def:s.def,spd:s.spd,lv:m.lv,t1:d.t1,t2:d.t2,mode:unitMode(d,M.bi),ranged:RANGED.has(d.t1)||d.spa>d.atk+15,cd:rnd()*.6,dir:team?1:2,fr:0,ft:0,moving:false,boss,scale:boss?1.45:1,flash:0,tgt:null,tt:0,lunge:0}}
 function renderBattleHead(){
-  if(!B)return;if(B.dmax){renderDmaxHead();return}const bi=B.M.bi,used=B.placed.length,lk=B.phase==='fight'||!!B.arena||!!B.defi||!!B.trans,last=Math.min(MAXST,SAVE.best+1),nx=lk||B.stage>=last;
+  if(!B)return;if(B.dmax){renderDmaxHead();return}const bi=B.M.bi,used=B.placed.length,lk=B.phase==='fight'||!!B.arena||!!B.defi||!!B.trans,last=Math.min(MAXST,stBest()+1),nx=lk||B.stage>=last;
   const nav=`<button class="sm" data-act="stGo" data-s="1" title="Premier tableau" ${lk||B.stage<=1?'disabled':''}>⏮</button><button class="sm" data-act="stGo" data-s="${B.stage-10}" title="10 tableaux en arrière" ${lk||B.stage<=1?'disabled':''}>⏪</button><button class="sm" data-act="stPrev" title="Tableau précédent" ${lk||B.stage<=1?'disabled':''}>◀</button>
-   <span class="title">${B.arena?'🏟️ '+seatLabel(B.arena.id)+' contre '+esc(B.arena.x.name)+' ('+ruleTxt(B.arena.rule)+') · ':''}${B.defi?'🎯 DÉFI : '+esc(B.defi.txt)+' · ':''}${SAVE.cycle?'Maître '+(SAVE.cycle>1?SAVE.cycle+' ':'')+'· ':''}Tableau ${B.stage}/${MAXST}${B.stage%PER_BIOME===0?' · BOSS LÉGENDAIRE':B.stage%5===0?' · BOSS':''}</span>
+   <span class="title">${B.arena?'🏟️ '+seatLabel(B.arena.id)+' contre '+esc(B.arena.x.name)+' ('+ruleTxt(B.arena.rule)+') · ':''}${B.defi?'🎯 DÉFI : '+esc(B.defi.txt)+' · '+esc(B.defi.bio||B.M.bi.name):(PCY()?cycName(PCY())+' · ':'')+'Tableau '+B.stage+'/'+MAXST+(B.stage%PER_BIOME===0?' · BOSS LÉGENDAIRE':B.stage%5===0?' · BOSS':'')}</span>
    <button class="sm" data-act="stNext" title="Tableau suivant" ${nx?'disabled':''}>▶</button><button class="sm" data-act="stGo" data-s="${B.stage+10}" title="10 tableaux en avant" ${nx?'disabled':''}>⏩</button><button class="sm" data-act="stGo" data-s="${last}" title="Dernier tableau atteint (${last})" ${nx?'disabled':''}>⏭</button><input id="stJump" type="number" min="1" max="${last}" placeholder="N°" style="width:62px" ${lk?'disabled':''} title="Aller au tableau…"><button class="sm" data-act="stJump" ${lk?'disabled':''}>Aller</button>`;
   const info=`<span class="biome">${bi.arena?'🏟️ Arène · '+seatLabel(B.arena?B.arena.id:'p1'):bi.temple?"Temple d'Arceus · combat final":bi.valley?'Vallée des légendes · '+(B.stage-MAXST+5)+'/5':bi.victory?'Route Victoire · '+((B.stage-1)%PER_BIOME+1)+'/'+(PER_BIOME-5):'Biome '+(Math.floor((B.stage-1)/PER_BIOME)+1)+'/'+(BIOMES.length-1)+' : '+bi.name+' · '+((B.stage-1)%PER_BIOME+1)+'/'+PER_BIOME}</span>${B.M.hasMud?`<span class="biome" title="La boue ralentit les Pokémon qui ne volent pas">🟤 Boue</span>`:''}${B.M.lay?`<span class="biome" title="Falaises : personne ne passe, même les volants. Rochers : seuls les volants passent.">⛰ ${LAYN[B.M.lay]}</span>`:''}${B.M.blk?`<span class="biome" style="background:#ffd98a">⚠ ${B.M.blk==='vide'?'Crevasse : seuls les volants passent':B.M.blk==='lave'?'Lave sans pont : Pokémon Feu ou volants':'Rivière sans pont : nageurs ou volants'}</span>`:''}<span class="biome">Ennemis : ${B.units.filter(u=>u.team).length} · Nv ≈ ${enemyLv(B.stage)}</span>`;
   const army=B.phase==='place'?`<span>Armée : <b>${used}/${SAVE.army}</b></span><button class="sm" data-act="autoPlace">Placement auto</button>${presetSelHTML()}<button class="sm" data-act="presets" title="Enregistrer ou charger une équipe">💾 Équipes</button><button class="sm" data-act="clearPlace">Vider</button>`:`<span>Armée : <b>${B.units.filter(u=>u.team===0&&u.hp>0).length}/${used}</b> debout</span>`;
   const fight=`<button class="sm" data-act="speed" title="Vitesse du combat (x1, x2, x4), gardée pour les combats suivants">Vitesse ×${bSpeed}</button>${B.phase==='place'?`<button class="go" data-act="fight" ${used?'':'disabled'}>⚔ Combat !</button>`:''}<button class="sm ${AUTO?'go':''}" data-act="autoRun" title="Rejoue automatiquement les tableaux suivants avec la même armée, jusqu'à une défaite">🔁 Auto ${AUTO?'ON':'OFF'}</button>${B.phase==='fight'?`<button class="sm" data-act="flee">Abandonner</button>`:''}<button class="sm" data-act="bfull" title="Plein écran">${document.body.classList.contains('bfull')?'⤡ Quitter':'⤢ Plein écran'}</button>`;
-  $('bhead').innerHTML=`<div class="bhrow"><div class="bhg"><span class="lab">Tableau</span>${nav}</div><div class="bhg"><span class="lab">Infos</span>${info}</div></div>
+  const cycSel=SAVE.cycle?`<select id="cycSel" title="Rejouer un mode précédent (tous ses tableaux sont ouverts)" ${lk?'disabled':''}>${Array.from({length:SAVE.cycle+1},(_,c)=>`<option value="${c}" ${c===PCY()?'selected':''}>${cycLbl(c)}${c===SAVE.cycle?' (actuel)':''}</option>`).join('')}</select>`:'';
+  $('bhead').innerHTML=`<div class="bhrow"><div class="bhg"><span class="lab">Tableau</span>${cycSel}${nav}</div><div class="bhg"><span class="lab">Infos</span>${info}</div></div>
    <div class="bhrow"><div class="bhg"><span class="lab">Armée</span>${army}</div><div class="bhg"><span class="lab">Combat</span>${fight}</div></div>
    <div class="bhrow syn">${synHTML(B.placed)}</div>`;
+  const cs=$('cycSel');if(cs)cs.onchange=e=>{const c=+e.target.value;SAVE.pc=c<(SAVE.cycle||0)?c:null;dirty=true;saveGame();setupStage(c<(SAVE.cycle||0)?1:SAVE.best+1);renderTop();toast(c?`🔥 ${cycName(c)}${c<SAVE.cycle?' : mode déjà terminé, tous les tableaux sont ouverts':''}`:'Mode normal : tous les tableaux sont ouverts')}
 }
 FILT_R.roster=()=>renderRoster();
 function renderRoster(){
@@ -1188,7 +1199,7 @@ function placeAt(px,py){
   const tx=Math.floor(px/TW),ty=Math.floor(py/TW);if(tx>PZB()){toast('Place ton armée dans la zone bleue, à gauche.');return}
   const m=mon(battleSel);if(!m)return;
   if(B.defi&&!defiOk(m)){toast('Ce Pokémon ne respecte pas la règle du défi.');return}
-  if(B.arena){const r=B.arena.rule;if(r.nolegend&&LEGEND.has(m.n)){toast('Pas de légendaire pour cette place.');return}if(r.type&&DEX[m.n].t1!==r.type&&DEX[m.n].t2!==r.type){toast('Seulement des Pokémon de type '+(TNAME[r.type]||r.type)+'.');return}}
+  if(B.arena){const r=B.arena.rule;if(r.maxLv&&m.lv>r.maxLv){toast('Niveau '+r.maxLv+' maximum pour cette place.');return}if(r.nolegend&&LEGEND.has(m.n)){toast('Pas de légendaire pour cette place.');return}if(r.type&&DEX[m.n].t1!==r.type&&DEX[m.n].t2!==r.type){toast('Seulement des Pokémon de type '+(TNAME[r.type]||r.type)+'.');return}}
   if(!passable(B.M,ty*GW+tx,unitMode(DEX[m.n],B.M.bi))){toast('Ce Pokémon ne peut pas se placer ici.');return}
   if(B.placed.some(p=>Math.floor(p.x/TW)===tx&&Math.floor(p.y/TW)===ty))return;
   const ex=B.placed.findIndex(p=>p.u===m.u);
@@ -1199,8 +1210,8 @@ function placeAt(px,py){
   renderBattleHead();renderRoster();
 }
 function autoPlace(){
-  B.placed=[];const cross=m=>{if(!B.M.blk)return 0;const md=unitMode(DEX[m.n],B.M.bi);return md==='fly'||(B.M.blk!=='vide'&&md==='swim')?0:1};const R0=B.arena&&B.arena.rule;let nl=0;const L=applyFilt(freeMons(),'roster').filter(m=>(!B.defi||defiOk(m))&&!(R0&&R0.nolegend&&LEGEND.has(m.n))&&!(R0&&R0.type&&DEX[m.n].t1!==R0.type&&DEX[m.n].t2!==R0.type)).sort((a,b)=>cross(a)-cross(b)||pc(b)-pc(a)).filter(m=>!(R0&&R0.maxLeg&&LEGEND.has(m.n)&&++nl>R0.maxLeg)).slice(0,B.defi&&B.defi.max?B.defi.max:armyMax());
-  const f=FILT.roster;if(f&&(f.q||f.t)&&!L.length)toast('Aucun Pokémon libre ne correspond au filtre.');
+  B.placed=[];const cross=m=>{if(!B.M.blk)return 0;const md=unitMode(DEX[m.n],B.M.bi);return md==='fly'||(B.M.blk!=='vide'&&md==='swim')?0:1};const R0=B.arena&&B.arena.rule;let nl=0;const L=applyFilt(freeMons(),'roster').filter(m=>(!B.defi||defiOk(m))&&!(R0&&R0.maxLv&&m.lv>R0.maxLv)&&!(R0&&R0.nolegend&&LEGEND.has(m.n))&&!(R0&&R0.type&&DEX[m.n].t1!==R0.type&&DEX[m.n].t2!==R0.type)).filter(m=>!(R0&&R0.maxLeg&&LEGEND.has(m.n)&&++nl>R0.maxLeg)).slice(0,B.defi&&B.defi.max?B.defi.max:armyMax());
+  const f=FILT.roster||{};if((f.q||f.t)&&!L.length)toast('Aucun Pokémon libre ne correspond au filtre.');else{const st=(MON_SORTS.find(x=>x[0]===f.s)||MON_SORTS[0])[1];toast(`⚡ Placement auto : ${L.length} Pokémon${f.t?' '+(TNAME[f.t]||f.t):''}${f.q?' « '+esc(f.q)+' »':''}, ${st.toLowerCase()} (les Pokémon occupés sont ignorés)`)}
   const pz=PZB(),spots=[];for(let x=pz-1;x>=1;x--)for(let y=B.dmax?1:2;y<GH-(B.dmax?1:2);y++)spots.push([x,y]);
   spots.sort((a,b)=>(b[0]-a[0])*3+(Math.abs(a[1]-GH/2)-Math.abs(b[1]-GH/2))/2);
   L.forEach(m=>{const md=unitMode(DEX[m.n],B.M.bi);const melee=!(RANGED.has(DEX[m.n].t1)||DEX[m.n].spa>DEX[m.n].atk+15);
@@ -1220,11 +1231,26 @@ function placeFrom(list){const used=new Set();B.placed=[];
 const NPRESET=30;
 function presets(){SAVE.presets=SAVE.presets||[];return SAVE.presets}
 function presetSelHTML(){const P=presets();return `<select data-act-preset title="Placer une équipe enregistrée"><option value="">Équipe…</option>${Array.from({length:NPRESET},(_,k)=>P[k]?`<option value="${k}">${k+1}. ${esc(P[k].name)} (${P[k].list.length})</option>`:'').join('')}</select>`}
+/* fiche : stats réelles et ce qu'elles font en combat */
+function statsHTML(m){const d=DEX[m.n],S=stats(m),L=m.lv,g=m.g,rg=RANGED.has(d.t1)||d.spa>d.atk+15;
+  const ref=Math.floor(((2*SMOOTH(180)+31)*L/100+5)*1.1),refHP=Math.floor(((2*SMOOTH(180)+31)*L/100+L+10)*1.1);
+  const mvp=Math.max(...movesOf(m).map(x=>x.pow)),dRef=Math.floor((2*75+15)*L/100+5),P=rg?S.spa:S.atk;
+  const hitD=((2*L/5+2)*T.pow*(mvp/75)*P/Math.max(1,dRef))/50+2,cd=clamp(1.4-S.spd/250,.55,1.4),mvs=(28+S.spd*.4)/TW;
+  const gk={hp:'hp',atk:'atk',def:'def',spa:'atk',spd:'spd'};
+  const row=(k,lab,val,max,eff,used=true)=>`<tr class="${used?'':'off'}"><td><b>${lab}</b>${m.bst===k?' <span title="Super mutation">★</span>':''}</td><td class="num">${d[k]}<small class="muted"> → ${k==='hp'&&d.hp<=1?1:SMOOTH(d[k])}</small></td><td class="num">${g[gk[k]]}</td><td class="num big">${fmt(val)}</td><td class="bar"><i style="width:${Math.min(100,val/max*100)}%;background:${k==='hp'?'#6bd36b':k==='atk'?'#ff7a4a':k==='spa'?'#c46bff':k==='def'?'#ffc94a':'#4ac4ff'}"></i></td><td class="eff">${eff}</td></tr>`;
+  return `<div class="statbox"><table class="stt"><tr><th>Stat</th><th title="Stat de base officielle → stat de base en jeu (lissée)">Base</th><th title="Gène, de 0 à 31">Gène</th><th>Valeur</th><th></th><th>En combat</th></tr>
+   ${row('hp','PV',S.hp,refHP,`<b>${fmt(Math.round(S.hp*T.hpMul))}</b> PV sur le terrain`)}
+   ${row('atk','Attaque',S.atk,ref,rg?'pas utilisée (il attaque à distance)':`≈ <b>${Math.round(hitD)}</b> dégâts par coup`,!rg)}
+   ${row('spa','Att. Spé',S.spa,ref,rg?`≈ <b>${Math.round(hitD)}</b> dégâts par tir`:'pas utilisée (il frappe au corps à corps)',rg)}
+   ${row('def','Défense',S.def,ref,`reçoit <b>${Math.round(dRef/Math.max(1,S.def)*100)} %</b> des dégâts d'un Pokémon moyen · K.O. en ≈ <b>${Math.ceil(S.hp*T.hpMul/(((2*L/5+2)*T.pow*dRef/Math.max(1,S.def))/50+2))}</b> coups moyens`)}
+   ${row('spd','Vitesse',S.spd,ref,`1 attaque toutes les <b>${cd.toFixed(2).replace('.',',')} s</b> · ${mvs.toFixed(1).replace('.',',')} case/s`)}
+   </table><p class="muted small">Style : <b>${rg?'🎯 à distance (Att. Spé)':'👊 corps à corps (Attaque)'}</b> · ≈ <b>${Math.round(hitD/cd)}</b> dégâts par seconde contre un Pokémon moyen de même niveau (attaque de puissance ${mvp}, sans efficacité de type, talents ni bonus d'équipe).${m.sh?' Shiny : +10 % sur tout.':''}${m.pk?' Pokérus : stats en plus.':''} Pas de Défense Spé dans le jeu : la Défense protège de tout.</p></div>`}
 function openMonInfo(u){const m=mon(u);if(!m)return;const d=DEX[m.n],hap=m.hap==null?70:m.hap,inv=SAVE.inv||{};
   const stones=Object.keys(inv).filter(id=>ITEMS[id]&&ITEMS[id].k==='stone'&&(EVO[m.n]||[]).some(e=>e[2]==='stone:'+id));
   const held=Object.keys(inv).filter(id=>ITEMS[id]&&ITEMS[id].k==='held');
   const evs=(EVO[m.n]||[]).map(([to,l,c])=>`<li>${esc(DEX[to].name)}${c&&(c.startsWith('stone')||c.startsWith('hap'))?'':' au niveau '+l}${condTxt(c)}</li>`).join('');
   openModal(`<h2>${esc(d.name)} <small class="muted">Nv ${m.lv}</small></h2><div class="flexr">${monCard(m)}<div style="flex:1;min-width:240px">
+   <p><b>📊 Stats</b></p>${statsHTML(m)}
    <p><b>Déplacement</b> : ${moveHTML(m.n)}</p>
    ${ABIL_OF[m.n]?`<p><b>Talent</b> : ✨ <b>${ABIL[ABIL_OF[m.n]][0]}</b> · ${ABIL[ABIL_OF[m.n]][1]}</p>`:''}
    <p><b>Attaques</b> : ${movesOf(m).map(x=>`<span class="ty" style="background:${TCOL[x.type]}">${esc(x.name)} · ${x.pow}</span>`).join(' ')}</p>
@@ -1272,21 +1298,28 @@ function daily(){const k=dayKey();if(!SAVE.daily||SAVE.daily.day!==k){const R=rn
     list.push({key,txt:txt.replace('{n}',goal),goal,base:SAVE.st[key]||0,claimed:false})}
   SAVE.daily={day:k,list,bonus:false}}return SAVE.daily}
 const misProg=x=>Math.min(x.goal,(SAVE.st[x.key]||0)-x.base);
-const misReward=()=>rp(400+30*Math.min(SAVE.best,500));
+const misReward=()=>{const mb=Math.max(SAVE.maxBest||0,SAVE.best||0);return rp(400+30*Math.min(mb,500)+10*Math.max(0,Math.min(mb,6000)-500))};
 function misClaim(i){const D=daily(),x=D.list[i];if(!x||x.claimed||misProg(x)<x.goal)return;x.claimed=true;const c=misReward();SAVE.coins+=c;let it=null;if(rnd()<.4){it=rollItem();invAdd(it)}
   toast(`🎯 Mission réussie : +${fmt(c)} pièces${it?' et '+ITEMS[it].n:''}`);dirty=true;saveGame();renderTop();renderAdv()}
 function misBonus(){const D=daily();if(D.bonus||!D.list.every(x=>x.claimed))return;if(bagFull()){bagMsg();return}D.bonus=true;const e=superEgg();e.lv=15;addEgg(e);toast(`🎁 Bonus du jour : un super œuf rare de ${esc(DEX[e.n].name)} niveau 15 !`);dirty=true;saveGame();renderAdv()}
 
 /* ---------- tableaux défi (2 par jour) ---------- */
-const DEFI_K=[['mono','Seulement des Pokémon {t}'],['baby','Seulement des Pokémon non évolués'],['few','3 Pokémon maximum'],['nolegend','Sans Métamorph ni légendaire, ennemis +10 niveaux'],['lvl','Pokémon de niveau {l} maximum']];
-function defis(){const k=dayKey();if(!SAVE.defis||SAVE.defis.day!==k){const R=rng(k*97+13);const pool=DEFI_K.slice();const list=[];
-  for(let i=0;i<2;i++){const d=pool.splice(Math.floor(R()*pool.length),1)[0];const t=TYPES_ALL[Math.floor(R()*TYPES_ALL.length)];const stage=clamp(Math.max(5,SAVE.best)-Math.floor(R()*10),5,MAXST-6);
-    const l=Math.max(10,Math.round(enemyLv(stage)*.9/5)*5);
-    list.push({k:d[0],t,l,stage,txt:d[1].replace('{t}',TNAME[t]||t).replace('{l}',l),max:d[0]==='few'?3:0,plus:d[0]==='nolegend'?10:5,done:false})}
-  SAVE.defis={day:k,list}}return SAVE.defis}
+const DEFI_K=[['mono','Seulement des Pokémon {t}'],['baby','Seulement des Pokémon non évolués'],['few','3 Pokémon maximum'],['nolegend','Sans Métamorph ni légendaire, ennemis +5 niveaux'],['lvl','Pokémon de niveau {l} maximum']];
+/* défis du jour : un combat dans un biome (pas un tableau). Les ennemis ont le niveau de TES Pokémon autorisés
+   (niveau max imposé + 1 à 3 pour « niveau max », sinon niveau moyen de tes meilleurs Pokémon autorisés + 2, ou + 5 sans légendaire) */
+function defiBiomes(){return (SAVE.cycle||0)>0||(SAVE.maxBest||0)>=MAXST?BIOMES.slice(0,BIOMES.length-1):biomesOpen()}
+function defis(){const k=dayKey();if(!SAVE.defis||SAVE.defis.day!==k||!SAVE.defis.v2){const old=SAVE.defis&&SAVE.defis.day===k?SAVE.defis.list:null;const R=rng(k*97+13);const pool=DEFI_K.slice();const list=[];
+  const top=[...SAVE.mons].sort((a,b)=>b.lv-a.lv).slice(0,6),P=top.length?top.reduce((a,m)=>a+m.lv,0)/top.length:10;const BI=defiBiomes();
+  for(let i=0;i<2;i++){const d=pool.splice(Math.floor(R()*pool.length),1)[0];const t=TYPES_ALL[Math.floor(R()*TYPES_ALL.length)];
+    const bi=BI[Math.floor(R()*BI.length)],bix=BIOMES.indexOf(bi);let stage=bix*PER_BIOME+1+Math.floor(R()*(PER_BIOME-1));if(stage%5===0)stage++;stage=clamp(stage,1,MAXST-6);
+    const l=clamp(Math.round(P*.8/5)*5,10,LV_MAX);
+    list.push({k:d[0],t,l,stage,bio:bi.name,txt:d[1].replace('{t}',TNAME[t]||t).replace('{l}',l),max:d[0]==='few'?3:0,plus:d[0]==='nolegend'?5:2,done:!!(old&&old[i]&&old[i].done)})}
+  SAVE.defis={day:k,v2:1,list}}return SAVE.defis}
+function defiLv(d){if(d.k==='lvl')return Math.min(LV_MAX,d.l+1);const ok=m=>d.k==='mono'?(DEX[m.n].t1===d.t||DEX[m.n].t2===d.t):d.k==='baby'?baseOf(m.n)===m.n&&!LEGEND.has(m.n):d.k==='nolegend'?m.n!==132&&!LEGEND.has(m.n):true;
+  const L=SAVE.mons.filter(ok).sort((a,b)=>b.lv-a.lv).slice(0,d.max||Math.max(3,armyMax()));const a=L.length?L.reduce((x,m)=>x+m.lv,0)/L.length:5;return Math.min(LV_MAX,Math.round(a)+(d.plus||2))}
 function defiOk(m){const d=B&&B.defi;if(!d)return true;const x=DEX[m.n];
   if(d.k==='mono')return x.t1===d.t||x.t2===d.t;if(d.k==='baby')return baseOf(m.n)===m.n&&!LEGEND.has(m.n);if(d.k==='nolegend')return m.n!==132&&!LEGEND.has(m.n);if(d.k==='lvl')return m.lv<=d.l;return true}
-function defiStart(i){const D=defis(),d=D.list[i];if(!d||d.done)return;showTab('battle');AUTO=false;setupStage(Math.min(d.stage,SAVE.best+1),Object.assign({i},d));toast('🎯 Défi : '+d.txt)}
+function defiStart(i){const D=defis(),d=D.list[i];if(!d||d.done)return;showTab('battle');AUTO=false;const elv=defiLv(d);setupStage(d.stage,Object.assign({i,elv},d));toast(`🎯 Défi : ${d.txt} · ${d.bio} · ennemis niveau ${elv} à ${Math.min(LV_MAX,elv+2)}`)}
 function defiWin(){const D=defis(),d=D.list[B.defi.i];if(!d||d.done)return;d.done=true;const e=superEgg();e.lv=20;e.g=randGenes(20,31);const ok=addEgg(e,true);const it=pick(['luckyegg','soothebell','shiny','dawn','dusk','ovalcharm','amuletcoin']);invAdd(it);const c=rp(1000+60*Math.min(SAVE.best,500));SAVE.coins+=c;
   SAVE.st.defi=(SAVE.st.defi||0)+1;setTimeout(()=>toast(`🎯 Défi réussi : œuf de ${esc(DEX[e.n].name)} niveau 20, ${ITEMS[it].n} et ${fmt(c)} pièces !`),400)}
 
@@ -1304,7 +1337,7 @@ function renderAdv(){const now=Date.now(),X=SAVE.exps||[],D=daily(),DF=defis(),i
    ${D.list.map((x,i)=>{const pr=misProg(x);return `<div class="slotrow"><b>${esc(x.txt)}</b><div class="bar"><i style="width:${pr/x.goal*100}%"></i></div><span>${pr}/${x.goal}</span>${x.claimed?'✅':`<button class="go sm" data-act="misGet" data-i="${i}" ${pr>=x.goal?'':'disabled'}>+${fmt(misReward())} pièces</button>`}</div>`}).join('')}
    <p>${D.bonus?'🎁 Bonus du jour récupéré':`<button class="sm ${D.list.every(x=>x.claimed)?'go':''}" data-act="misBonus" ${D.list.every(x=>x.claimed)?'':'disabled'}>🎁 Bonus des 3 missions : super œuf rare niveau 15</button>`}</p></div>
    <div class="panel" style="margin-bottom:12px"><h3>⚔ Tableaux défi du jour <span class="muted">une règle spéciale, une récompense rare (œuf niveau 20, objet, pièces)</span></h3>
-   ${DF.list.map((d,i)=>`<div class="slotrow"><b>${esc(d.txt)}</b><span class="muted">Tableau ${d.stage} · ennemis +${d.plus} niveaux</span>${d.done?'✅ Réussi':`<button class="go sm" data-act="defiGo" data-i="${i}">Lancer le défi</button>`}</div>`).join('')}</div>
+   ${DF.list.map((d,i)=>`<div class="slotrow"><b>${esc(d.txt)}</b><span class="muted">${esc(d.bio||'')} · ennemis niveau ${defiLv(d)}${d.k==='lvl'?'':' (selon tes Pokémon autorisés)'}</span>${d.done?'✅ Réussi':`<button class="go sm" data-act="defiGo" data-i="${i}">Lancer le défi</button>`}</div>`).join('')}</div>
    <div class="panel"><h3>🎒 Sac d'objets</h3><div class="invgrid">${Object.keys(inv).filter(id=>ITEMS[id]).map(id=>{const it=ITEMS[id];return `<div class="invit">${itIc(id,32)}<b>${it.n} ×${inv[id]}</b><small>${esc(it.d||'')}</small>${it.k==='sell'?`<button class="sm" data-act="sellIt" data-id="${id}">Vendre</button>`:it.k==='nest'?SAVE.nests.map((n,k)=>n.oval?'':`<button class="sm" data-act="ovalUse" data-i="${k}">Nid ${k+1}</button>`).join(''):it.k==='ko'?'<small class="muted">Pour les Pokémon K.O. : onglet Pokémon</small>':it.k==='stone'||it.k==='held'||it.k==='use'?'<small class="muted">À utiliser depuis la fiche d\'un Pokémon (📋 Fiche)</small>':''}</div>`}).join('')||'<p class="muted">Aucun objet. Les boss, les expéditions et les missions en donnent.</p>'}</div></div>`}
 
 /* =====================================================================
@@ -1328,8 +1361,8 @@ const seatKind=id=>id==='master'?'master':id[0]==='c'?'c4':id[0]==='p'?'champ':'
 const seatType=id=>id.startsWith('x_')?id.slice(2):null;
 const seatLabel=id=>{const k=seatKind(id);return k==='master'?'Maître':k==='c4'?'Conseil 4 ('+id.slice(1)+')':k==='champ'?'Champion d\'arène ('+id.slice(1)+')':'Expert '+(TNAME[seatType(id)]||seatType(id))};
 /* règle d'équipe de chaque place : experts = un seul type, légendaires permis ; champions et Conseil 4 = équipe d'un seul type sans légendaire ; Maître = sans légendaire */
-const seatRule=id=>{const k=seatKind(id);return k==='expert'?{type:seatType(id),mono:true,nolegend:false}:k==='master'?{mono:false,nolegend:false,maxLeg:1}:{mono:false,nolegend:true}};
-const ruleTxt=r=>(r.type?'équipe 100 % '+(TNAME[r.type]||r.type):r.mono?'équipe d\'un seul type':'types libres')+(r.nolegend?', sans légendaire':r.maxLeg?', 1 légendaire maximum':', légendaires permis');
+const seatRule=id=>{const k=seatKind(id);return k==='expert'?{type:seatType(id),mono:true,nolegend:false,maxLv:999}:k==='master'?{mono:false,nolegend:false,maxLeg:1,maxLv:999}:k==='c4'?{mono:false,nolegend:true,maxLv:500}:{mono:false,nolegend:true,maxLv:100}};
+const ruleTxt=r=>(r.type?'équipe 100 % '+(TNAME[r.type]||r.type):r.mono?'équipe d\'un seul type':'types libres')+(r.nolegend?', sans légendaire':r.maxLeg?', 1 légendaire maximum':', légendaires permis')+(r.maxLv&&r.maxLv<999?', niveau '+r.maxLv+' maximum':'');
 const monthKey=()=>new Date().toISOString().slice(0,7);
 async function arenaLoad(force){if(!CLOUD.db||ARENA.busy)return;if(!force&&ARENA.map&&Date.now()-ARENA.t<20000)return;ARENA.busy=true;
   try{let q=await CLOUD.db.collection('arena').get();let M={};q.docs.forEach(d=>M[d.id]=Object.assign({id:d.id},d.data()));
@@ -1360,16 +1393,19 @@ const seatOf=uid=>{const M=ARENA.map||{};return Object.keys(M).filter(id=>id!=='
 const myLadder=()=>CLOUD.user?seatOf(CLOUD.user.uid).find(id=>seatKind(id)!=='expert')||null:null;
 const myExpert=()=>CLOUD.user?seatOf(CLOUD.user.uid).find(id=>seatKind(id)==='expert')||null:null;
 /* meilleure équipe possible pour une règle (pour prendre une place libre ou mettre à jour la sienne) */
-function bestTeam(rule){const now=Date.now();let L=SAVE.mons.filter(m=>!(rule.nolegend&&LEGEND.has(m.n))&&!(m.rest>now)&&!(m.ko>now));
+function bestTeam(rule){const now=Date.now();let L=SAVE.mons.filter(m=>!(rule.maxLv&&m.lv>rule.maxLv)&&!(rule.nolegend&&LEGEND.has(m.n))&&!(m.rest>now)&&!(m.ko>now));
   const top=A=>{let nl=0;return A.slice().sort((a,b)=>pc(b)-pc(a)).filter(m=>!(rule.maxLeg&&LEGEND.has(m.n)&&++nl>rule.maxLeg)).slice(0,SAVE.army)};
   if(rule.type)L=L.filter(m=>DEX[m.n].t1===rule.type||DEX[m.n].t2===rule.type);
   else if(rule.mono){let best=[],bs=-1;TYPES_ALL.forEach(t=>{const T=top(L.filter(m=>DEX[m.n].t1===t||DEX[m.n].t2===t));const sc=T.reduce((a,m)=>a+pc(m),0);if(sc>bs){bs=sc;best=T}});L=best}
   return top(L).map((m,i)=>Object.assign(snapMon(m),{x:(PZ-1-(i%3)*2)*TW+TW/2,y:(3+Math.floor(i/3)*3)%(GH-2)*TW+TW/2}))}
-function teamOk(mons,rule){if(!mons.length)return 'Équipe vide';if(rule.maxLeg&&mons.filter(m=>LEGEND.has(m.n)).length>rule.maxLeg)return 'Un seul légendaire autorisé contre le Maître';if(rule.nolegend&&mons.some(m=>LEGEND.has(m.n)))return 'Pas de légendaire pour cette place';
+function teamOk(mons,rule){if(!mons.length)return 'Équipe vide';if(rule.maxLv&&mons.some(m=>m.lv>rule.maxLv))return 'Niveau '+rule.maxLv+' maximum pour cette place';if(rule.maxLeg&&mons.filter(m=>LEGEND.has(m.n)).length>rule.maxLeg)return 'Un seul légendaire autorisé contre le Maître';if(rule.nolegend&&mons.some(m=>LEGEND.has(m.n)))return 'Pas de légendaire pour cette place';
   if(rule.type&&!mons.every(m=>DEX[m.n].t1===rule.type||DEX[m.n].t2===rule.type))return 'Tous les Pokémon doivent être de type '+(TNAME[rule.type]||rule.type);
   if(rule.mono&&!rule.type){const c=TYPES_ALL.filter(t=>mons.every(m=>DEX[m.n].t1===t||DEX[m.n].t2===t));if(!c.length)return 'Tous les Pokémon doivent partager un même type'}return ''}
 /* qui peut défier ou prendre quelle place */
+/* un membre du Conseil 4 ou un Maître destitué attend 24 h avant de retenter le Conseil 4 ou le Maître */
+const LOCK_MS=864e5;function arenaLock(){const me=CLOUD.user&&CLOUD.user.uid,L=(ARENA.map&&ARENA.map.log&&ARENA.map.log.L)||[];if(!me)return 0;const e=L.filter(x=>x.du===me&&x.w&&['c4','master'].includes(seatKind(x.s))).pop();return e?Math.max(0,e.t+LOCK_MS-Date.now()):0}
 function canChallenge(id){const L=myLadder(),k=seatKind(id);
+  if((k==='c4'||k==='master')&&L!==id){const lk=arenaLock();if(lk)return '⏳ Destitué : tu pourras retenter dans '+fmtT(lk)}
   if(k==='expert')return CLOUD.user&&seatX(id).uid===CLOUD.user.uid?'':'ok';
   if(L===id)return '';
   if(k==='champ'){if(L&&seatKind(L)!=='champ')return 'Tu es au-dessus des champions';if(L)return 'Tu es déjà champion d\'arène';return 'ok'}
@@ -1402,7 +1438,7 @@ function renderArena(){const g=onlineGate();if(g)return g;if(!ARENA.map&&!ARENA.
   if(ARENA.err==='rules')return '<p>L\'arène n\'est pas encore activée dans Firebase (règle « arena »).</p>';if(ARENA.err)return '<p>Impossible de charger l\'arène. <button class="sm" data-act="arenaReload">Réessayer</button></p>';if(!ARENA.map)return '<p>Chargement…</p>';
   const d=new Date(),end=new Date(d.getFullYear(),d.getMonth()+1,1),days=Math.ceil((end-d)/864e5);
   const ex=(SAVE.expT||[]).map(t=>TNAME[t]||t);
-  return `<p class="muted">Bats l'équipe d'une place, en duel dans le stade, pour la prendre : ton équipe gagnante devient l'équipe de la place et elle est verrouillée tant que personne ne la bat (ou jusqu'à ce que tu montes plus haut avec une nouvelle équipe). 🤖 Les places sans joueur sont gardées par des bots. Parcours : champion d'arène (n'importe laquelle des ${NARENA}) → Conseil 4 → Maître. Tu ne peux tenir qu'une seule place parmi champion, Conseil 4 et Maître ; en montant, tu libères l'ancienne. Champions, Conseil 4 et Maître : types libres. Pas de légendaire chez les champions et au Conseil 4 ; un seul légendaire autorisé pour le Maître et pour qui l'affronte. 😈 Le siège de Maître est tenu par un boss PNJ en attendant qu'un joueur le batte. Les places d'expert se cumulent : expert de plusieurs types à la fois, en plus de ta place. Les experts jouent une équipe 100 % de leur type, légendaires permis. Fin du mois dans ${days} jour${days>1?'s':''} : les champions sont destitués.</p>
+  return `<p class="muted">Bats l'équipe d'une place, en duel dans le stade, pour la prendre : ton équipe gagnante devient l'équipe de la place et elle est verrouillée tant que personne ne la bat (ou jusqu'à ce que tu montes plus haut avec une nouvelle équipe). 🤖 Les places sans joueur sont gardées par des bots. Parcours : champion d'arène (n'importe laquelle des ${NARENA}) → Conseil 4 → Maître. Tu ne peux tenir qu'une seule place parmi champion, Conseil 4 et Maître ; en montant, tu libères l'ancienne. Champions, Conseil 4 et Maître : types libres. Pas de légendaire chez les champions et au Conseil 4 ; un seul légendaire autorisé pour le Maître et pour qui l'affronte. Niveau maximum des Pokémon : 100 pour les champions, 500 pour le Conseil 4, 999 pour le Maître. Un membre du Conseil 4 ou un Maître battu doit attendre 24 h avant de retenter le Conseil 4 ou le Maître. 😈 Le siège de Maître est tenu par un boss PNJ en attendant qu'un joueur le batte. Les places d'expert se cumulent : expert de plusieurs types à la fois, en plus de ta place. Les experts jouent une équipe 100 % de leur type, légendaires permis. Fin du mois dans ${days} jour${days>1?'s':''} : les champions sont destitués.</p>
    <div class="banner" style="margin:6px 0">💰 Revenu par heure tenue : 👑 Maître ${fmt(seatRate('master'))} · 🎖️ Conseil 4 ${fmt(seatRate('c1'))} · 🏟️ Champion d'arène ${fmt(seatRate('p1'))}. Versé chaque jour à ta première connexion.<br>✨ Expert d'un type : chance de shiny ×${EXP_SH} pour les Pokémon de ce type.${ex.length?` <b>Tu es expert : ${ex.join(', ')}</b>`:''}${(()=>{const P=SAVE.arP;return P&&(P.seat||P.pot>=1)?`<br><b>${P.seat?'Ta place : '+seatLabel(P.seat)+' · ':''}en attente : ${fmt(Math.floor(P.pot+(P.seat&&P.t?seatRate(P.seat)*(Date.now()-P.t)/3600000:0)))} pièces</b>`:''})()}</div>
    <h3>👑 Maître</h3><div class="arena">${seatCard('master')}</div>
    <h3>🎖️ Conseil 4</h3><div class="arena">${SEATS_C4.map(seatCard).join('')}</div>
@@ -1525,7 +1561,7 @@ function applySyn(){const A=synActive(B.placed).filter(x=>x.lvl);const me=B.unit
 function synInfo(){openModal(`<h2>Bonus d'équipe par type</h2><p class="muted">Chaque Pokémon compte pour ses deux types. Les bonus s'activent avec 5, 10 et 15 Pokémon <b>différents</b> du même type dans ton armée : deux Pokémon de la même espèce ne comptent qu'une fois.</p><table class="rank"><tr><th>Type</th><th>5</th><th>10</th><th>15</th></tr>${Object.keys(SYN).map(t=>`<tr><td><span class="ty" style="background:${TCOL[t]}">${SYN[t][0]} ${TNAME[t]}</span></td>${[1,2,3].map(l=>`<td>${synTxt(t,l)}</td>`).join('')}</tr>`).join('')}</table>`)}
 /* XP d'une victoire : suit le niveau des ennemis (mode Maître : ennemis au niveau de ton meilleur Pokémon dès le tableau 1) */
 const stEqOf=L=>Math.pow(Math.max(0,L-3)/3.4,1/.62);
-function winXP(st){const L=B&&B.eLv||enemyLv(st);return Math.round(15+14*Math.max(st,stEqOf(L))*(1+.1*(SAVE.cycle||0)))}
+function winXP(st){const L=B&&B.eLv||enemyLv(st);return Math.round(15+14*(B&&B.defi?stEqOf(L):Math.max(effSt(st),stEqOf(L)))*(B&&B.defi?1:1+.1*PCY()))}
 function startFight(){if(B){const E=B.units.filter(u=>u.team===1);B.eLv=E.length?E.reduce((a,u)=>a+u.lv,0)/E.length:0}
   if(!B.placed.length)return;if(B.arena){const bad=teamOk(B.placed.map(p=>mon(p.u)).filter(Boolean),B.arena.rule);if(bad){toast('🏟️ '+bad);return}}AUTO_LAST=B.placed.map(p=>({u:p.u,x:p.x,y:p.y}));
   B.placed=B.placed.filter(p=>{const m=mon(p.u);return m&&!monStatus(p.u)});
@@ -1590,7 +1626,8 @@ const ABIL={
 const ABIL_OF={};Object.entries(ABIL).forEach(([k,v])=>v[2].forEach(n=>ABIL_OF[n]=k));
 const abilHTML=n=>ABIL_OF[n]?`<span class="biome" title="${esc(ABIL[ABIL_OF[n]][1])}">✨ ${ABIL[ABIL_OF[n]][0]}</span>`:'';
 function abTxt(u,t,c){B.fx.push({k:'txt',x:u.x,y:u.y-46*u.scale,t:0,s:t,c:c||'#c9a0ff'})}
-function applyAbilities(){for(const u of B.units){u.ab=ABIL_OF[u.n]||null;if(!u.ab)continue;
+const AB_V=['intim','speedboost','guts','regen','multiscale','roughskin','sniper','static','poisonpt','moxie','sturdy'];
+function applyAbilities(){const allAb=PCY()>=5&&!B.arena&&!B.dmax&&!B.defi;for(const u of B.units){u.ab=ABIL_OF[u.n]||(allAb&&u.team===1?AB_V[(u.n*7+Math.round(u.x))%AB_V.length]:null);if(!u.ab)continue;
   if(u.ab==='camo')u.stealth=true;if(u.ab==='sniper')u.crit=Math.max(u.crit||0,.1);if(u.ab==='hugepower'||u.ab==='purepower')u.atk*=1.6;
   if(u.ab==='intim'){abTxt(u,'Intimidation !');B.units.forEach(v=>{if(v.team!==u.team&&!(v.intimN>=2)){v.atk*=.85;v.spa*=.85;v.intimN=(v.intimN||0)+1}})}}}
 function abilTick(dt){for(const u of B.units){if(u.psn>0&&u.hp>0){u.psn-=dt;u.hp-=u.max*.015*dt;u.psT=(u.psT||0)+dt;if(u.psT>1.5){u.psT=0;abTxt(u,'☠','#a050c0')}if(u.hp<=0){u.hp=0;B.fx.push({k:'poof',x:u.x,y:u.y,t:0})}}if(!u.ab||u.hp<=0)continue;
@@ -1648,12 +1685,12 @@ function stepBattle(dt){
   if(!a0||!a1||B.t>(B.dmax?240:FIGHT_T))endFight(a0&&!a1);
 }
 function endFight(win){if(B.dmax){dmaxEnd(win);return}
-  B.phase='end';const st=B.stage,first=win&&st>SAVE.best&&!B.defi&&!B.arena;
+  B.phase='end';const st=B.stage,first=win&&PCY()===(SAVE.cycle||0)&&st>SAVE.best&&!B.defi&&!B.arena;
   let coins=0,egg=null,xp=0;
   let drop=null;
-  if(win){coins=Math.round((30+st*20)*(st%5===0?2.5:1)*(first?1:.5)*(B.placed.some(p=>{const m=mon(p.u);return m&&m.item==='amuletcoin'})?1.5:1));if(B.defi||B.arena)coins=0;SAVE.coins+=coins;if(first){SAVE.best=st;SAVE.maxBest=Math.max(SAVE.maxBest||0,st+(SAVE.cycle||0)*MAXST)}SAVE.st.wins=(SAVE.st.wins||0)+1;if(B.units.some(u=>u.boss)){SAVE.st.boss=(SAVE.st.boss||0)+1;B.units.filter(u=>u.boss).forEach(u=>[DEX[u.n].t1,DEX[u.n].t2].filter(Boolean).forEach(t=>SAVE.st['bt_'+t]=(SAVE.st['bt_'+t]||0)+1));if(rnd()<.35){drop=rollItem();invAdd(drop)}}
+  if(win){coins=Math.round((30+effSt(st)*20)*(st%5===0?2.5:1)*(first?1:.5)*(B.placed.some(p=>{const m=mon(p.u);return m&&m.item==='amuletcoin'})?1.5:1));if(B.defi||B.arena)coins=0;SAVE.coins+=coins;if(first){SAVE.best=st;SAVE.maxBest=Math.max(SAVE.maxBest||0,st+(SAVE.cycle||0)*MAXST)}SAVE.st.wins=(SAVE.st.wins||0)+1;if(B.units.some(u=>u.boss)){SAVE.st.boss=(SAVE.st.boss||0)+1;B.units.filter(u=>u.boss).forEach(u=>[DEX[u.n].t1,DEX[u.n].t2].filter(Boolean).forEach(t=>SAVE.st['bt_'+t]=(SAVE.st['bt_'+t]||0)+1));if(rnd()<.35){drop=rollItem();invAdd(drop)}}
     /* récompense de boss : œuf niveau 5 (boss de mi-biome) ou super œuf rare niveau 10 (boss de fin de biome) */
-    const boss=B.arena?null:B.units.find(u=>u.boss);if(boss){const own0=baseOf(boss.n),own=own0===132?0:own0,mk=(n,lv)=>{const sh=rnd()<T.sh0*expMul(n);return{id:SAVE.uid++,n,sx:rollSex(n),lv:lv+(sh?T.mutLv:0),g:randGenes(8,24),sh,mut:0,bst:sh?pick(BST_K):null,src:'boss'}};
+    const boss=B.arena?null:B.units.find(u=>u.boss);if(boss){const own0=baseOf(boss.n),own=own0===132?0:own0,shX=PCY()>=5?3:PCY()>=4?2:1,mk=(n,lv)=>{const sh=rnd()<T.sh0*expMul(n)*shX;return{id:SAVE.uid++,n,sx:rollSex(n),lv:lv+(sh?T.mutLv:0),g:randGenes(8,24),sh,mut:0,bst:sh?pick(BST_K):null,src:'boss'}};
     /* œuf du boss lui-même : 10 % pour un légendaire, 35 % sinon ; sinon super œuf (tous les 10 tableaux) ou œuf niveau 5 du biome */
     egg=st===MAXST&&first?legendEgg():LEGEND.has(boss.n)?(rnd()<.1&&EGG_HAS.has(own)?Object.assign(eggOf(own),{src:'legende'}):superEgg()):EGG_HAS.has(own)&&rnd()<.35?mk(own,st%10===0?10:5):st%10===0?superEgg():(()=>{const P=EGG_SPECIES.filter(x=>!LEGEND.has(x)&&x!==132&&eggMethod(x)==='marche'&&(HAB[x]?HAB[x].includes(B.M.bi.hab):(B.M.bi.types.includes(DEX[x].t1)||B.M.bi.types.includes(DEX[x].t2))));const n=P.length?pick(P):pick(EGG_SPECIES.filter(x=>eggMethod(x)==='marche'&&x!==132));const sh=rnd()<T.sh0;return{id:SAVE.uid++,n,sx:rollSex(n),lv:5+(sh?T.mutLv:0),g:randGenes(5,20),sh,mut:0,bst:sh?pick(BST_K):null,src:'boss'}})();if(!addEgg(egg,egg.src==='arceus'||egg.src==='legende')){const v=rp(eggPrice(egg.n)*.3);SAVE.coins+=v;egg.sold=v}}
     if(SAVE.tuto>=5&&SAVE.tuto<6)setTuto(6)}
@@ -1670,7 +1707,7 @@ function endFight(win){if(B.dmax){dmaxEnd(win);return}
    ${win?`<p class="price">${COIN} +${fmt(coins)} pièces${first?'':' (rejouer rapporte moitié moins)'}</p>`:'<p>Fais se reproduire tes Pokémon pour des bébés plus forts, entraîne-les, ou change ton placement.</p>'}
    ${win?'':'<p class="muted">Pas d\'XP en cas de défaite.</p>'}<p ${win?'':'hidden'}>+${xp} XP pour chaque Pokémon de ton armée.</p>
    ${drop?`<p>${itIc(drop,28)} Objet trouvé : <b>${ITEMS[drop].n}</b> (dans ton sac d'objets, onglet Aventures).</p>`:''}${egg&&egg.sold?`<p>🎒 Sac d'œufs plein : l'œuf de ${esc(DEX[egg.n].name)} a été revendu (+${fmt(egg.sold)} pièces).</p>`:''}${egg&&!egg.sold?`<p>${eggH(egg.n,48)} ${egg.src==='legende'?'<b>✨ Incroyable ! Le légendaire a laissé son propre œuf :</b>':egg.src==='arceus'?'<b>Arceus t\'offre un œuf légendaire :</b>':egg.src==='super'?'<b>Super œuf rare</b> (niveau 10) :':'Le boss a laissé un œuf niveau 5 :'} <b>${esc(DEX[egg.n].name)}</b> !</p>`:''}
-   ${win&&first&&st>=MAXST?`<div class="banner s" style="margin:8px 0">🌍 Tu es arrivé au bout de l'aventure ! Tu as traversé les ${BIOMES.length-1} biomes du continent, la Route Victoire et la Vallée des légendes.</div><p>Tu peux recommencer les tableaux en <b>mode Maître</b> : tous les Pokémon ennemis sont entièrement évolués et au niveau de ton meilleur Pokémon (Nv ${bestLevel()}).</p><div class="flexr"><button class="go" data-act="newCycle">Recommencer en mode Maître</button><button data-act="closeModal">Plus tard</button></div>`:''}
+   ${win&&first&&st>=MAXST?`<div class="banner s" style="margin:8px 0">🌍 Tu es arrivé au bout de l'aventure ! Tu as traversé les ${BIOMES.length-1} biomes du continent, la Route Victoire et la Vallée des légendes.</div><p>${(SAVE.cycle||0)>=MAX_CYCLE?`Tu as vaincu le mode <b>${cycName(SAVE.cycle)}</b>, le plus haut du jeu. Bravo !</p><div class="flexr">`:`Tu peux passer en <b>mode ${cycName((SAVE.cycle||0)+1)}</b> : tous les ennemis sont entièrement évolués et plus forts qu'Arceus : Nv ${Math.min(LV_MAX,ARCEUS_LV()*((SAVE.cycle||0)+1)+lvCurve(1))} au tableau 1, jusqu'à Nv ${Math.min(LV_MAX,ARCEUS_LV()*((SAVE.cycle||0)+1)+lvCurve(MAXST))} au tableau ${MAXST} (niveau maximum du jeu : ${LV_MAX}).</p><div class="flexr"><button class="go" data-act="newCycle">Passer en mode ${cycName((SAVE.cycle||0)+1)}</button>`}<button data-act="closeModal">Plus tard</button></div>`:''}
    <div class="flexr">${win&&st<MAXST?`<button class="go" data-act="nextStage">Tableau suivant ▶</button>`:''}<button data-act="retry">${win?'Rejouer ce tableau':'Réessayer'}</button></div>`);
 }
 /* =====================================================================
@@ -1891,6 +1928,8 @@ const ACH=[
  ['rich','Millionnaire','Avoir 1 000 000 pièces',20000,()=>SAVE.coins,1000000],
  ['b250','Légende vivante','Vaincre Arceus dans son temple (tableau 1000)',50000,()=>SAVE.maxBest||SAVE.best,1000],
  ['bm1','Maître du continent','Terminer un tableau en mode Maître',5000,()=>SAVE.cycle&&SAVE.best?1:0,1],
+ ['bm3','Maître III','Vaincre Arceus en mode Maître III',500000,()=>(SAVE.cycle||0)>3||((SAVE.cycle||0)===3&&SAVE.best>=MAXST)?1:0,1],
+ ['bm5','Maître V','Vaincre Arceus en mode Maître V, le plus haut',2000000,()=>(SAVE.cycle||0)>=5&&SAVE.best>=MAXST?1:0,1],
  ['w50','Vétéran','Gagner 50 combats',800,()=>stv('wins'),50],
  ['k1','Chasseur de boss','Vaincre un boss',300,()=>stv('boss'),1],
  ['k10','Tueur de boss','Vaincre 10 boss',2000,()=>stv('boss'),10],
@@ -1911,7 +1950,7 @@ const TITLES=[['','Dresseur',0],
  ['s1','Chasseur de chromas',2],['s5','Collectionneur brillant',3],['p1','Patient zéro',2],['t1','Jackpot vivant',4],
  ['e1','Évolutionniste',0],['e25','Professeur',2],['e100','Darwin',3],
  ['d25','Petit Pokédex',0],['d50','Collectionneur',1],['d100','Encyclopédie',2],['d200','Pokédex vivant',3],['d400','Attrapez-les tous',4],
- ['b5','Aventurier',0],['b10','Explorateur des Plaines',1],['b25','Conquérant',1],['b50','Champion',2],['b100','Grand explorateur',2],['b500','Mi-parcours',3],['b240','Tour du continent',3],['b250','Légende vivante',4],['bm1','Maître du continent',4],
+ ['b5','Aventurier',0],['b10','Explorateur des Plaines',1],['b25','Conquérant',1],['b50','Champion',2],['b100','Grand explorateur',2],['b500','Mi-parcours',3],['b240','Tour du continent',3],['b250','Légende vivante',4],['bm1','Maître du continent',4],['bm3','Maître III',4],['bm5','Maître V',4],
  ['w50','Vétéran',1],['k1','Chasseur de boss',1],['k10','Tueur de boss',3],['l1','Ami des légendes',3],
  ['v50','Costaud',1],['v100','Niveau 100',3],['n4','Nourrice',1],['n8','Pouponnière géante',2],['a10','Général',2],['c50','Grande famille',1],
  ['g25','Collectionneur d\'œufs',1],['g50','Ovologue',2],['g100','Gardien des œufs',3],['gall','Maître des œufs',4],['sh12','Conservateur',2],['tr1','Sportif',0],['tr24','Marathonien',2],['dna1','Généticien légendaire',4],['dmax1','Dompteur Dynamax',2],['dmax10','Roi de l\'antre',4],['au25','Pilote automatique',1],['rich','Millionnaire',3],['ar1','Champion d\'arène',2],['ar8','Maître de l\'arène',4],['arc4','Membre du Conseil 4',3],['arx','Expert de type',2],['auc1','Commerçant',1],['defi5','Défieur',2],['exp10','Explorateur',1]];
@@ -1978,7 +2017,7 @@ function renderAch(){const n=ACH.filter(a=>SAVE.ach[a[0]]).length;
 let cur='nursery';
 function showTab(t){cur=t;document.querySelectorAll('nav button[data-tab]').forEach(b=>b.classList.toggle('on',b.dataset.tab===t));['nursery','team','battle','shop','dex','ach','rank','profile','settings','adv'].forEach(k=>$('tab-'+k).hidden=k!==t);
   if(t==='nursery')renderNursery();if(t==='team')renderTeam();if(t==='shop')renderShop();if(t==='dex')renderDex();if(t==='ach')renderAch();if(t==='rank')renderRank();if(t==='adv')renderAdv();if(t==='profile')renderProfile();if(t==='settings')renderSettings();if(t!=='team')teamSel=null;updateMusic();if(t==='battle'){if(!B||B.phase==='end')setupStage(Math.min(SAVE.best+1,B&&B.phase==='end'?B.stage:SAVE.best+1));else{renderBattleHead();renderRoster()}}}
-function renderTop(){$('coins').textContent=fmt(SAVE.coins);$('eggN').textContent=SAVE.eggs.length+SAVE.incs.reduce((s,c)=>s+c.slots.length,0);$('stN').textContent=(SAVE.cycle?'Maître · ':'')+Math.min(MAXST,SAVE.best+1)}
+function renderTop(){$('coins').textContent=fmt(SAVE.coins);$('eggN').textContent=SAVE.eggs.length+SAVE.incs.reduce((s,c)=>s+c.slots.length,0);$('stN').textContent=(PCY()?cycName(PCY())+' · ':'')+Math.min(MAXST,PCY()<(SAVE.cycle||0)?(typeof B!=='undefined'&&B&&B.stage||1):SAVE.best+1)}
 function openModal(h){const b=$('mbody');delete b.dataset.cloud;b.innerHTML=h;$('modal').hidden=false;const x=document.querySelector('#modal .x');if(x)x.style.display=''}
 function closeModal(){$('modal').hidden=true;pickState=null}
 function toast(h){const d=document.createElement('div');d.className='toast';d.innerHTML=h;$('toasts').appendChild(d);setTimeout(()=>d.remove(),3200)}
@@ -2090,7 +2129,7 @@ const ACT={
   autoRun:()=>{AUTO=!AUTO;AUTO_SPEED=null;if(AUTO&&B){if(B.phase==='place'){if(!B.placed.length){if(AUTO_LAST.length){B.phase='end';autoNextSame()}else autoPlace()}if(B.phase==='place'&&B.placed.length)startFight()}else if(B.phase==='end'&&B.res&&B.res.win)autoNext()}renderBattleHead()},speed:()=>{bSpeed=bSpeed>=4?1:bSpeed*2;OPT.mspd=bSpeed;saveOpt();if(AUTO)AUTO_SPEED=bSpeed;renderBattleHead()},flee:()=>endFight(false),
   stPrev:()=>setupStage(B.stage-1),stNext:()=>setupStage(B.stage+1,null,true),stGo:(t)=>{const s2=+t.dataset.s;setupStage(s2,null,s2===B.stage+1)},stJump:()=>{const v=Math.round(+(($('stJump')||{}).value||0));if(v>=1)setupStage(v,null,v===B.stage+1)},
   nextStage:()=>{closeModal();setupStage(B.stage+1,null,true)},
-  newCycle:()=>{SAVE.cycle=(SAVE.cycle||0)+1;SAVE.best=0;closeModal();saveGame();toast(`🔥 Mode Maître ${SAVE.cycle>1?SAVE.cycle:''} : les ennemis sont au niveau de ton meilleur Pokémon !`);setupStage(1);renderTop()},retry:()=>{closeModal();const keep=B.placed;setupStage(B.stage);B.placed=keep.filter(p=>mon(p.u)&&!monStatus(p.u));renderBattleHead();renderRoster()},
+  newCycle:()=>{if((SAVE.cycle||0)>=MAX_CYCLE){toast('Tu as déjà atteint le mode Maître V, le plus haut !');closeModal();return}SAVE.cycle=(SAVE.cycle||0)+1;SAVE.pc=null;SAVE.best=0;closeModal();saveGame();toast(`🔥 Mode ${cycName(SAVE.cycle)} : les ennemis sont plus forts qu\'Arceus (Nv ${enemyLv(1)} au tableau 1) !`);setupStage(1);renderTop()},retry:()=>{closeModal();const keep=B.placed;setupStage(B.stage);B.placed=keep.filter(p=>mon(p.u)&&!monStatus(p.u));renderBattleHead();renderRoster()},
   starter:(t)=>{const n=+t.dataset.n;addMon({n:132,lv:5,g:randGenes(5,15)});addMon({n:25,lv:5,g:randGenes(5,15)});addMon({n,lv:5,g:randGenes(8,18)});SAVE.tuto=0;closeModal();setTuto(1);dirty=true;saveGame();if(!SAVE.tour)setTimeout(tourStart,300)},
   cloud:()=>openCloud(),setPseudo:()=>setPseudo(),setTitle:(t)=>setTitle(t.dataset.t),rankReload:()=>{RANK.list=null;RANK.err='';rankLoad(true);renderRank()},showProfile:(t)=>showProfile(+t.dataset.i),signIn:()=>cloudSignIn(),signOut:()=>cloudSignOut()
 };
