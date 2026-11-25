@@ -451,3 +451,11 @@ V00.51.00
    Firebase             règles publiées le 25/11 à 22 h 38 : chat (lecture/écriture si connecté), dm (lecture seulement par
                         l'expéditeur et le destinataire), feedback (écriture seule, lecture dans la console Firebase)
                         les avis se lisent dans la console Firebase > Firestore > Données > feedback
+
+V00.52.00
+   Filtre de mots       insultes, propos haineux et grossièretés (français et anglais) remplacés par des ★ ; liens remplacés
+                        par « [lien retiré] » ; repère aussi les majuscules, accents, lettres répétées (« putaiiin ») et
+                        chiffres à la place des lettres (« c0nn4rd ») ; s'applique au chat monde, aux messages privés,
+                        aux avis (à l'envoi et à l'affichage) et aux pseudos (pseudo interdit refusé)
+                        liste des mots : const BADW dans index.html (à compléter si besoin)
+   Cristal              refusé sur un Pokémon déjà super muté ; les niveaux sont plafonnés à 999 (la fenêtre l'indique)

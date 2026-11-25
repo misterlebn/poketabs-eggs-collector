@@ -234,6 +234,7 @@ html,body{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 .chatbox{height:min(52vh,460px);overflow:auto;border:2px solid #e0cda8;border-radius:8px;padding:8px;background:#fffdf7;display:flex;flex-direction:column;gap:3px}.cmsg{padding:3px 6px;border-radius:6px;word-break:break-word}.cmsg.me{background:#fff1cc}.chatin{margin-top:6px}
 .convrow{display:flex;gap:8px;align-items:center;padding:8px 10px;border-bottom:1px dashed #e0cda8;cursor:pointer}.convrow:hover{background:#fff6e0}.convrow.un{background:#eef7ff}.convrow .muted{flex:1;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
 .gotegg{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:8px 0}.ge{display:flex;flex-direction:column;align-items:center;width:120px;padding:6px;border:3px solid #c9b48a;border-radius:10px;background:#fffaf0;text-align:center}.ge b{font-size:13px}.ge small{font-size:11px}.ge.r1{border-color:#6bbf6b}.ge.r2{border-color:#4a8fe0;background:#eef6ff}.ge.r3{border-color:#a050e0;background:#f6eeff}.ge.r4{border-color:#e0a020;background:#fff3c4;box-shadow:0 0 12px #ffd23a}
+.xdel{padding:0 4px!important;font-size:11px!important;opacity:.5}.xdel:hover{opacity:1}
 </style>
 </head>
 <body>
@@ -286,7 +287,7 @@ html,body{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
    POKETABS EGGS COLLECTOR  (V00.01.00)
    Réglages rapides : objet T ci-dessous (durées en secondes, chances en 0..1)
    ===================================================================== */
-const VERSION='V00.52.00';
+const VERSION='V00.53.00';
 const T={
   breed:45,        // durée de base d'une ponte (s)
   hatch:75,        // durée de base d'éclosion (s), modulée par l'espèce (stats totales et rareté)
@@ -2461,19 +2462,24 @@ const BAD_RX=new RegExp('(^|[^a-z])('+[...new Set(BADW.map(w=>normW(w)))].map(w=
 function cleanTxt(t){t=String(t||'').replace(/(https?:\/\/|www\.)\S+/gi,'[lien retiré]');const {n,ix}=normMap(t);const out=t.split('');let m;BAD_RX.lastIndex=0;
   while((m=BAD_RX.exec(n))){const a=m.index+m[1].length,b=a+m[2].length-1;for(let k=ix[a];k<=(b+1<ix.length?ix[b+1]-1:t.length-1);k++)if(!/\s/.test(out[k]))out[k]='★';if(m[0].length===0)BAD_RX.lastIndex++}return out.join('')}
 const isBad=t=>{BAD_RX.lastIndex=0;return BAD_RX.test(normW(String(t||'')))};
-const MSG={mode:'mail',chat:[],unsub:null,dmUnsub:[],dms:{in:[],out:[]},conv:null,last:0,err:''};
+/* compte développeur (Nolan, mister.le.bn@gmail.com) : lit les avis et modère le chat ; la sécurité réelle est dans les règles Firebase */
+const DEV_UIDS=['UHIxjbgeHjVnlWgepgg6QKrtutG2'];const isDev=()=>!!(CLOUD.user&&DEV_UIDS.includes(CLOUD.user.uid));
+const MSG={mode:'mail',fb:null,fbAll:false,chat:[],unsub:null,dmUnsub:[],dms:{in:[],out:[]},conv:null,last:0,err:''};
 const vNum=v=>+String(v).replace(/[^\d]/g,'');
 function mailNew(){const seen=vNum(SAVE.mailSeen||'V00.00');return PATCH.filter(x=>vNum(x[0])>seen).length}
 function dmUnread(){const me=CLOUD.user&&CLOUD.user.uid;return MSG.dms.in.filter(d=>!d.read&&d.to===me).length}
 function msgBadge(){const b=$('msgBadge');if(!b)return;const n=mailNew()+dmUnread();b.hidden=!n;b.textContent=n>9?'9+':n}
 const tAgo=t=>{const m=Math.round((Date.now()-t)/60000);return m<1?'à l\'instant':m<60?m+' min':m<1440?Math.round(m/60)+' h':new Date(t).toLocaleDateString('fr-FR')};
-function msgTabs(){const u=dmUnread(),m=mailNew();return `<div class="flexr" style="margin-bottom:10px">${[['mail','📬 Courrier'+(m?` (${m})`:'')],['chat','🌍 Chat monde'],['dm','✉ Messages privés'+(u?` (${u})`:'')]].map(([k,t])=>`<button class="${MSG.mode===k?'go':''}" data-act="msgMode" data-v="${k}">${t}</button>`).join('')}</div>`}
+function msgTabs(){const u=dmUnread(),m=mailNew();return `<div class="flexr" style="margin-bottom:10px">${[['mail','📬 Courrier'+(m?` (${m})`:'')],['chat','🌍 Chat monde'],['dm','✉ Messages privés'+(u?` (${u})`:'')],...(isDev()?[['dev','🛠 Avis reçus'+(MSG.fb?` (${MSG.fb.filter(f=>!f.done).length})`:'')]]:[])].map(([k,t])=>`<button class="${MSG.mode===k?'go':''}" data-act="msgMode" data-v="${k}">${t}</button>`).join('')}</div>`}
 function renderMsg(){const el=$('tab-msg');if(!el)return;let body='';
   if(MSG.mode==='mail'){body=`<div class="panel"><h3>📬 Courrier</h3><p class="muted">Les nouveautés du jeu, de la plus récente à la plus ancienne.</p>
      <div class="mail">${PATCH.map(([v,t])=>`<div class="mailit ${vNum(v)>vNum(SAVE.mailSeen||'V00.00')?'new':''}"><b>${v}</b>${vNum(v)>vNum(SAVE.mailSeen||'V00.00')?' <span class="newb">🆕</span>':''}<p>${t}</p></div>`).join('')}</div></div>
      <div class="panel"><h3>💡 Ton avis</h3><p class="muted">Une idée, un bug, ce que tu aimes ou pas : ton message est envoyé au créateur du jeu.</p>
      ${CLOUD.user?`<div class="flexr" style="margin:4px 0">${[1,2,3,4,5].map(k=>`<button class="sm ${MSG.stars===k?'go':''}" data-act="fbStar" data-v="${k}">${'★'.repeat(k)}</button>`).join('')}</div><textarea id="fbTxt" maxlength="2000" rows="4" style="width:100%" placeholder="Écris ton avis ici…"></textarea><div class="flexr"><button class="go" data-act="fbSend">📨 Envoyer mon avis</button></div>`:'<p>Connecte-toi avec Google (onglet 👤 Profil) pour envoyer ton avis.</p>'}</div>`;
     if(mailNew()){SAVE.mailSeen=PATCH[0][0];dirty=true;saveGame();setTimeout(msgBadge,0)}}
+  else if(MSG.mode==='dev'&&isDev()){if(!MSG.fb&&!MSG.fbBusy)fbLoad();const L=(MSG.fb||[]).filter(f=>MSG.fbAll||!f.done);
+    body=`<div class="panel"><h3>🛠 Avis reçus <button class="sm" data-act="fbReload">Actualiser</button> <button class="sm ${MSG.fbAll?'go':''}" data-act="fbAllT">${MSG.fbAll?'Tous':'Non traités'}</button></h3><p class="muted">Visible seulement par toi (compte développeur). ${MSG.fb?`${MSG.fb.length} avis au total, moyenne ${(MSG.fb.filter(f=>f.stars).reduce((a,f)=>a+f.stars,0)/Math.max(1,MSG.fb.filter(f=>f.stars).length)).toFixed(1).replace('.',',')} ★`:''}</p>
+     ${MSG.fbErr?`<p>${esc(MSG.fbErr)}</p>`:!MSG.fb?'<p>Chargement…</p>':L.length?L.map(f=>`<div class="mailit ${f.done?'':'new'}"><b>${esc(cleanTxt(f.name||'?'))}</b> <span class="muted">${f.stars?'★'.repeat(f.stars)+'☆'.repeat(5-f.stars):'sans note'} · ${new Date(f.t).toLocaleString('fr-FR')} · ${esc(f.v||'')}</span><p style="white-space:pre-wrap">${esc(f.txt||'')}</p><div class="flexr">${f.done?'<span class="muted">✔ traité</span>':`<button class="sm go" data-act="fbDone" data-id="${f.id}">✔ Traité</button>`}<button class="sm" data-act="dmTo" data-uid="${f.uid}" data-name="${esc(f.name||'?')}">✉ Répondre</button><button class="sm" data-act="fbDel" data-id="${f.id}">🗑 Supprimer</button></div></div>`).join(''):'<p class="muted">Aucun avis à traiter.</p>'}</div>`}
   else if(!cloudReady()||!CLOUD.user){body=`<div class="panel"><p>Le chat et les messages privés marchent sur la version en ligne du jeu, connecté avec Google (onglet 👤 Profil).</p></div>`}
   else if(MSG.mode==='chat'){chatStart();body=`<div class="panel"><h3>🌍 Chat monde</h3><p class="muted">Visible par tous les joueurs connectés. Reste correct 🙂 (300 caractères max ; insultes et liens sont masqués automatiquement). Clique sur un pseudo pour lui écrire en privé.</p>
      <div class="chatbox" id="chatBox">${chatHTML()}</div>
@@ -2482,7 +2488,7 @@ function renderMsg(){const el=$('tab-msg');if(!el)return;let body='';
   el.innerHTML=msgTabs()+body;if(MSG.mode==='chat'){const b=$('chatBox');if(b)b.scrollTop=b.scrollHeight;const i=$('chatTxt');if(i)i.onkeydown=e=>{if(e.key==='Enter')ACT.chatSend()}}
   if(MSG.conv){const b=$('dmBox');if(b)b.scrollTop=b.scrollHeight;const i=$('dmTxt');if(i)i.onkeydown=e=>{if(e.key==='Enter')ACT.dmSend()}}msgBadge()}
 function chatHTML(){const me=CLOUD.user&&CLOUD.user.uid;if(!MSG.chat.length)return '<p class="muted">Aucun message pour l\'instant. Lance la discussion !</p>';
-  return MSG.chat.slice().reverse().map(c=>`<div class="cmsg ${c.uid===me?'me':''}"><small class="muted">${tAgo(c.t)}</small> ${c.title?ttlHTML(c.title):''}${c.uid===me?nameHTML(c.name,c.color,'b'):`<button class="pl" data-act="dmTo" data-uid="${c.uid}" data-name="${esc(c.name||'?')}">${nameHTML(c.name,c.color)}</button>`} : ${esc(cleanTxt(c.txt))}</div>`).join('')}
+  return MSG.chat.slice().reverse().map(c=>`<div class="cmsg ${c.uid===me?'me':''}"><small class="muted">${tAgo(c.t)}</small> ${c.title?ttlHTML(c.title):''}${c.uid===me?nameHTML(c.name,c.color,'b'):`<button class="pl" data-act="dmTo" data-uid="${c.uid}" data-name="${esc(c.name||'?')}">${nameHTML(c.name,c.color)}</button>`} : ${esc(cleanTxt(c.txt))}${isDev()||c.uid===me?` <button class="sm xdel" data-act="chatDel" data-id="${c.id}" title="Supprimer">🗑</button>`:''}</div>`).join('')}
 function chatStart(){if(MSG.unsub||!CLOUD.db)return;try{MSG.unsub=CLOUD.db.collection('chat').orderBy('t','desc').limit(60).onSnapshot(q=>{MSG.chat=q.docs.map(d=>Object.assign({id:d.id},d.data()));MSG.err='';if(cur==='msg'&&MSG.mode==='chat'){const b=$('chatBox');if(b){const atEnd=b.scrollTop+b.clientHeight>=b.scrollHeight-30;b.innerHTML=chatHTML();if(atEnd)b.scrollTop=b.scrollHeight}}},e=>{MSG.err=e&&e.code==='permission-denied'?'Le chat n\'est pas encore activé dans Firebase.':'Chat indisponible pour le moment.';MSG.unsub=null;if(cur==='msg')renderMsg()})}catch(e){}}
 function chatStop(){if(MSG.unsub){try{MSG.unsub()}catch(e){}MSG.unsub=null}}
 function dmStart(){if(MSG.dmUnsub.length||!CLOUD.db||!CLOUD.user)return;const me=CLOUD.user.uid,col=CLOUD.db.collection('dm');let first=true;
@@ -2496,9 +2502,14 @@ function dmConvHTML(){const me=CLOUD.user.uid,c=MSG.conv,L=[...MSG.dms.in,...MSG
   L.filter(d=>d.to===me&&!d.read).forEach(d=>{d.read=true;CLOUD.db.collection('dm').doc(d.id).update({read:true}).catch(()=>{})});
   return `<div class="panel"><h3><button class="sm" data-act="dmBack">◀</button> ✉ ${esc(c.name||'?')}</h3><div class="chatbox" id="dmBox">${L.map(d=>`<div class="cmsg ${d.from===me?'me':''}"><small class="muted">${tAgo(d.t)}</small> <b>${d.from===me?'Toi':esc(cleanTxt(d.fromName||'?'))}</b> : ${esc(cleanTxt(d.txt))}</div>`).join('')||'<p class="muted">Écris le premier message.</p>'}</div>
    <div class="flexr chatin"><input id="dmTxt" maxlength="500" placeholder="Ton message à ${esc(c.name||'?')}…" style="flex:1"><button class="go" data-act="dmSend">Envoyer</button></div></div>`}
+async function fbLoad(){MSG.fbBusy=true;try{const q=await CLOUD.db.collection('feedback').orderBy('t','desc').limit(200).get();MSG.fb=q.docs.map(d=>Object.assign({id:d.id},d.data()));MSG.fbErr=''}catch(e){MSG.fbErr=e&&e.code==='permission-denied'?'Lecture refusée : la règle Firebase des avis n\'autorise pas encore ce compte.':'Chargement impossible.'}MSG.fbBusy=false;if(cur==='msg')renderMsg()}
 function dmOpen(uid,name){if(!CLOUD.user){toast('Connecte-toi avec Google pour écrire aux joueurs.');return}MSG.mode='dm';MSG.conv={uid,name};showTab('msg')}
 Object.assign(ACT,{
   msgMode:(t)=>{MSG.mode=t.dataset.v;MSG.conv=null;if(MSG.mode!=='chat')chatStop();renderMsg()},
+  fbReload:()=>{MSG.fb=null;fbLoad()},fbAllT:()=>{MSG.fbAll=!MSG.fbAll;renderMsg()},
+  fbDone:async(t)=>{try{await CLOUD.db.collection('feedback').doc(t.dataset.id).update({done:true});const f=MSG.fb.find(x=>x.id===t.dataset.id);if(f)f.done=true;renderMsg()}catch(e){toast('Impossible de marquer l\'avis.')}},
+  fbDel:async(t)=>{if(!confirm('Supprimer définitivement cet avis ?'))return;try{await CLOUD.db.collection('feedback').doc(t.dataset.id).delete();MSG.fb=MSG.fb.filter(x=>x.id!==t.dataset.id);renderMsg()}catch(e){toast('Suppression impossible.')}},
+  chatDel:async(t)=>{if(!confirm('Supprimer ce message du chat ?'))return;try{await CLOUD.db.collection('chat').doc(t.dataset.id).delete()}catch(e){toast('Suppression impossible.')}},
   fbStar:(t)=>{MSG.stars=+t.dataset.v;const v=$('fbTxt')&&$('fbTxt').value;renderMsg();if(v&&$('fbTxt'))$('fbTxt').value=v},
   fbSend:async()=>{const tx=($('fbTxt')&&$('fbTxt').value||'').trim();if(!tx){toast('Écris ton avis avant de l\'envoyer.');return}if(!CLOUD.user)return;
     try{await CLOUD.db.collection('feedback').add({uid:CLOUD.user.uid,name:myPseudo(),txt:cleanTxt(tx).slice(0,2000),stars:MSG.stars||0,v:VERSION,t:Date.now()});MSG.stars=0;toast('📨 Merci ! Ton avis a été envoyé.');renderMsg()}catch(e){toast(e&&e.code==='permission-denied'?'Les avis ne sont pas encore activés dans Firebase.':'Envoi impossible, réessaie plus tard.')}},
