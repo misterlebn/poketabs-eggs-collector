@@ -428,3 +428,26 @@ V00.49.00
                         sélectionne les doublons les plus faibles ; pour chaque espèce, garde le plus fort parmi les normaux
                         et ne touche jamais aux shiny, aux mutés (mutation ou super mutation) ni aux favoris ⭐ ;
                         seulement parmi ce qui est affiché et pas occupé ; tu vérifies, puis tu vends / relâches
+
+V00.50.00
+   Gène miroir          si tu en as plusieurs : choisis combien en utiliser à la suite (champ + « Lancer ») ; le Pokémon pond
+                        1 œuf par Gène miroir, puis quitte le nid ; le nid affiche « Gène miroir ×N » ; retirer le Pokémon
+                        rend les Gènes miroirs pas encore utilisés
+   Œufs mystère 🆕      un œuf d'une espèce jamais éclose (pas encore au Pokédex) affiche « ??? » au lieu du nom, avec 🆕 :
+                        sac d'œufs, liste des incubateurs, marché du jour, œufs du moment, légendaire du jour, messages d'achat ;
+                        la recherche du marché ne trouve pas les œufs mystère ; le nom apparaît dès que l'espèce est éclose
+
+V00.51.00
+   Œufs surprise        chances affichées dans la boutique : Œuf surprise = Commun 70 % · Peu commun 27 % · Rare 3 % ;
+                        Œuf surprise rare = Rare 85 % · Très rare 15 % ; les deux : ✨ Légendaire 1 sur 1 000 000
+                        après l'achat, une fenêtre montre les œufs reçus (image, rareté, niveau ; « ??? » si jamais éclos)
+   Cristal de super     1 000 000 pièces (boutique) : depuis la 📋 Fiche d'un Pokémon non shiny, choisis la stat :
+   mutation             il devient shiny, +25 % sur cette stat et +5 niveaux
+   💬 Messages          nouvel onglet avec badge rouge (nouveautés non lues + messages privés non lus) :
+                          📬 Courrier : notes des mises à jour + « Ton avis » (note 1 à 5 étoiles + texte, envoyé dans Firestore « feedback »)
+                          🌍 Chat monde : salon commun en direct (300 caractères, 1 message / 3 s), clic sur un pseudo = message privé
+                          ✉ Messages privés : conversations à deux, « Nouveau message », bouton ✉ dans le classement et les profils
+                        il faut être connecté avec Google sur le site en ligne
+   Firebase             règles publiées le 25/11 à 22 h 38 : chat (lecture/écriture si connecté), dm (lecture seulement par
+                        l'expéditeur et le destinataire), feedback (écriture seule, lecture dans la console Firebase)
+                        les avis se lisent dans la console Firebase > Firestore > Données > feedback

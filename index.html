@@ -229,6 +229,11 @@ html,body{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 .ibtn{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;min-width:18px;padding:0!important;margin:0 4px;border-radius:50%!important;font:italic 700 12px Georgia,serif!important;background:#4a8fe0!important;color:#fff!important;border:2px solid #2a5a9a!important;box-shadow:none!important;vertical-align:middle;cursor:help;line-height:1}
 .ibtn:hover{background:#2a6ac0!important}#infoPop{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:400;max-width:min(440px,92vw);background:#fffaf0;border:4px solid var(--ink,#3a2a1a);border-radius:12px;padding:12px 16px;box-shadow:0 8px 0 rgba(0,0,0,.2)}#infoPop[hidden]{display:none}#infoPop p{line-height:1.45}
 .newb{display:inline-block;font-size:13px;margin-right:2px;filter:drop-shadow(0 1px 0 rgba(0,0,0,.25))}.eggchip.newegg{background:#eaf6ff;border-color:#7ab8f0}
+.nbadge{display:inline-block;min-width:18px;padding:0 5px;margin-left:4px;border-radius:9px;background:#e0443c;color:#fff;font-size:11px;font-weight:800;line-height:18px;text-align:center}.nbadge[hidden]{display:none}
+.mail{display:flex;flex-direction:column;gap:6px;max-height:420px;overflow:auto}.mailit{border:2px solid #e0cda8;border-radius:8px;padding:6px 10px;background:#fffaf0}.mailit.new{border-color:#7ab8f0;background:#eef7ff}.mailit p{margin:2px 0 0}
+.chatbox{height:min(52vh,460px);overflow:auto;border:2px solid #e0cda8;border-radius:8px;padding:8px;background:#fffdf7;display:flex;flex-direction:column;gap:3px}.cmsg{padding:3px 6px;border-radius:6px;word-break:break-word}.cmsg.me{background:#fff1cc}.chatin{margin-top:6px}
+.convrow{display:flex;gap:8px;align-items:center;padding:8px 10px;border-bottom:1px dashed #e0cda8;cursor:pointer}.convrow:hover{background:#fff6e0}.convrow.un{background:#eef7ff}.convrow .muted{flex:1;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.gotegg{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:8px 0}.ge{display:flex;flex-direction:column;align-items:center;width:120px;padding:6px;border:3px solid #c9b48a;border-radius:10px;background:#fffaf0;text-align:center}.ge b{font-size:13px}.ge small{font-size:11px}.ge.r1{border-color:#6bbf6b}.ge.r2{border-color:#4a8fe0;background:#eef6ff}.ge.r3{border-color:#a050e0;background:#f6eeff}.ge.r4{border-color:#e0a020;background:#fff3c4;box-shadow:0 0 12px #ffd23a}
 </style>
 </head>
 <body>
@@ -248,6 +253,7 @@ html,body{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
     <button data-tab="ach">Succès</button>
     <button data-tab="adv">🗺️ Aventures</button>
     <button data-tab="rank">🌐 En ligne</button>
+    <button data-tab="msg" id="msgBtn">💬 Messages<span class="nbadge" id="msgBadge" hidden></span></button>
     <button data-tab="profile" id="cloudBtn">👤 Profil</button>
     <button data-tab="settings" title="Réglages">⚙</button>
     <button data-act="fullscreen" id="fsBtn" title="Jouer en plein écran (Échap pour quitter)">⛶</button>
@@ -268,6 +274,7 @@ html,body{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
   <section id="tab-adv" hidden></section>
   <section id="tab-profile" hidden></section>
   <section id="tab-settings" hidden></section>
+  <section id="tab-msg" hidden></section>
 </main>
 <div id="modal" hidden><div class="mbox"><button class="x sm" data-act="closeModal">✕</button><div id="mbody"></div></div></div>
 <div id="toasts"></div>
@@ -279,7 +286,7 @@ html,body{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
    POKETABS EGGS COLLECTOR  (V00.01.00)
    Réglages rapides : objet T ci-dessous (durées en secondes, chances en 0..1)
    ===================================================================== */
-const VERSION='V00.50.00';
+const VERSION='V00.52.00';
 const T={
   breed:45,        // durée de base d'une ponte (s)
   hatch:75,        // durée de base d'éclosion (s), modulée par l'espèce (stats totales et rareté)
@@ -455,8 +462,14 @@ function makeEgg(A,B,nestLvl){
   const pkIn=!!(A.pk||B.pk),pk=pkIn||rnd()<T.pkr;
   return{id:SAVE.uid++,n:sp,sx:rollSex(sp),lv:Math.max(1,lv),g,sh,mut,bst,pk,pkNew:pk&&!pkIn,src:'nid',weird}
 }
+/* probabilités des œufs surprise (affichées en boutique) */
+const EGG_ODDS={c:[[0,.70,'Commun'],[1,.27,'Peu commun'],[2,.03,'Rare']],r:[[2,.85,'Rare'],[3,.15,'Très rare']]},LEG_ODDS=1e-6;
+const oddsTxt=t=>EGG_ODDS[t].map(([,p,n])=>`${n} ${String(+(p*100).toFixed(2)).replace('.',',')} %`).join(' · ')+' · ✨ Légendaire 1 sur 1 000 000';
 function shopEgg(tier){
-  const rars=tier==='c'?[0,1]:tier==='r'?[2]:[3];
+  if(rnd()<LEG_ODDS){const L=EGG_SPECIES.filter(x=>LEGEND.has(x));const n=pick(L);const e=eggOf(n);e.src='boutique';e.lucky=1;return e}
+  let r=rnd(),rr=EGG_ODDS[tier]?EGG_ODDS[tier][0][0]:3;if(EGG_ODDS[tier])for(const [k,p] of EGG_ODDS[tier]){if(r<p){rr=k;break}r-=p}
+  const okR=k=>EGG_SPECIES.some(n=>DEX[n].rar===k&&!LEGEND.has(n)&&n!==132&&eggMethod(n)==='marche');if(!okR(rr))rr=tier==='c'?0:2;
+  const rars=[rr];
   const pool=EGG_SPECIES.map(n=>DEX[n]).filter(d=>rars.includes(d.rar)&&!LEGEND.has(d.n)&&d.n!==132&&eggMethod(d.n)==='marche');
   const d=pick(pool);const lv=eggLevel(d.n);
   const sh=rnd()<T.sh0*expMul(d.n);
@@ -771,7 +784,7 @@ function teamSelRelease(){const L=[...teamSel].map(mon).filter(m=>m&&!monStatus(
    ===================================================================== */
 const ITDIR=SPR+'Graphics/Items/';
 /* k : use = à utiliser sur un Pokémon, held = à faire tenir, stone = pierre d'évolution, sell = à revendre, nest = amélioration de nid */
-const ITEMS={expshare:{n:'Multi Exp',ic:'EXPSHARE',k:'held',d:'Tenu : XP ×2 (combats, entraînement, antre…).'},maxrevive:{n:'Rappel Max',ic:'MAXREVIVE',k:'ko',d:'Soigne tout de suite un Pokémon K.O.'},revive:{n:'Rappel',ic:'REVIVE',k:'ko',d:'Un Pokémon K.O. guérit 1 h 30 plus vite.'},rarecandy:{n:'Super Bonbon',ic:'RARECANDY',k:'use',d:'+1 niveau.'},nugget:{n:'Pépite',ic:'NUGGET',k:'sell',v:5000,d:'Se revend 5 000 pièces.'},bignugget:{n:'Maxi Pépite',ic:'BIGNUGGET',k:'sell',v:20000,d:'Se revend 20 000 pièces.'},starpiece:{n:'Morceau d\'Étoile',ic:'STARPIECE',k:'sell',v:10000,d:'Se revend 10 000 pièces.'},
+const ITEMS={smut:{n:'Cristal de super mutation',ic:'COMETSHARD',k:'use',d:'Super mutation sur le Pokémon de ton choix (depuis sa Fiche).'},expshare:{n:'Multi Exp',ic:'EXPSHARE',k:'held',d:'Tenu : XP ×2 (combats, entraînement, antre…).'},maxrevive:{n:'Rappel Max',ic:'MAXREVIVE',k:'ko',d:'Soigne tout de suite un Pokémon K.O.'},revive:{n:'Rappel',ic:'REVIVE',k:'ko',d:'Un Pokémon K.O. guérit 1 h 30 plus vite.'},rarecandy:{n:'Super Bonbon',ic:'RARECANDY',k:'use',d:'+1 niveau.'},nugget:{n:'Pépite',ic:'NUGGET',k:'sell',v:5000,d:'Se revend 5 000 pièces.'},bignugget:{n:'Maxi Pépite',ic:'BIGNUGGET',k:'sell',v:20000,d:'Se revend 20 000 pièces.'},starpiece:{n:'Morceau d\'Étoile',ic:'STARPIECE',k:'sell',v:10000,d:'Se revend 10 000 pièces.'},
  ovalcharm:{n:'Charme Ovale',ic:'OVALCHARM',k:'nest',d:'Améliore un nid pour toujours : ponte 25 % plus rapide.'},luckyegg:{n:'Œuf Chance',ic:'LUCKYEGG',k:'held',d:'Tenu : +50 % d\'XP.'},soothebell:{n:'Grelot Zen',ic:'SOOTHEBELL',k:'held',d:'Tenu : le bonheur monte 2 fois plus vite.'},everstone:{n:'Pierre Stase',ic:'EVERSTONE',k:'held',d:'Tenu : empêche l\'évolution.'},amuletcoin:{n:'Pièce Rune',ic:'AMULETCOIN',k:'held',d:'Tenu par un Pokémon de l\'armée : +50 % de pièces gagnées en combat.'},
  fire:{n:'Pierre Feu',ic:'FIRESTONE',k:'stone'},water:{n:'Pierre Eau',ic:'WATERSTONE',k:'stone'},thunder:{n:'Pierre Foudre',ic:'THUNDERSTONE',k:'stone'},leaf:{n:'Pierre Plante',ic:'LEAFSTONE',k:'stone'},moon:{n:'Pierre Lune',ic:'MOONSTONE',k:'stone'},sun:{n:'Pierre Soleil',ic:'SUNSTONE',k:'stone'},shiny:{n:'Pierre Éclat',ic:'SHINYSTONE',k:'stone'},dusk:{n:'Pierre Nuit',ic:'DUSKSTONE',k:'stone'},dawn:{n:'Pierre Aube',ic:'DAWNSTONE',k:'stone'},ice:{n:'Pierre Glace',ic:'ICESTONE',k:'stone'}};
 Object.values(ITEMS).forEach(it=>{if(it.k==='stone')it.d='Fait évoluer certains Pokémon.'});
@@ -796,8 +809,8 @@ function gainHap(m,v){if(!m)return;const old=m.hap==null?70:m.hap;m.hap=Math.min
 function useStone(m,st){const e=(EVO[m.n]||[]).find(x=>x[2]==='stone:'+st);if(!e||m.item==='everstone')return false;if(!invUse(st))return false;const old=DEX[m.n].name;m.n=e[0];dexOwn(m.n,m.sh);SAVE.st.evo=(SAVE.st.evo||0)+1;toast(`✨ ${old} évolue en <b>${DEX[m.n].name}</b> !`);checkEvo(m,true);return true}
 const SHOP=[
  {h:'Œufs'},
- {id:'eggC',name:'Œuf surprise',desc:'Un Pokémon commun ou peu commun au hasard, niveau 5.',ic:EGGDIR+'egg_base.png',price:()=>100,max:()=>bagFull(),buy:()=>{addEgg(shopEgg('c'))}},
- {id:'eggR',name:'Œuf surprise rare',desc:'Un Pokémon rare au hasard, niveau 10.',ic:'assets/type_eggs.png#2',price:()=>600,max:()=>bagFull(),buy:()=>{addEgg(shopEgg('r'))}},
+ {id:'eggC',name:'Œuf surprise',desc:'Un Pokémon au hasard. Chances : '+oddsTxt('c')+'.',ic:EGGDIR+'egg_base.png',price:()=>100,max:()=>bagFull(),buy:()=>{addEgg(shopEgg('c'))}},
+ {id:'eggR',name:'Œuf surprise rare',desc:'Un Pokémon rare au hasard. Chances : '+oddsTxt('r')+'.',ic:'assets/type_eggs.png#2',price:()=>600,max:()=>bagFull(),buy:()=>{addEgg(shopEgg('r'))}},
  {h:'Nurserie'},
  {id:'nest',name:'Nouveau nid',desc:'Un couple de plus en même temps (max 6).',ic:'assets/nest1.png',price:()=>rp(300*Math.pow(2.2,SAVE.nests.length-1)),max:()=>SAVE.nests.length>=6,buy:()=>SAVE.nests.push({lvl:1,a:null,b:null,t0:0,dur:0,egg:null})},
  {id:'nestUp',name:'Améliorer un nid',desc:'Ponte 15 % plus rapide, +3 % de mutation. Niveau 3 : garde 2 œufs en attente, niveau 5 : 3 œufs et shiny ×1,5.',ic:'assets/nest3.png',price:()=>{const n=lowNest();return n?rp(200*Math.pow(2.1,n.lvl)):0},max:()=>!lowNest(),buy:()=>{lowNest().lvl++}},
@@ -832,6 +845,7 @@ const SHOP=[
  {id:'it_soothebell',name:ITEMS.soothebell.n,desc:ITEMS.soothebell.d,ic:ITDIR+ITEMS.soothebell.ic+'.png',price:()=>5000,buy:()=>invAdd('soothebell')},
  {id:'it_everstone',name:ITEMS.everstone.n,desc:ITEMS.everstone.d,ic:ITDIR+ITEMS.everstone.ic+'.png',price:()=>1000,buy:()=>invAdd('everstone')},
  {id:'it_rarecandy',name:ITEMS.rarecandy.n,desc:ITEMS.rarecandy.d,ic:ITDIR+ITEMS.rarecandy.ic+'.png',price:()=>2000,buy:()=>invAdd('rarecandy')},
+ {id:'it_smut',name:'Cristal de super mutation',desc:'Donne une super mutation au Pokémon de ton choix : shiny, +25 % sur la stat que tu choisis et +5 niveaux. À utiliser depuis sa 📋 Fiche.',ic:ITDIR+'COMETSHARD.png',price:()=>1000000,buy:()=>invAdd('smut')},
  {id:'mirror',name:'Gène miroir',desc:'Un Pokémon seul pond un œuf par Gène miroir (tu peux en utiliser plusieurs à la suite), puis il quitte le nid.',ic:'sprites/Graphics/Items/DNASPLICERS.png',price:()=>500,buy:()=>SAVE.items.mirror++},
 ];
 const lowNest=()=>SAVE.nests.filter(n=>n.lvl<5).sort((a,b)=>a.lvl-b.lvl)[0];
@@ -884,8 +898,14 @@ function buyDeal(i){const D=dealsNow(),d=D.list[i];if(!d||d.sold)return;const p=
 function buyEgg(n){if(n!==132&&!marketToday().list.includes(n))return;const p=eggPrice(n);if(SAVE.coins<p)return;if(bagFull()){bagMsg();return}let k=0;while(k<qMax()&&SAVE.coins>=p&&!bagFull()){MK_FORCE=n;SAVE.coins-=p;addEgg(eggOf(n));MK_FORCE=0;SAVE.st.buy=(SAVE.st.buy||0)+1;k++}toast(`🥚 ${k>1?k+' œufs':'Œuf'} ${eggKnown(n)?'de <b>'+esc(DEX[n].name)+'</b>':'<b>mystère</b> 🆕'} acheté${k>1?'s':''} ! ${k>1?'Ils sont':'Il est'} dans le sac d'œufs.${k<BUYQ&&BUYQ?' (arrêt : pièces ou place)':''}`);dirty=true;saveGame();renderTop();renderMarket()}
 let BUYQ=1;const BUYQS=[1,5,10,25,0];/* 0 = autant que possible */
 const qMax=()=>BUYQ||1e6;
-function buy(i){const it=SHOP[i];let n=0,tot=0;while(n<qMax()){const p=it.price();if((it.max&&it.max())||SAVE.coins<p)break;SAVE.coins-=p;tot+=p;it.buy();n++}
-  if(!n)return;toast(`Acheté${n>1?' ×'+n:''} : <b>${it.name}</b>${n>1?` (${COIN}${fmt(tot)})`:''}`);dirty=true;saveGame();renderShop();renderTop()}
+function buy(i){const it=SHOP[i];const e0=SAVE.eggs.length,isEgg=/^egg/.test(it.id);let n=0,tot=0;while(n<qMax()){const p=it.price();if((it.max&&it.max())||SAVE.coins<p)break;SAVE.coins-=p;tot+=p;it.buy();n++}
+  if(!n)return;toast(`Acheté${n>1?' ×'+n:''} : <b>${it.name}</b>${n>1?` (${COIN}${fmt(tot)})`:''}`);dirty=true;saveGame();renderShop();renderTop();
+  if(isEgg){const got=SAVE.eggs.slice(e0);if(got.length)showGotEggs(got,it.name,tot)}}
+const RARN=['Commun','Peu commun','Rare','Très rare'];
+function showGotEggs(L,title,tot){const lg=L.some(e=>LEGEND.has(e.n));
+  openModal(`<h2>🥚 ${L.length} ${esc(L.length>1?title.replace(/^Œuf/,'Œufs'):title)} reçu${L.length>1?'s':''}${tot?` <span class="muted">(${COIN}${fmt(tot)})</span>`:''}</h2>${lg?'<div class="banner s">✨ INCROYABLE : un œuf légendaire (1 chance sur 1 000 000) !</div>':''}
+   <div class="gotegg">${L.map(e=>`<div class="ge r${LEGEND.has(e.n)?4:DEX[e.n].rar}">${eggH(e.n,56)}<b>${newB(e.n)}${eggNm(e.n)}</b><small>${LEGEND.has(e.n)?'✨ Légendaire':RARN[DEX[e.n].rar]||''}${e.sh?' · ★ super mutation':''} · Nv ${e.lv}</small></div>`).join('')}</div>
+   <p class="muted">Ils sont dans le sac d'œufs.</p><div class="flexr"><button class="go" data-act="closeModal">OK</button></div>`)}
 const buyQHTML=()=>`<div class="buyq"><b>🛒 Achat groupé :</b> ${BUYQS.map(q=>`<button class="sm ${BUYQ===q?'go':''}" data-act="setBuyQ" data-v="${q}">${q?'×'+q:'Max'}</button>`).join('')} <span class="muted">s'applique aux objets, boosts, améliorations et œufs du Marché du jour (arrêt si plus assez de pièces ou de place dans le sac)</span></div>`;
 
 /* =====================================================================
@@ -1262,7 +1282,7 @@ function openMonInfo(u){const m=mon(u);if(!m)return;const d=DEX[m.n],hap=m.hap==
   const held=Object.keys(inv).filter(id=>ITEMS[id]&&ITEMS[id].k==='held');
   const evs=(EVO[m.n]||[]).map(([to,l,c])=>`<li>${esc(DEX[to].name)}${c&&(c.startsWith('stone')||c.startsWith('hap'))?'':' au niveau '+l}${condTxt(c)}</li>`).join('');
   openModal(`<h2>${esc(d.name)} <small class="muted">Nv ${m.lv}</small></h2><div class="flexr">${monCard(m)}<div style="flex:1;min-width:240px">
-   <p><b>📊 Stats</b></p>${statsHTML(m)}
+   ${!m.sh&&invN('smut')?`<p><button class="go" data-act="smutAsk" data-u="${m.u}">💎 Utiliser un Cristal de super mutation (${invN('smut')})</button></p>`:''}<p><b>📊 Stats</b></p>${statsHTML(m)}
    <p><b>Déplacement</b> : ${moveHTML(m.n)}</p>
    ${ABIL_OF[m.n]?`<p><b>Talent</b> : ✨ <b>${ABIL[ABIL_OF[m.n]][0]}</b> · ${ABIL[ABIL_OF[m.n]][1]}</p>`:''}
    <p><b>Attaques</b> : ${movesOf(m).map(x=>`<span class="ty" style="background:${TCOL[x.type]}">${esc(x.name)} · ${x.pow}</span>`).join(' ')}</p>
@@ -1983,13 +2003,13 @@ const NCOLORS=[{id:'base',name:'Classique',css:'color:#2a5bb0'},{id:'vert',name:
  {id:'feu',name:'Flamme',css:'background:linear-gradient(90deg,#e0441c,#ffb020);-webkit-background-clip:text;background-clip:text;color:transparent',ach:'bm1'},
  {id:'arc',name:'Arc-en-ciel',css:'background:linear-gradient(90deg,#e74c3c,#f39c12,#f1c40f,#2ecc71,#3498db,#9b59b6);-webkit-background-clip:text;background-clip:text;color:transparent',ach:'b250'}];
 const colorOk=c=>!c.ach||!!SAVE.ach[c.ach];
-const nameHTML=(name,cid,tag)=>{const c=NCOLORS.find(x=>x.id===cid)||NCOLORS[0];return `<${tag||'span'} class="pname" style="${c.css}">${esc(name||'?')}</${tag||'span'}>`};
+const nameHTML=(name,cid,tag)=>{const c=NCOLORS.find(x=>x.id===cid)||NCOLORS[0];return `<${tag||'span'} class="pname" style="${c.css}">${esc(typeof cleanTxt==='function'?cleanTxt(name||'?'):name||'?')}</${tag||'span'}>`};
 const titleOf=name=>TITLES.find(t=>t[1]===name)||TITLES[0];
 const titleOk=t=>!t[0]||!!SAVE.ach[t[0]];
 const achDesc=id=>((ACH.find(a=>a[0]===id)||[])[2])||'';
 const ttlHTML=name=>{const t=titleOf(name);return `<span class="ttl c${t[2]}">${esc(t[1])}</span>`};
 function myPseudo(){return (SAVE.pseudo||(CLOUD.user&&(CLOUD.user.displayName||'').split(' ')[0])||'Dresseur').slice(0,16)}
-function setPseudo(){const v=prompt('Ton pseudo (16 caractères max) :',myPseudo());if(v===null)return;const c=v.replace(/[<>"&]/g,'').trim().slice(0,16);if(!c)return;SAVE.pseudo=c;dirty=true;saveGame();if(CLOUD.user)profilePush();RANK.list=null;if(cur==='profile')renderProfile();renderCloud()}
+function setPseudo(){const v=prompt('Ton pseudo (16 caractères max) :',myPseudo());if(v===null)return;const c=v.replace(/[<>"&]/g,'').trim().slice(0,16);if(!c)return;if(isBad(c)){toast('🚫 Ce pseudo contient un mot interdit. Choisis-en un autre.');return}SAVE.pseudo=c;dirty=true;saveGame();if(CLOUD.user)profilePush();RANK.list=null;if(cur==='profile')renderProfile();renderCloud()}
 function setTitle(name){const t=titleOf(name);if(!titleOk(t))return;SAVE.title=t[1];dirty=true;saveGame();if(CLOUD.user)profilePush();RANK.list=null;if(cur==='profile')renderProfile()}
 function titlePickerHTML(){const cur=titleOf(SAVE.title||'Dresseur')[1];const ok=TITLES.filter(titleOk).length;
   return `<div class="panel" style="margin-bottom:12px"><h3>Profil</h3><p>Pseudo : ${nameHTML(myPseudo(),SAVE.ncolor,'b')} <button class="sm" data-act="setPseudo">Modifier</button> · Titre affiché : ${ttlHTML(cur)}</p>
@@ -2020,13 +2040,13 @@ function renderRankList(el){
   else if(RANK.err)body=`<p>Impossible de charger le classement. <button class="sm" data-act="rankReload">Réessayer</button></p>`;
   else if(!RANK.list)body='<p>Chargement…</p>';
   else if(!RANK.list.length)body='<p>Aucun joueur pour l\'instant.</p>';
-  else body=`<table class="rank"><tr><th>#</th><th>Joueur</th><th>Progression</th><th>Pokédex</th><th>Succès</th></tr>${RANK.list.map((p,i)=>`<tr class="${p.uid===me?'me':''}"><td class="n">${i<3?['🥇','🥈','🥉'][i]:i+1}</td><td>${ttlHTML(p.title)}<button class="pl" data-act="showProfile" data-i="${i}">${nameHTML(p.name,p.color)}</button></td><td>${progTxt(p)}</td><td>${p.dex||0}</td><td>${p.ach||0}</td></tr>`).join('')}</table>`;
+  else body=`<table class="rank"><tr><th>#</th><th>Joueur</th><th>Progression</th><th>Pokédex</th><th>Succès</th></tr>${RANK.list.map((p,i)=>`<tr class="${p.uid===me?'me':''}"><td class="n">${i<3?['🥇','🥈','🥉'][i]:i+1}</td><td>${ttlHTML(p.title)}<button class="pl" data-act="showProfile" data-i="${i}">${nameHTML(p.name,p.color)}</button>${CLOUD.user&&p.uid!==me?` <button class="sm" data-act="dmTo" data-uid="${p.uid}" data-name="${esc(p.name||'?')}" title="Écrire en privé">✉</button>`:''}</td><td>${progTxt(p)}</td><td>${p.dex||0}</td><td>${p.ach||0}</td></tr>`).join('')}</table>`;
   el.innerHTML=`<div class="panel">${onlineTabs()}<h3>Classement des dresseurs <button class="sm" data-act="rankReload">Actualiser</button></h3>
    ${CLOUD.user?`<p class="muted">Tu apparais sous le nom ${ttlHTML(SAVE.title||'Dresseur')}${nameHTML(myPseudo(),SAVE.ncolor,'b')} (pseudo et titre modifiables dans l'onglet Profil). Clique sur un pseudo pour voir son profil.</p>`:`<p>Connecte-toi avec Google (onglet 👤 Profil) pour apparaître au classement.</p>`}
    ${body}</div>`}
 function showProfile(i){const p=RANK.list&&RANK.list[i];if(!p)return;
   const mons=(p.mons||[]).filter(m=>DEX[m.n]);
-  openModal(`<h2>${ttlHTML(p.title)}${nameHTML(p.name,p.color)}</h2>
+  openModal(`<h2>${ttlHTML(p.title)}${nameHTML(p.name,p.color)} ${CLOUD.user&&p.uid!==CLOUD.user.uid?`<button class="sm go" data-act="dmTo" data-uid="${p.uid}" data-name="${esc(p.name||'?')}">✉ Écrire</button>`:''}</h2>
    <div class="pstats"><span>⚔ ${progTxt(p)}</span><span>Record : tableau ${p.maxBest||p.best||0}</span><span>📖 ${p.dex||0} espèces</span><span>🏆 ${p.ach||0} succès</span><span>Pokémon : ${p.nmons||0}</span><span>✨ ${p.shinies||0} shiny</span><span>🥚 ${p.eggs||0} œufs collectionnés</span></div>${(p.cab||[]).length?cabHTML(p.cab,false):''}${(p.shelf||[]).length?shelfHTML(p.shelf,false):''}
    <h3>Ses Pokémon${(p.nmons||0)>mons.length?` (les ${mons.length} plus forts)`:''}</h3>
    <div class="pmons">${mons.map(m=>`<div class="pmon">${sprHTML(m.n,!!m.sh,48,true)}<b>${m.sh?'✨':''}${esc(DEX[m.n].name)}${m.sx==='M'?' ♂':m.sx==='F'?' ♀':''}</b><span>Nv ${m.lv}${m.mu?' · muté':''}${m.pk?' · Pokérus':''}</span></div>`).join('')||'<p>Aucun Pokémon.</p>'}</div>`)}
@@ -2038,7 +2058,7 @@ function renderAch(){const n=ACH.filter(a=>SAVE.ach[a[0]]).length;
    INTERFACE GÉNÉRALE
    ===================================================================== */
 let cur='nursery';
-function showTab(t){cur=t;document.querySelectorAll('nav button[data-tab]').forEach(b=>b.classList.toggle('on',b.dataset.tab===t));['nursery','team','battle','shop','dex','ach','rank','profile','settings','adv'].forEach(k=>$('tab-'+k).hidden=k!==t);
+function showTab(t){cur=t;document.querySelectorAll('nav button[data-tab]').forEach(b=>b.classList.toggle('on',b.dataset.tab===t));['nursery','team','battle','shop','dex','ach','rank','profile','settings','adv','msg'].forEach(k=>$('tab-'+k).hidden=k!==t);if(t!=='msg')chatStop();if(t==='msg')renderMsg();
   if(t==='nursery')renderNursery();if(t==='team')renderTeam();if(t==='shop')renderShop();if(t==='dex')renderDex();if(t==='ach')renderAch();if(t==='rank')renderRank();if(t==='adv')renderAdv();if(t==='profile')renderProfile();if(t==='settings')renderSettings();if(t!=='team')teamSel=null;updateMusic();if(t==='battle'){if(!B||B.phase==='end')setupStage(Math.min(SAVE.best+1,B&&B.phase==='end'?B.stage:SAVE.best+1));else{renderBattleHead();renderRoster()}}}
 function renderTop(){$('coins').textContent=fmt(SAVE.coins);$('eggN').textContent=SAVE.eggs.length+SAVE.incs.reduce((s,c)=>s+c.slots.length,0);$('stN').textContent=(PCY()?cycName(PCY())+' · ':'')+Math.min(MAXST,PCY()<(SAVE.cycle||0)?(typeof B!=='undefined'&&B&&B.stage||1):SAVE.best+1)}
 function openModal(h){const b=$('mbody');delete b.dataset.cloud;b.innerHTML=h;$('modal').hidden=false;const x=document.querySelector('#modal .x');if(x)x.style.display=''}
@@ -2073,6 +2093,8 @@ const ACT={
   hatch:(t)=>{const r=hatchOne(+t.dataset.i,+t.dataset.k);if(r){showHatch([r]);dirty=true;saveGame()}},
   hatchAll:()=>hatchAll(),
   ball:(t)=>openBall(+t.dataset.i),
+  smutAsk:(t)=>{const m=mon(+t.dataset.u);if(!m||m.sh||!invN('smut'))return;openModal(`<h2>💎 Super mutation de ${esc(DEX[m.n].name)}</h2><p>Il devient shiny, gagne +25 % sur la stat que tu choisis et ${m.lv>=LV_MAX?'<b>aucun niveau</b> (déjà niveau '+LV_MAX+')':m.lv+5>LV_MAX?'+'+(LV_MAX-m.lv)+' niveau'+(LV_MAX-m.lv>1?'x':'')+' (plafond '+LV_MAX+')':'+5 niveaux'} :</p><div class="flexr">${BST_K.map(k=>`<button class="go" data-act="smutDo" data-u="${m.u}" data-k="${k}">${BST_N[k]}</button>`).join('')}</div><p class="muted">Le Cristal est consommé.</p>`)},
+  smutDo:(t)=>{const m=mon(+t.dataset.u);if(!m||!invN('smut'))return;if(m.sh){toast('Ce Pokémon a déjà une super mutation.');return}invUse('smut');m.sh=true;m.bst=t.dataset.k;m.lv=Math.min(LV_MAX,m.lv+T.mutLv);SAVE.st.sh=(SAVE.st.sh||0)+1;dirty=true;saveGame();closeModal();jingle('mutation');toast(`💎 ${esc(DEX[m.n].name)} a reçu une super mutation (${BST_N[m.bst]} +25 %) !`);openMonInfo(m.u)},
   trainFillAsk:(t)=>{const i=t.dataset.i!=null&&t.dataset.i!==''?t.dataset.i:'';openModal(`<h2>⚡ Remplir ${i!==''?'ce punching-ball':'les punching-balls'}</h2><p>Les Pokémon libres les plus forts (sous le niveau 100) vont à l'entraînement. Choisis la durée :</p><p>${TRAIN_D.map(mn=>`<button class="go" data-act="trainFill" data-v="${mn}" data-i="${i}">${trainTxt(mn)}</button>`).join(' ')}</p>`)},
   trainFill:(t)=>{if(t.dataset.v)trainDur=+t.dataset.v;closeModal();const only=t.dataset.i!=null&&t.dataset.i!==''?+t.dataset.i:null;let c=0;const F=freeMons().filter(m=>m.lv<100).sort((a,b)=>pc(b)-pc(a));
     SAVE.balls.forEach((b,i)=>{if(only!=null&&i!==only)return;b.tr=b.tr||{};while(b.mons.length<BALL_SLOT[b.lvl]&&F.length){const m=F.shift();b.mons.push(m.u);b.tr[m.u]={t0:Date.now(),dur:(trainDur||60)*60000};c++}});
@@ -2157,7 +2179,7 @@ const ACT={
   nextStage:()=>{closeModal();setupStage(B.stage+1,null,true)},
   newCycle:()=>{if((SAVE.cycle||0)>=MAX_CYCLE){toast('Tu as déjà atteint le mode Maître V, le plus haut !');closeModal();return}SAVE.cycle=(SAVE.cycle||0)+1;SAVE.pc=null;SAVE.best=0;closeModal();saveGame();toast(`🔥 Mode ${cycName(SAVE.cycle)} : les ennemis sont plus forts qu\'Arceus (Nv ${enemyLv(1)} au tableau 1) !`);setupStage(1);renderTop()},retry:()=>{closeModal();const keep=B.placed;setupStage(B.stage);B.placed=keep.filter(p=>mon(p.u)&&!monStatus(p.u));renderBattleHead();renderRoster()},
   starter:(t)=>{const n=+t.dataset.n;addMon({n:132,lv:5,g:randGenes(5,15)});addMon({n:25,lv:5,g:randGenes(5,15)});addMon({n,lv:5,g:randGenes(8,18)});SAVE.tuto=0;closeModal();setTuto(1);dirty=true;saveGame();if(!SAVE.tour)setTimeout(tourStart,300)},
-  cloud:()=>openCloud(),setPseudo:()=>setPseudo(),setTitle:(t)=>setTitle(t.dataset.t),rankReload:()=>{RANK.list=null;RANK.err='';rankLoad(true);renderRank()},showProfile:(t)=>showProfile(+t.dataset.i),signIn:()=>cloudSignIn(),signOut:()=>cloudSignOut()
+  cloud:()=>openCloud(),setPseudo:()=>setPseudo(),setTitle:(t)=>setTitle(t.dataset.t),rankReload:()=>{RANK.list=null;RANK.err='';rankLoad(true);renderRank()},showProfile:(t)=>showProfile(+t.dataset.i),dmTo:(t)=>{closeModal();dmOpen(t.dataset.uid,t.dataset.name)},signIn:()=>cloudSignIn(),signOut:()=>cloudSignOut()
 };
 document.addEventListener('click',e=>{const tb=e.target.closest('nav button[data-tab]');if(tb){showTab(tb.dataset.tab);return}const t=e.target.closest('[data-act]');if(t&&ACT[t.dataset.act]){ACT[t.dataset.act](t,e)}else if(e.target.id==='modal'&&SAVE.mons.length)closeModal()});
 /* glisser-déposer : depuis la liste vers le terrain, ou d'une case à l'autre sur le terrain (hors du terrain = retiré) */
@@ -2264,7 +2286,7 @@ function homeRender(){const h=$('home');if(!h||!HOME.on)return;const ok=cloudRea
      :`<button class="go big" data-act="homeGoogle" ${ok&&CLOUD.auth?'':'disabled'}><b>G</b> ${tr2('Se connecter avec Google','Sign in with Google')}</button>`}
    <button class="big" data-act="homeGuest">👤 ${tr2('Jouer en invité','Play as guest')}</button>
    <p class="muted small">${u?'':ok?(CLOUD.auth?tr2('Avec Google, ta partie est sauvegardée en ligne et tu as accès au classement, à l\'arène et à l\'hôtel des ventes. En invité, la partie reste dans ce navigateur.','With Google, your game is saved online and you get the ranking, the arena and the auction house. As a guest, your game stays in this browser.'):tr2('Connexion à Google en cours…','Connecting to Google…')):tr2('La connexion Google marche seulement sur le site en ligne. Ici, joue en invité.','Google sign-in only works on the online site. Here, play as a guest.')}</p></div>`}
-function homeEnter(){HOME.on=false;const h=$('home');if(h)h.hidden=true;updateMusic();showTab(cur||'nursery');
+function homeEnter(){if(!SAVE.mailSeen&&!SAVE.mons.length&&typeof PATCH!=='undefined')SAVE.mailSeen=PATCH[1][0];setTimeout(()=>typeof msgBadge==='function'&&msgBadge(),300);HOME.on=false;const h=$('home');if(h)h.hidden=true;updateMusic();showTab(cur||'nursery');
   if(!SAVE.mons.length)starterModal();else{if(SAVE.tuto>=1&&SAVE.tuto<6)setTip(TUTO[SAVE.tuto]);if(!SAVE.tour)setTimeout(tourStart,400)}}
 /* ---- traduction anglaise : textes exacts + quelques mots fréquents (le reste reste en français) ---- */
 const EN={"Nurserie":"Nursery","Pokémon":"Pokémon","Combat":"Battle","Boutique":"Shop","Pokédex":"Pokédex","Succès":"Achievements","🗺️ Aventures":"🗺️ Adventures","🌐 En ligne":"🌐 Online","Réglages":"Settings","⚙ Réglages":"⚙ Settings",
@@ -2395,6 +2417,10 @@ const INFO=[
  [/^Ta vitrine/,'Vitrine de collection','Choisis jusqu\'à 6 œufs de ta collection à montrer aux autres joueurs.'],
  [/^Titre$/,'Titre','Les titres se débloquent avec les succès. Celui choisi s\'affiche à côté de ton nom pour les autres joueurs.'],
  [/^Compte$/,'Compte','Connecte-toi avec Google pour sauvegarder ta partie en ligne et jouer sur plusieurs appareils, et pour accéder au classement, à l\'arène et à l\'hôtel des ventes.'],
+ [/^📬 Courrier/,'Courrier','Les nouveautés de chaque mise à jour du jeu. Un 🆕 marque celles que tu n\'as pas encore lues.'],
+ [/^💡 Ton avis/,'Ton avis','Envoie une idée, un bug ou ton avis au créateur du jeu, avec une note de 1 à 5 étoiles. Il faut être connecté avec Google.'],
+ [/^🌍 Chat monde/,'Chat monde','Un salon de discussion commun à tous les joueurs connectés. Clique sur un pseudo pour lui écrire en privé.'],
+ [/^✉ Messages privés/,'Messages privés','Des conversations à deux. Seuls toi et l\'autre joueur pouvez les lire. Un badge rouge sur l\'onglet 💬 indique les messages non lus.'],
  [/^Sauvegarde$/,'Sauvegarde','La partie est sauvegardée automatiquement dans le navigateur, et en ligne si tu es connecté avec Google.'],
  [/^Talent$/,'Talent','Une capacité spéciale tirée des vrais jeux, que seuls certains Pokémon ont (Camouflage de Kecleon, Absentéisme de Monaflemit…). Elle agit toute seule en combat.'],
  [/^Déplacement$/,'Déplacement','🪽 Vol : passe au-dessus de l\'eau, de la lave et de la boue, mais pas des falaises. 🦶 Terrestre : marche, ralenti dans la boue. 🌊 Nage : traverse l\'eau. 🌋 Lave : traverse la lave.'],
@@ -2408,6 +2434,82 @@ ACT.info=(t,e)=>{if(e){e.stopPropagation();e.preventDefault()}const x=INFO[+t.da
   if(back){let d=$('infoPop');if(!d){d=document.createElement('div');d.id='infoPop';document.body.appendChild(d)}d.innerHTML=`<b>ℹ ${x[1]}</b><p>${x[2]}</p><button class="sm" onclick="this.parentNode.hidden=true">OK</button>`;d.hidden=false;return}
   openModal(`<h2>ℹ ${x[1]}</h2><p style="line-height:1.5">${x[2]}</p><div class="flexr"><button class="go" data-act="closeModal">OK</button></div>`)};
 setTimeout(()=>infoScan(document.body),0);
+
+/* =====================================================================
+   MESSAGES : courrier (nouveautés + avis), chat monde, messages privés (Firestore : chat, dm, feedback)
+   ===================================================================== */
+const PATCH=[
+ ['V00.52','Filtre automatique des insultes et des liens dans le chat, les messages privés, les avis et les pseudos.'],
+ ['V00.51','Œufs surprise : chances affichées (commun, peu commun, rare, très rare) et 1 chance sur 1 000 000 d\'un légendaire ; fenêtre des œufs reçus après l\'achat. Cristal de super mutation (1 000 000). Onglet 💬 Messages : courrier, chat monde, messages privés.'],
+ ['V00.50','Plusieurs Gènes miroirs à la suite. Œufs mystère 🆕 « ??? » tant que l\'espèce n\'a jamais éclos.'],
+ ['V00.49','🧠 Sélection intelligente : les doublons les plus faibles, sans toucher aux shiny, mutés et favoris.'],
+ ['V00.48','Petits « i » d\'information à côté de chaque partie du jeu.'],
+ ['V00.47','Prix des soins Dynamax affiché avant de payer, +25 % par combat Gigamax du jour.'],
+ ['V00.46','Défis du jour dans un biome, contre des ennemis à ton niveau.'],
+ ['V00.45','Le mode Maître continue l\'aventure : pièces et XP qui montent toujours. Maître IV et V plus durs (gènes parfaits, plus d\'ennemis, talents).'],
+ ['V00.44','Menu « Mode » pour rejouer les modes précédents.'],
+ ['V00.42','Modes Maître I à V, niveau maximum 999, limites de niveau en arène, 24 h d\'attente après une destitution.'],
+ ['V00.39','Fiche 📊 Stats avec les vrais chiffres en combat.'],
+ ['V00.37','Accueil, version téléphone et manette.']];
+/* filtre de mots : insultes, propos haineux et liens remplacés par des ★ (chat, messages privés, avis, pseudos) */
+const BADW=['connard','connasse','conasse','salope','salaud','encule','enculer','enfoire','batard','pute','putain','pétasse','petasse','pd','pede','tapette','tafiole','fdp','ntm','nique','niquer','nik','tg','ta gueule','fils de','ferme la','debile','abruti','attarde','mongol','gogol','triso','trisomique','bouffon','negre','negro','bougnoul','bicot','youpin','raton','chinetoque','bamboula','nazi','hitler','sieg','viol','violer','suicide','suicide toi','creve','crever','kys','cul','bite','zizi','chatte','couille','couilles','branleur','branler','sucer','suce','salope','merde','emmerde','fuck','fucking','shit','bitch','asshole','dick','pussy','cunt','nigger','nigga','faggot','retard','whore','slut','rape','kill yourself'];
+const LEET={'@':'a','4':'a','3':'e','€':'e','1':'i','!':'i','|':'i','0':'o','5':'s','$':'s','7':'t'};
+/* normalise en gardant la position de chaque lettre dans le texte d'origine (accents, leet, lettres répétées) */
+function normMap(t){let n='',ix=[];for(let k=0;k<t.length;k++){let c=t[k].toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');c=LEET[c]||c;if(c.length!==1)c=c.slice(0,1)||' ';if(n.length&&c===n[n.length-1]&&/[a-z]/.test(c))continue;n+=c;ix.push(k)}return{n,ix}}
+const normW=t=>normMap(t).n;
+const BAD_RX=new RegExp('(^|[^a-z])('+[...new Set(BADW.map(w=>normW(w)))].map(w=>w.replace(/[.*+?^${}()|[\]\\]/g,'\\$&').replace(/ /g,'[\\s._\'’-]*')).join('|')+')(?=$|[^a-z])','g');
+function cleanTxt(t){t=String(t||'').replace(/(https?:\/\/|www\.)\S+/gi,'[lien retiré]');const {n,ix}=normMap(t);const out=t.split('');let m;BAD_RX.lastIndex=0;
+  while((m=BAD_RX.exec(n))){const a=m.index+m[1].length,b=a+m[2].length-1;for(let k=ix[a];k<=(b+1<ix.length?ix[b+1]-1:t.length-1);k++)if(!/\s/.test(out[k]))out[k]='★';if(m[0].length===0)BAD_RX.lastIndex++}return out.join('')}
+const isBad=t=>{BAD_RX.lastIndex=0;return BAD_RX.test(normW(String(t||'')))};
+const MSG={mode:'mail',chat:[],unsub:null,dmUnsub:[],dms:{in:[],out:[]},conv:null,last:0,err:''};
+const vNum=v=>+String(v).replace(/[^\d]/g,'');
+function mailNew(){const seen=vNum(SAVE.mailSeen||'V00.00');return PATCH.filter(x=>vNum(x[0])>seen).length}
+function dmUnread(){const me=CLOUD.user&&CLOUD.user.uid;return MSG.dms.in.filter(d=>!d.read&&d.to===me).length}
+function msgBadge(){const b=$('msgBadge');if(!b)return;const n=mailNew()+dmUnread();b.hidden=!n;b.textContent=n>9?'9+':n}
+const tAgo=t=>{const m=Math.round((Date.now()-t)/60000);return m<1?'à l\'instant':m<60?m+' min':m<1440?Math.round(m/60)+' h':new Date(t).toLocaleDateString('fr-FR')};
+function msgTabs(){const u=dmUnread(),m=mailNew();return `<div class="flexr" style="margin-bottom:10px">${[['mail','📬 Courrier'+(m?` (${m})`:'')],['chat','🌍 Chat monde'],['dm','✉ Messages privés'+(u?` (${u})`:'')]].map(([k,t])=>`<button class="${MSG.mode===k?'go':''}" data-act="msgMode" data-v="${k}">${t}</button>`).join('')}</div>`}
+function renderMsg(){const el=$('tab-msg');if(!el)return;let body='';
+  if(MSG.mode==='mail'){body=`<div class="panel"><h3>📬 Courrier</h3><p class="muted">Les nouveautés du jeu, de la plus récente à la plus ancienne.</p>
+     <div class="mail">${PATCH.map(([v,t])=>`<div class="mailit ${vNum(v)>vNum(SAVE.mailSeen||'V00.00')?'new':''}"><b>${v}</b>${vNum(v)>vNum(SAVE.mailSeen||'V00.00')?' <span class="newb">🆕</span>':''}<p>${t}</p></div>`).join('')}</div></div>
+     <div class="panel"><h3>💡 Ton avis</h3><p class="muted">Une idée, un bug, ce que tu aimes ou pas : ton message est envoyé au créateur du jeu.</p>
+     ${CLOUD.user?`<div class="flexr" style="margin:4px 0">${[1,2,3,4,5].map(k=>`<button class="sm ${MSG.stars===k?'go':''}" data-act="fbStar" data-v="${k}">${'★'.repeat(k)}</button>`).join('')}</div><textarea id="fbTxt" maxlength="2000" rows="4" style="width:100%" placeholder="Écris ton avis ici…"></textarea><div class="flexr"><button class="go" data-act="fbSend">📨 Envoyer mon avis</button></div>`:'<p>Connecte-toi avec Google (onglet 👤 Profil) pour envoyer ton avis.</p>'}</div>`;
+    if(mailNew()){SAVE.mailSeen=PATCH[0][0];dirty=true;saveGame();setTimeout(msgBadge,0)}}
+  else if(!cloudReady()||!CLOUD.user){body=`<div class="panel"><p>Le chat et les messages privés marchent sur la version en ligne du jeu, connecté avec Google (onglet 👤 Profil).</p></div>`}
+  else if(MSG.mode==='chat'){chatStart();body=`<div class="panel"><h3>🌍 Chat monde</h3><p class="muted">Visible par tous les joueurs connectés. Reste correct 🙂 (300 caractères max ; insultes et liens sont masqués automatiquement). Clique sur un pseudo pour lui écrire en privé.</p>
+     <div class="chatbox" id="chatBox">${chatHTML()}</div>
+     <div class="flexr chatin"><input id="chatTxt" maxlength="300" placeholder="Écris un message…" style="flex:1"><button class="go" data-act="chatSend">Envoyer</button></div>${MSG.err?`<p class="muted">${esc(MSG.err)}</p>`:''}</div>`}
+  else{body=MSG.conv?dmConvHTML():dmListHTML()}
+  el.innerHTML=msgTabs()+body;if(MSG.mode==='chat'){const b=$('chatBox');if(b)b.scrollTop=b.scrollHeight;const i=$('chatTxt');if(i)i.onkeydown=e=>{if(e.key==='Enter')ACT.chatSend()}}
+  if(MSG.conv){const b=$('dmBox');if(b)b.scrollTop=b.scrollHeight;const i=$('dmTxt');if(i)i.onkeydown=e=>{if(e.key==='Enter')ACT.dmSend()}}msgBadge()}
+function chatHTML(){const me=CLOUD.user&&CLOUD.user.uid;if(!MSG.chat.length)return '<p class="muted">Aucun message pour l\'instant. Lance la discussion !</p>';
+  return MSG.chat.slice().reverse().map(c=>`<div class="cmsg ${c.uid===me?'me':''}"><small class="muted">${tAgo(c.t)}</small> ${c.title?ttlHTML(c.title):''}${c.uid===me?nameHTML(c.name,c.color,'b'):`<button class="pl" data-act="dmTo" data-uid="${c.uid}" data-name="${esc(c.name||'?')}">${nameHTML(c.name,c.color)}</button>`} : ${esc(cleanTxt(c.txt))}</div>`).join('')}
+function chatStart(){if(MSG.unsub||!CLOUD.db)return;try{MSG.unsub=CLOUD.db.collection('chat').orderBy('t','desc').limit(60).onSnapshot(q=>{MSG.chat=q.docs.map(d=>Object.assign({id:d.id},d.data()));MSG.err='';if(cur==='msg'&&MSG.mode==='chat'){const b=$('chatBox');if(b){const atEnd=b.scrollTop+b.clientHeight>=b.scrollHeight-30;b.innerHTML=chatHTML();if(atEnd)b.scrollTop=b.scrollHeight}}},e=>{MSG.err=e&&e.code==='permission-denied'?'Le chat n\'est pas encore activé dans Firebase.':'Chat indisponible pour le moment.';MSG.unsub=null;if(cur==='msg')renderMsg()})}catch(e){}}
+function chatStop(){if(MSG.unsub){try{MSG.unsub()}catch(e){}MSG.unsub=null}}
+function dmStart(){if(MSG.dmUnsub.length||!CLOUD.db||!CLOUD.user)return;const me=CLOUD.user.uid,col=CLOUD.db.collection('dm');let first=true;
+  const on=(k)=>q=>{const L=q.docs.map(d=>Object.assign({id:d.id},d.data()));if(k==='in'&&!first){const old=new Set(MSG.dms.in.map(d=>d.id));L.filter(d=>!old.has(d.id)&&!d.read).forEach(d=>toast(`✉ Nouveau message de ${esc(d.fromName||'?')}`))}MSG.dms[k]=L;if(k==='in')first=false;msgBadge();if(cur==='msg'&&MSG.mode==='dm')renderMsg()};
+  try{MSG.dmUnsub=[col.where('to','==',me).limit(200).onSnapshot(on('in'),()=>{}),col.where('from','==',me).limit(200).onSnapshot(on('out'),()=>{})]}catch(e){}}
+function dmConvs(){const me=CLOUD.user.uid,C={};[...MSG.dms.in,...MSG.dms.out].forEach(d=>{const o=d.from===me?d.to:d.from,nm=d.from===me?d.toName:d.fromName;(C[o]=C[o]||{uid:o,name:nm,L:[],un:0}).L.push(d);if(d.to===me&&!d.read)C[o].un++});
+  return Object.values(C).map(c=>(c.L.sort((a,b)=>a.t-b.t),c.last=c.L[c.L.length-1].t,c)).sort((a,b)=>b.last-a.last)}
+function dmListHTML(){const C=dmConvs();return `<div class="panel"><h3>✉ Messages privés <button class="sm go" data-act="dmNew">✏ Nouveau message</button></h3>
+   ${C.length?C.map(c=>`<div class="convrow ${c.un?'un':''}" data-act="dmOpenC" data-uid="${c.uid}" data-name="${esc(c.name||'?')}"><b>${esc(c.name||'?')}</b>${c.un?` <span class="nbadge">${c.un}</span>`:''}<span class="muted">${esc(cleanTxt(c.L[c.L.length-1].txt||'').slice(0,60))}</span><small class="muted">${tAgo(c.last)}</small></div>`).join(''):'<p class="muted">Aucune conversation. Écris à un joueur depuis le classement, le chat monde ou « Nouveau message ».</p>'}</div>`}
+function dmConvHTML(){const me=CLOUD.user.uid,c=MSG.conv,L=[...MSG.dms.in,...MSG.dms.out].filter(d=>(d.from===me&&d.to===c.uid)||(d.from===c.uid&&d.to===me)).sort((a,b)=>a.t-b.t);
+  L.filter(d=>d.to===me&&!d.read).forEach(d=>{d.read=true;CLOUD.db.collection('dm').doc(d.id).update({read:true}).catch(()=>{})});
+  return `<div class="panel"><h3><button class="sm" data-act="dmBack">◀</button> ✉ ${esc(c.name||'?')}</h3><div class="chatbox" id="dmBox">${L.map(d=>`<div class="cmsg ${d.from===me?'me':''}"><small class="muted">${tAgo(d.t)}</small> <b>${d.from===me?'Toi':esc(cleanTxt(d.fromName||'?'))}</b> : ${esc(cleanTxt(d.txt))}</div>`).join('')||'<p class="muted">Écris le premier message.</p>'}</div>
+   <div class="flexr chatin"><input id="dmTxt" maxlength="500" placeholder="Ton message à ${esc(c.name||'?')}…" style="flex:1"><button class="go" data-act="dmSend">Envoyer</button></div></div>`}
+function dmOpen(uid,name){if(!CLOUD.user){toast('Connecte-toi avec Google pour écrire aux joueurs.');return}MSG.mode='dm';MSG.conv={uid,name};showTab('msg')}
+Object.assign(ACT,{
+  msgMode:(t)=>{MSG.mode=t.dataset.v;MSG.conv=null;if(MSG.mode!=='chat')chatStop();renderMsg()},
+  fbStar:(t)=>{MSG.stars=+t.dataset.v;const v=$('fbTxt')&&$('fbTxt').value;renderMsg();if(v&&$('fbTxt'))$('fbTxt').value=v},
+  fbSend:async()=>{const tx=($('fbTxt')&&$('fbTxt').value||'').trim();if(!tx){toast('Écris ton avis avant de l\'envoyer.');return}if(!CLOUD.user)return;
+    try{await CLOUD.db.collection('feedback').add({uid:CLOUD.user.uid,name:myPseudo(),txt:cleanTxt(tx).slice(0,2000),stars:MSG.stars||0,v:VERSION,t:Date.now()});MSG.stars=0;toast('📨 Merci ! Ton avis a été envoyé.');renderMsg()}catch(e){toast(e&&e.code==='permission-denied'?'Les avis ne sont pas encore activés dans Firebase.':'Envoi impossible, réessaie plus tard.')}},
+  chatSend:async()=>{const i=$('chatTxt');const tx=(i&&i.value||'').trim();if(!tx||!CLOUD.user)return;if(Date.now()-MSG.last<3000){toast('Attends un peu avant de renvoyer un message.');return}MSG.last=Date.now();i.value='';
+    try{await CLOUD.db.collection('chat').add({uid:CLOUD.user.uid,name:myPseudo(),color:SAVE.ncolor||'',title:SAVE.title||'',txt:cleanTxt(tx).slice(0,300),t:Date.now()})}catch(e){toast(e&&e.code==='permission-denied'?'Le chat n\'est pas encore activé dans Firebase.':'Envoi impossible.')}},
+  dmOpenC:(t)=>{MSG.conv={uid:t.dataset.uid,name:t.dataset.name};renderMsg()},dmBack:()=>{MSG.conv=null;renderMsg()},
+  dmNew:async()=>{if(!RANK.list)await rankLoad(true);const me=CLOUD.user&&CLOUD.user.uid,L=(RANK.list||[]).filter(p=>p.uid!==me);
+    openModal(`<h2>✏ Nouveau message</h2>${L.length?`<p>À qui veux-tu écrire ?</p><div class="flexr">${L.map(p=>`<button data-act="dmTo" data-uid="${p.uid}" data-name="${esc(p.name||'?')}">${nameHTML(p.name,p.color)}</button>`).join('')}</div>`:'<p class="muted">Aucun autre joueur trouvé pour l\'instant.</p>'}`)},
+  dmSend:async()=>{const i=$('dmTxt');const tx=(i&&i.value||'').trim(),c=MSG.conv;if(!tx||!c||!CLOUD.user)return;if(Date.now()-MSG.last<1500)return;MSG.last=Date.now();i.value='';
+    try{await CLOUD.db.collection('dm').add({from:CLOUD.user.uid,fromName:myPseudo(),to:c.uid,toName:c.name||'?',txt:cleanTxt(tx).slice(0,500),t:Date.now(),read:false})}catch(e){toast(e&&e.code==='permission-denied'?'Les messages privés ne sont pas encore activés dans Firebase.':'Envoi impossible.')}}});
+setInterval(()=>{if(CLOUD.user&&CLOUD.db)dmStart();msgBadge()},5000);
 
 /* ---------- démarrage ---------- */
 SAVE=loadSave();
