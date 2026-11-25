@@ -287,7 +287,7 @@ html,body{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
    POKETABS EGGS COLLECTOR  (V00.01.00)
    Réglages rapides : objet T ci-dessous (durées en secondes, chances en 0..1)
    ===================================================================== */
-const VERSION='V00.53.00';
+const VERSION='V01.00.00';
 const T={
   breed:45,        // durée de base d'une ponte (s)
   hatch:75,        // durée de base d'éclosion (s), modulée par l'espèce (stats totales et rareté)
@@ -647,7 +647,7 @@ const nestEggN=n=>(n.egg?1:0)+((n.more||[]).length);
 /* place pour de futurs Pokémon : Pokémon + œufs du sac + œufs en couveuse + bébés en attente */
 function eggRoom(){const inc=SAVE.incs.reduce((a,c)=>a+c.slots.length,0);return monCap()-SAVE.mons.length-SAVE.eggs.length-inc-(SAVE.pend||[]).length}
 function collect(i,quiet){const n=SAVE.nests[i];if(!n.egg)return 0;let got=0,why='';
-  while(n.egg){if(bagFull()){why='bag';break}if(eggRoom()<=0){why='room';break}addEgg(n.egg);SAVE.st.lay=(SAVE.st.lay||0)+1;got++;n.egg=(n.more&&n.more.length)?n.more.shift():null}
+  while(n.egg){if(bagFull()){why='bag';break}addEgg(n.egg);SAVE.st.lay=(SAVE.st.lay||0)+1;got++;n.egg=(n.more&&n.more.length)?n.more.shift():null}
   collect.why=why;
   if(got){const A=mon(n.a),B=n.b==='solo'?A:mon(n.b);if(A&&B){if(!n.t0||Date.now()>=n.t0+n.dur){n.t0=Date.now();n.dur=breedDur(n,A,B)}}else n.t0=0;dirty=true}
   if(!quiet){if(got){toast(`🥚 ${got} œuf${got>1?'s':''} récupéré${got>1?'s':''} !`);saveGame()}if(why==='bag'&&!got)bagMsg();if(why==='room')toast(`🏠 Plus de place dans la nurserie (${SAVE.mons.length} Pokémon + ${SAVE.eggs.length} œufs au sac + œufs en couveuse = ${monCap()}). Relâche des Pokémon ou agrandis la nurserie pour récupérer ${got?'les autres œufs':'cet œuf'} et relancer la ponte.`)}
@@ -2384,7 +2384,7 @@ const INFO=[
  [/^Incubateurs/,'Incubateurs','Mets-y les œufs du sac pour les faire éclore. Chaque espèce a sa durée. Un incubateur amélioré a plus de places et va plus vite. Il faut de la place libre dans ta nurserie pour faire éclore.'],
  [/^Entraînement/,'Entraînement','Les punching-balls donnent de l\'XP à tes Pokémon pendant la durée choisie (30 min à 24 h). Un Pokémon à l\'entraînement ne peut ni combattre ni se reproduire. ⚡ remplit les places vides avec tes Pokémon libres les plus forts.'],
  [/^🗄️ Armoire|^Ton armoire/,'Armoire à œufs','Expose jusqu\'à 12 œufs que tu veux garder ou montrer. Les autres joueurs la voient sur ton profil. Clique sur un œuf de l\'armoire pour le reprendre.'],
- [/^Sac d'œufs/,'Sac d\'œufs','Les œufs récupérés des nids, achetés ou gagnés. Mets-les dans un incubateur pour les faire éclore, range-les dans l\'armoire ou vends-les. Le sac a une place limitée (agrandissable en boutique).'],
+ [/^Sac d'œufs/,'Sac d\'œufs','Les œufs récupérés des nids, achetés ou gagnés. Mets-les dans un incubateur pour les faire éclore, range-les dans l\'armoire ou vends-les. Le sac a ses propres places, séparées de celles de la nurserie (agrandissable en boutique). Si la nurserie est pleine à l\'éclosion, le bébé attend qu\'une place se libère.'],
  [/^Mes Pokémon/,'Mes Pokémon','Tous tes Pokémon. 📋 Fiche : stats réelles, talent, déplacement, objet tenu, évolution. ⭐ = favori (protégé des relâchers auto). ☑ Sélectionner plusieurs : relâcher en lot avec des filtres.'],
  [/^Tableau$/,'Tableaux','L\'aventure : 1000 tableaux répartis en biomes. Un boss tous les 5 tableaux (il donne des œufs), un légendaire à la fin de chaque biome, Arceus au tableau 1000. Ensuite, le mode Maître I à V recommence avec des ennemis plus forts qu\'Arceus.'],
  [/^Armée$/,'Armée','Les Pokémon que tu poses dans la zone bleue. Glisse-les depuis la liste ou utilise « Placement auto » (qui suit tes filtres et ton tri). La taille de l\'armée s\'agrandit en boutique (15 max). Les équipes 💾 enregistrent un placement.'],
@@ -2440,6 +2440,8 @@ setTimeout(()=>infoScan(document.body),0);
    MESSAGES : courrier (nouveautés + avis), chat monde, messages privés (Firestore : chat, dm, feedback)
    ===================================================================== */
 const PATCH=[
+ ['V01.00','🎉 Sortie officielle de PokeTabs Eggs Collector ! Merci à tous les testeurs. Envoie ton avis depuis l\'onglet 💬 Messages.'],
+ ['V00.54','Le sac d\'œufs et la nurserie ont maintenant des places séparées : tu peux récupérer les œufs des nids même si la nurserie est pleine (seule la place du sac compte).'],
  ['V00.52','Filtre automatique des insultes et des liens dans le chat, les messages privés, les avis et les pseudos.'],
  ['V00.51','Œufs surprise : chances affichées (commun, peu commun, rare, très rare) et 1 chance sur 1 000 000 d\'un légendaire ; fenêtre des œufs reçus après l\'achat. Cristal de super mutation (1 000 000). Onglet 💬 Messages : courrier, chat monde, messages privés.'],
  ['V00.50','Plusieurs Gènes miroirs à la suite. Œufs mystère 🆕 « ??? » tant que l\'espèce n\'a jamais éclos.'],
