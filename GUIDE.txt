@@ -295,3 +295,25 @@ V00.33.00
                         selon le biome) avec relief (bord sombre en bas, lumière à gauche)
    Bestiaire            Bestiaire_PokeTabs.xlsx régénéré : 529 espèces, génération, talent, déplacement, PC avec stats lissées,
                         taux de shiny ; ajouté au .gitignore
+
+V00.34.00
+   Page d'accueil       à chaque lancement : « Se connecter avec Google » (ou « Continuer en tant que … » si déjà connecté),
+                        « Jouer en invité », choix de la langue 🇫🇷 / 🇬🇧 ; en local (fichier ouvert sans site) : invité seulement
+   Langue               Réglages > Langue / Language (FR ou English) ; en anglais : accueil, tutoriel, onglets, menus, boutons,
+                        types, astuces ; les longues descriptions restent en français pour l'instant
+   Tutoriel             visite des 10 onglets (Nurserie, Pokémon, Combat, Boutique, Pokédex, Succès, Aventures, En ligne,
+                        Profil, Réglages) lancée une fois juste après le choix du starter ; boutons Précédent / Suivant /
+                        Passer ; Réglages > « Revoir le tutoriel »
+   Entraînement         ⚡ Remplir les punching-balls (Nurserie) et ⚡ Remplir automatiquement (dans un punching-ball) :
+                        les Pokémon libres les plus forts (sous le niveau 100), avec la durée choisie
+   Bébés                plafond au niveau du parent le plus fort AVANT mutation : une mutation ou super mutation
+                        le fait passer au-dessus (ex. deux parents niveau 10 : bébé niveau 8 à 10, avec mutation 13 à 15)
+
+V00.35.00
+   Achat groupé         en haut de la Boutique : ×1, ×5, ×10, ×25 ou Max ; vaut pour les objets, boosts, améliorations
+                        et œufs du Marché du jour ; s'arrête quand il n'y a plus assez de pièces ou de place dans le sac
+   Entraînement         « ⚡ Remplir » demande d'abord la durée (30 min à 24 h)
+   Arène                champions, Conseil 4 et Maître : types libres ; pas de légendaire chez les champions et au Conseil 4 ;
+                        1 légendaire maximum pour le Maître et pour qui l'affronte ; experts : 100 % de leur type, légendaires permis
+   Musiques             combat d'arène en ligne : sons/combat_en_ligne.mp3 ; combat contre le Maître : sons/combat_maitre.mp3
+                        (tant que ces fichiers manquent : arene_champion.mp3 et combat_mewtwo.mp3 à la place)
