@@ -200,7 +200,8 @@ body.bfull .roster{flex:none;padding:6px 2px}
 .slotrow .bar{flex:1}
 .mvtag{display:inline-block;padding:2px 8px;margin:1px 2px;border-radius:10px;background:#f3e6cf;border:1px solid #c9a97a;font-size:12px;font-weight:600}
 .alog{list-style:none;padding:0;margin:0}.alog li{padding:4px 8px;border-bottom:1px dashed #d8c4a0;font-size:13px}.alog li.me{background:#fff3c4;border-radius:6px}
-#home{position:fixed;inset:0;z-index:200;display:flex;align-items:center;justify-content:center;background:radial-gradient(circle at 50% 30%,#fff7e0,#e8cfa0 70%,#c9a46a);padding:16px}
+#home{position:fixed;inset:0;z-index:200;display:flex;align-items:center;justify-content:center;background:#2a1f4a url('assets/bg_menu.jpg') center/cover no-repeat;padding:16px;overflow:auto}
+#home .hbox{background:rgba(255,248,234,.92)!important;backdrop-filter:blur(2px)}
 #home .hbox{background:var(--paper,#fff8ea);border:4px solid var(--ink,#3a2a1a);border-radius:18px;padding:26px 30px;max-width:460px;width:100%;text-align:center;display:flex;flex-direction:column;gap:10px;align-items:center;box-shadow:0 10px 0 rgba(0,0,0,.15)}
 #home[hidden],#tour[hidden]{display:none}#home .hlogo{width:84px}#home h1{margin:0;font-size:30px;letter-spacing:2px;line-height:1}#home h1 span{display:block;font-size:15px;letter-spacing:4px;color:#b06a20}
 #home button.big{width:100%;font-size:17px;padding:12px}#home .hlang{display:flex;gap:6px}#home .small{font-size:12px}
@@ -208,6 +209,20 @@ body.bfull .roster{flex:none;padding:6px 2px}
 #tour h3{margin:2px 0 6px}#tour p{margin:0 0 10px;line-height:1.45}#tour .tstep{font-size:12px;color:#8a6a3a;font-weight:700}#tour .tbtn{display:flex;gap:6px;align-items:center}
 nav button.tourhl{animation:tourpulse 1s infinite;outline:3px solid #ff8a2a}@keyframes tourpulse{50%{transform:scale(1.08)}}
 .buyq{display:flex;flex-wrap:wrap;gap:6px;align-items:center;background:#fff3c4;border:2px solid #d8b86a;border-radius:10px;padding:6px 10px;margin:4px 0 6px;position:sticky;top:108px;z-index:5}
+html,body{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+@media (max-width:760px),(max-height:500px){
+ header{padding:6px 8px;gap:6px 10px}.logoic{width:30px;height:30px}.logo>div{font-size:17px}.logo span{font-size:9px;letter-spacing:2px}.stats{font-size:13px;gap:8px}
+ nav{flex-wrap:nowrap;overflow-x:auto;width:100%;margin-left:0;padding-bottom:4px;scrollbar-width:none;-webkit-overflow-scrolling:touch}nav::-webkit-scrollbar{display:none}
+ nav button{flex:0 0 auto;padding:5px 10px;font-size:13px}
+ main{padding:6px}.panel{padding:8px;border-width:3px}.grid{grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:6px}
+ #modal{padding:4px}#tip{width:94vw;max-width:94vw;bottom:8px}#tour{bottom:6px;padding:9px 11px}#tour p{font-size:13px;margin-bottom:8px}
+ .buyq{position:static}#home .hbox{padding:16px}#home h1{font-size:24px}
+ .bhrow{flex-direction:column;align-items:stretch}
+}
+@media (max-width:760px) and (orientation:portrait){#tab-battle::before{content:'📱 Tourne ton téléphone à l\'horizontale pour avoir un plus grand terrain.';display:block;text-align:center;font-size:12px;font-weight:700;background:#fff3c4;border:2px solid #d8b86a;border-radius:8px;padding:4px;margin-bottom:6px}}
+@media (max-height:500px){header{position:static}}
+#gpc{position:fixed;left:0;top:0;width:26px;height:26px;margin:-4px 0 0 -4px;z-index:9999;pointer-events:none;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 26 26'%3E%3Cpath d='M3 2 L3 21 L8 16 L12 24 L15 23 L11 15 L18 15 Z' fill='%23ffd23a' stroke='%233a2a1a' stroke-width='2' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat;filter:drop-shadow(1px 2px 0 rgba(0,0,0,.4))}
+#gpc[hidden]{display:none}.gphov{outline:3px solid #ffb02a!important;outline-offset:2px}
 </style>
 </head>
 <body>
@@ -258,7 +273,7 @@ nav button.tourhl{animation:tourpulse 1s infinite;outline:3px solid #ff8a2a}@key
    POKETABS EGGS COLLECTOR  (V00.01.00)
    Réglages rapides : objet T ci-dessous (durées en secondes, chances en 0..1)
    ===================================================================== */
-const VERSION='V00.36.00';
+const VERSION='V00.38.00';
 const T={
   breed:45,        // durée de base d'une ponte (s)
   hatch:75,        // durée de base d'éclosion (s), modulée par l'espèce (stats totales et rareté)
@@ -1184,7 +1199,8 @@ function placeAt(px,py){
   renderBattleHead();renderRoster();
 }
 function autoPlace(){
-  B.placed=[];const cross=m=>{if(!B.M.blk)return 0;const md=unitMode(DEX[m.n],B.M.bi);return md==='fly'||(B.M.blk!=='vide'&&md==='swim')?0:1};const L=freeMons().filter(m=>!B.defi||defiOk(m)).sort((a,b)=>cross(a)-cross(b)||pc(b)-pc(a)).slice(0,B.defi&&B.defi.max?B.defi.max:armyMax());
+  B.placed=[];const cross=m=>{if(!B.M.blk)return 0;const md=unitMode(DEX[m.n],B.M.bi);return md==='fly'||(B.M.blk!=='vide'&&md==='swim')?0:1};const R0=B.arena&&B.arena.rule;let nl=0;const L=applyFilt(freeMons(),'roster').filter(m=>(!B.defi||defiOk(m))&&!(R0&&R0.nolegend&&LEGEND.has(m.n))&&!(R0&&R0.type&&DEX[m.n].t1!==R0.type&&DEX[m.n].t2!==R0.type)).sort((a,b)=>cross(a)-cross(b)||pc(b)-pc(a)).filter(m=>!(R0&&R0.maxLeg&&LEGEND.has(m.n)&&++nl>R0.maxLeg)).slice(0,B.defi&&B.defi.max?B.defi.max:armyMax());
+  const f=FILT.roster;if(f&&(f.q||f.t)&&!L.length)toast('Aucun Pokémon libre ne correspond au filtre.');
   const pz=PZB(),spots=[];for(let x=pz-1;x>=1;x--)for(let y=B.dmax?1:2;y<GH-(B.dmax?1:2);y++)spots.push([x,y]);
   spots.sort((a,b)=>(b[0]-a[0])*3+(Math.abs(a[1]-GH/2)-Math.abs(b[1]-GH/2))/2);
   L.forEach(m=>{const md=unitMode(DEX[m.n],B.M.bi);const melee=!(RANGED.has(DEX[m.n].t1)||DEX[m.n].spa>DEX[m.n].atk+15);
@@ -1507,7 +1523,10 @@ function applySyn(){const A=synActive(B.placed).filter(x=>x.lvl);const me=B.unit
     else if(k==='heal')u.heal=(u.heal||0)+v;else if(k==='dodge')u.dodge=(u.dodge||0)+v;else if(k==='crit')u.crit=(u.crit||0)+v;else if(k==='leech')u.leech=(u.leech||0)+v;else if(k==='dmg')u.dmgm=(u.dmgm||1)*(1+v)});
     if(k==='foeCd')foes.forEach(u=>u.cdm=(u.cdm||1)*(1+v));if(k==='foeDef')foes.forEach(u=>u.def*=1-v)})}
 function synInfo(){openModal(`<h2>Bonus d'équipe par type</h2><p class="muted">Chaque Pokémon compte pour ses deux types. Les bonus s'activent avec 5, 10 et 15 Pokémon <b>différents</b> du même type dans ton armée : deux Pokémon de la même espèce ne comptent qu'une fois.</p><table class="rank"><tr><th>Type</th><th>5</th><th>10</th><th>15</th></tr>${Object.keys(SYN).map(t=>`<tr><td><span class="ty" style="background:${TCOL[t]}">${SYN[t][0]} ${TNAME[t]}</span></td>${[1,2,3].map(l=>`<td>${synTxt(t,l)}</td>`).join('')}</tr>`).join('')}</table>`)}
-function startFight(){
+/* XP d'une victoire : suit le niveau des ennemis (mode Maître : ennemis au niveau de ton meilleur Pokémon dès le tableau 1) */
+const stEqOf=L=>Math.pow(Math.max(0,L-3)/3.4,1/.62);
+function winXP(st){const L=B&&B.eLv||enemyLv(st);return Math.round(15+14*Math.max(st,stEqOf(L))*(1+.1*(SAVE.cycle||0)))}
+function startFight(){if(B){const E=B.units.filter(u=>u.team===1);B.eLv=E.length?E.reduce((a,u)=>a+u.lv,0)/E.length:0}
   if(!B.placed.length)return;if(B.arena){const bad=teamOk(B.placed.map(p=>mon(p.u)).filter(Boolean),B.arena.rule);if(bad){toast('🏟️ '+bad);return}}AUTO_LAST=B.placed.map(p=>({u:p.u,x:p.x,y:p.y}));
   B.placed=B.placed.filter(p=>{const m=mon(p.u);return m&&!monStatus(p.u)});
   B.units=B.units.filter(u=>u.team===1);
@@ -1638,7 +1657,7 @@ function endFight(win){if(B.dmax){dmaxEnd(win);return}
     /* œuf du boss lui-même : 10 % pour un légendaire, 35 % sinon ; sinon super œuf (tous les 10 tableaux) ou œuf niveau 5 du biome */
     egg=st===MAXST&&first?legendEgg():LEGEND.has(boss.n)?(rnd()<.1&&EGG_HAS.has(own)?Object.assign(eggOf(own),{src:'legende'}):superEgg()):EGG_HAS.has(own)&&rnd()<.35?mk(own,st%10===0?10:5):st%10===0?superEgg():(()=>{const P=EGG_SPECIES.filter(x=>!LEGEND.has(x)&&x!==132&&eggMethod(x)==='marche'&&(HAB[x]?HAB[x].includes(B.M.bi.hab):(B.M.bi.types.includes(DEX[x].t1)||B.M.bi.types.includes(DEX[x].t2))));const n=P.length?pick(P):pick(EGG_SPECIES.filter(x=>eggMethod(x)==='marche'&&x!==132));const sh=rnd()<T.sh0;return{id:SAVE.uid++,n,sx:rollSex(n),lv:5+(sh?T.mutLv:0),g:randGenes(5,20),sh,mut:0,bst:sh?pick(BST_K):null,src:'boss'}})();if(!addEgg(egg,egg.src==='arceus'||egg.src==='legende')){const v=rp(eggPrice(egg.n)*.3);SAVE.coins+=v;egg.sold=v}}
     if(SAVE.tuto>=5&&SAVE.tuto<6)setTuto(6)}
-  xp=win?Math.round(15+st*14):0;B.placed.forEach(p=>{const m=mon(p.u);if(m){gainXP(m,xp);if(win)gainHap(m,3)}});
+  xp=win?winXP(st):0;B.placed.forEach(p=>{const m=mon(p.u);if(m){gainXP(m,xp);if(win)gainHap(m,3)}});
   if(win&&B.units.some(u=>u.boss&&u.team===1))jingle(B.units.some(u=>u.boss&&u.team===1&&LEGEND.has(u.n))?'victoire_legendaire':'victoire_boss');
   if(AUTO&&win)SAVE.st.autoW=(SAVE.st.autoW||0)+1;
   if(AUTO&&(B.defi||B.arena))AUTO=false;
@@ -2152,9 +2171,9 @@ const BIOME_MUS={'Plaines':'plaine','Prairie fleurie':'plaine','Cerisaie':'plain
  'Désert ardent':'desert','Mesa':'desert','Canyon':'desert','Toundra gelée':'neige','Banquise':'neige','Gouffre de glace':'neige',
  'Volcan':'volcan','Récif corallien':'ocean','Marais brumeux':'brouillard','Montagnes':'brouillard','Falaises de cristal':'brouillard',
  'Cimetière':'nuit','Grotte':'nuit','Ruines de Mew':'nuit','Route Victoire':'jouer'};
-const MUS_FB={combat_en_ligne:'arene_champion',combat_maitre:'combat_mewtwo'};MUS.miss=MUS.miss||{};const musK=k=>MUS.miss[k]&&MUS_FB[k]?MUS_FB[k]:k;
+const MUS_FB={combat_en_ligne:'arene_champion',combat_maitre:'combat_mewtwo',accueil:'opening'};MUS.miss=MUS.miss||{};const musK=k=>MUS.miss[k]&&MUS_FB[k]?MUS_FB[k]:k;
 function musWanted(){return musK(musWanted0())}
-function musWanted0(){if(!SAVE.mons.length)return 'opening';if(cur!=='battle')return TAB_MUS[cur]||'ile';if(!B)return 'plaine';if(B.arena)return B.arena.id==='master'?'combat_maitre':'combat_en_ligne';const bi=B.M.bi;
+function musWanted0(){if(typeof HOME!=='undefined'&&HOME.on)return 'accueil';if(!SAVE.mons.length)return 'opening';if(cur!=='battle')return TAB_MUS[cur]||'ile';if(!B)return 'plaine';if(B.arena)return B.arena.id==='master'?'combat_maitre':'combat_en_ligne';const bi=B.M.bi;
   if(B.phase==='fight'){const bo=B.units.find(u=>u.boss&&u.team===1);if(bo)return LEGEND.has(bo.n)?'combat_mewtwo':'combat_boss'}
   if(bi.temple||bi.valley)return 'arene_champion';return BIOME_MUS[bi.name]||'plaine'}
 function musAudio(k,loop){let a=MUS.cache[k];if(!a){a=new Audio('sons/'+k+'.mp3');a.preload='auto';MUS.cache[k]=a;if(MUS_FB[k])a.onerror=()=>{MUS.miss[k]=1;if(MUS.key===k){MUS.key=null;MUS.a=null;updateMusic()}}}a.loop=loop;return a}
@@ -2180,7 +2199,7 @@ function homeRender(){const h=$('home');if(!h||!HOME.on)return;const ok=cloudRea
      :`<button class="go big" data-act="homeGoogle" ${ok&&CLOUD.auth?'':'disabled'}><b>G</b> ${tr2('Se connecter avec Google','Sign in with Google')}</button>`}
    <button class="big" data-act="homeGuest">👤 ${tr2('Jouer en invité','Play as guest')}</button>
    <p class="muted small">${u?'':ok?(CLOUD.auth?tr2('Avec Google, ta partie est sauvegardée en ligne et tu as accès au classement, à l\'arène et à l\'hôtel des ventes. En invité, la partie reste dans ce navigateur.','With Google, your game is saved online and you get the ranking, the arena and the auction house. As a guest, your game stays in this browser.'):tr2('Connexion à Google en cours…','Connecting to Google…')):tr2('La connexion Google marche seulement sur le site en ligne. Ici, joue en invité.','Google sign-in only works on the online site. Here, play as a guest.')}</p></div>`}
-function homeEnter(){HOME.on=false;const h=$('home');if(h)h.hidden=true;showTab(cur||'nursery');
+function homeEnter(){HOME.on=false;const h=$('home');if(h)h.hidden=true;updateMusic();showTab(cur||'nursery');
   if(!SAVE.mons.length)starterModal();else{if(SAVE.tuto>=1&&SAVE.tuto<6)setTip(TUTO[SAVE.tuto]);if(!SAVE.tour)setTimeout(tourStart,400)}}
 /* ---- traduction anglaise : textes exacts + quelques mots fréquents (le reste reste en français) ---- */
 const EN={"Nurserie":"Nursery","Pokémon":"Pokémon","Combat":"Battle","Boutique":"Shop","Pokédex":"Pokédex","Succès":"Achievements","🗺️ Aventures":"🗺️ Adventures","🌐 En ligne":"🌐 Online","Réglages":"Settings","⚙ Réglages":"⚙ Settings",
@@ -2229,6 +2248,44 @@ function tourRender(){let el=$('tour');if(!el){el=document.createElement('div');
 function tourEnd(){TOUR.on=false;const el=$('tour');if(el)el.hidden=true;document.querySelectorAll('nav button.tourhl').forEach(b=>b.classList.remove('tourhl'));SAVE.tour=1;dirty=true;saveGame();showTab('nursery')}
 Object.assign(ACT,{setLang:(t)=>setLang(t.dataset.v),homeEnter:()=>homeEnter(),homeGuest:()=>homeEnter(),homeGoogle:()=>{HOME.want=true;cloudSignIn()},homeOut:async()=>{HOME.want=true;try{await CLOUD.auth.signOut()}catch(e){}cloudSignIn()},
   tourStart:()=>tourStart(),tourSkip:()=>tourEnd(),tourNext:()=>{if(TOUR.i>=TOUR_STEPS.length-1)tourEnd();else{TOUR.i++;tourRender()}},tourPrev:()=>{TOUR.i=Math.max(0,TOUR.i-1);tourRender()}});
+
+/* =====================================================================
+   MANETTE : stick gauche ou croix = curseur, A = cliquer (maintenir pour glisser), B = retour / fermer,
+   X = placement auto, Y = plein écran du combat, LB / RB = onglet précédent / suivant, Start = lancer le combat,
+   stick droit = faire défiler
+   ===================================================================== */
+const GP={on:false,x:innerWidth/2,y:innerHeight/2,prev:[],down:false,hov:null,last:0,el:null};
+const GP_TABS=()=>[...document.querySelectorAll('nav button[data-tab]')];
+function gpEl(){if(!GP.el){GP.el=document.createElement('div');GP.el.id='gpc';document.body.appendChild(GP.el)}return GP.el}
+function gpShow(){const c=gpEl();c.hidden=false;c.style.transform=`translate(${GP.x}px,${GP.y}px)`}
+function gpTarget(){const c=gpEl();c.hidden=true;const e=document.elementFromPoint(GP.x,GP.y);c.hidden=false;return e}
+function gpFire(type,el){if(!el)return;const o={bubbles:true,cancelable:true,clientX:GP.x,clientY:GP.y,button:0,buttons:type==='pointerup'?0:1,pointerId:7,isPrimary:true,pointerType:'mouse'};
+  el.dispatchEvent(type.startsWith('pointer')?new PointerEvent(type,o):new MouseEvent(type,o))}
+function gpScroll(dy){const e=gpTarget();let n=e;while(n&&n!==document.body){const cs=getComputedStyle(n);if(/(auto|scroll)/.test(cs.overflowY)&&n.scrollHeight>n.clientHeight+2){n.scrollTop+=dy;return}n=n.parentElement}scrollBy(0,dy)}
+function gpTab(d){const T=GP_TABS().filter(b=>!b.hidden&&b.offsetParent);const i=T.findIndex(b=>b.dataset.tab===cur);const nb=T[(i+d+T.length)%T.length];if(nb)nb.click()}
+function gpLoop(t){requestAnimationFrame(gpLoop);const P=navigator.getGamepads?[...navigator.getGamepads()].filter(Boolean):[];const g=P[0];if(!g)return;
+  const dt=Math.min(.05,(t-(GP.last||t))/1000);GP.last=t;const b=g.buttons.map(x=>x.pressed),pr=i=>b[i]&&!GP.prev[i];const dz=v=>Math.abs(v)<.18?0:v;
+  let ax=dz(g.axes[0]||0),ay=dz(g.axes[1]||0);if(b[14])ax=-1;if(b[15])ax=1;if(b[12])ay=-1;if(b[13])ay=1;
+  const any=ax||ay||b.some(x=>x)||dz(g.axes[3]||0);if(any&&!GP.on){GP.on=true}
+  if(GP.on){const sp=(b[6]||b[7]?1500:780)*dt;GP.x=clamp(GP.x+ax*Math.abs(ax)*sp*1.3,0,innerWidth-2);GP.y=clamp(GP.y+ay*Math.abs(ay)*sp*1.3,0,innerHeight-2);
+    if(ay>.5&&GP.y>innerHeight-30)gpScroll(14);if(ay<-.5&&GP.y<30)gpScroll(-14);
+    const ry=dz(g.axes[3]||0);if(ry)gpScroll(ry*22);
+    if(ax||ay||any)gpShow();
+    const h=gpTarget(),hv=h&&h.closest&&h.closest('[data-act],button,a,select,input,.card,nav button,canvas');if(hv!==GP.hov){if(GP.hov)GP.hov.classList.remove('gphov');GP.hov=hv;if(hv&&hv.tagName!=='CANVAS')hv.classList.add('gphov')}
+    if(pr(0)){const e=gpTarget();GP.down=e;gpFire('pointerdown',e);gpFire('mousedown',e)}
+    else if(b[0]&&GP.down&&(ax||ay)){gpFire('pointermove',gpTarget());gpFire('pointermove',window)}
+    if(GP.prev[0]&&!b[0]&&GP.down){const e=gpTarget();gpFire('pointerup',e);window.dispatchEvent(new PointerEvent('pointerup',{clientX:GP.x,clientY:GP.y,bubbles:true,pointerId:7}));gpFire('mouseup',e);
+      if(e){const tg=e.closest('select');if(tg){const n=tg.options.length;if(n){tg.selectedIndex=(tg.selectedIndex+1)%n;tg.dispatchEvent(new Event('change',{bubbles:true}));tg.dispatchEvent(new Event('input',{bubbles:true}))}}else if(/^(INPUT|TEXTAREA)$/.test(e.tagName)){e.focus()}else gpFire('click',e)}GP.down=null}
+    if(pr(1)){const m=$('modal');if(m&&!m.hidden)closeModal();else if(TOUR.on)tourEnd();else if($('tip')&&!$('tip').hidden)$('tip').hidden=true;else if(document.body.classList.contains('bfull'))toggleBattleFull()}
+    if(pr(2)&&cur==='battle'){const a=document.querySelector('[data-act="autoPlace"]');if(a&&!a.disabled)a.click()}
+    if(pr(3)&&cur==='battle')toggleBattleFull();
+    if(pr(4))gpTab(-1);if(pr(5))gpTab(1);
+    if(pr(9)){if(HOME.on)homeEnter();else if(cur==='battle'){const a=document.querySelector('[data-act="fight"]');if(a&&!a.disabled)a.click()}}}
+  GP.prev=b}
+addEventListener('gamepadconnected',()=>{GP.on=true;gpShow();toast(tr2('🎮 Manette connectée : stick gauche = curseur, A = cliquer, B = retour, X = placement auto, LB / RB = onglets, Start = combat, stick droit = défiler','🎮 Controller connected: left stick = cursor, A = click, B = back, X = auto place, LB / RB = tabs, Start = fight, right stick = scroll'))});
+addEventListener('gamepaddisconnected',()=>{if(GP.el)GP.el.hidden=true;GP.on=false});
+addEventListener('mousemove',e=>{if(e.isTrusted&&GP.on&&GP.el&&!GP.el.hidden&&Math.abs(e.movementX)+Math.abs(e.movementY)>2){GP.el.hidden=true;if(GP.hov){GP.hov.classList.remove('gphov');GP.hov=null}}});
+requestAnimationFrame(gpLoop);
 
 /* ---------- démarrage ---------- */
 SAVE=loadSave();

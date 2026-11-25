@@ -317,3 +317,24 @@ V00.35.00
                         1 légendaire maximum pour le Maître et pour qui l'affronte ; experts : 100 % de leur type, légendaires permis
    Musiques             combat d'arène en ligne : sons/combat_en_ligne.mp3 ; combat contre le Maître : sons/combat_maitre.mp3
                         (tant que ces fichiers manquent : arene_champion.mp3 et combat_mewtwo.mp3 à la place)
+
+V00.36.00
+   Stade                les défis en ligne se jouent dans un stade (sol plat sans obstacle, gradins avec public, lignes,
+                        Poké Ball au centre, zones bleue et rouge) : terre battue pour les champions, pierre violette pour
+                        le Conseil 4, or pour le Maître, couleur du type pour les experts
+   Équipe verrouillée   l'équipe qui gagne une place devient l'équipe de la place et ne peut plus être changée
+                        (plus de bouton « Mettre à jour mon équipe ») ; elle change seulement si elle est battue
+                        ou si tu prends une place plus haute avec une nouvelle équipe
+
+V00.37.00
+   Accueil              fond : assets/bg_menu.jpg (copie allégée de « BG-menu du jeu.jpeg ») ; musique de l'accueil :
+                        sons/accueil.mp3 (tant qu'il manque : opening.mp3)
+   Téléphone            en-tête compact, onglets sur une ligne qui défile au doigt, grilles plus serrées, fenêtres et
+                        tutoriel à la largeur de l'écran, pas de zoom au double tap ; en Combat à la verticale, conseil de
+                        tourner le téléphone ; en horizontal l'en-tête ne reste plus collé en haut
+   Manette              stick gauche ou croix = curseur (gâchettes = plus rapide), A = cliquer (maintenir pour glisser
+                        un Pokémon), B = retour / fermer, X = placement auto, Y = plein écran du combat,
+                        LB / RB = onglet précédent / suivant, Start = lancer le combat (ou entrer depuis l'accueil),
+                        stick droit = faire défiler ; la souris reprend la main dès qu'elle bouge
+   Placement auto       utilise seulement les Pokémon affichés par le filtre de type et la recherche par nom sous le terrain
+                        (et respecte les règles de la place d'arène)
