@@ -226,6 +226,9 @@ html,body{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 .statbox{margin:4px 0 8px}.stt{border-collapse:collapse;width:100%;font-size:13px}.stt th{text-align:left;font-size:11px;color:#8a6a3a;padding:2px 4px}.stt td{padding:3px 4px;border:0;border-top:1px dashed #e0cda8;vertical-align:middle;background:none}
 .stt td.num{text-align:right;white-space:nowrap}.stt td.big{font-weight:800;font-size:15px}.stt td.bar{width:26%}.stt td.bar i{display:block;height:10px;border-radius:5px;border:1px solid rgba(0,0,0,.25)}.stt td.eff{font-size:12px}.stt tr.off td{opacity:.45}
 @media (max-width:760px){.stt td.bar{display:none}.stt{font-size:12px}}
+.ibtn{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;min-width:18px;padding:0!important;margin:0 4px;border-radius:50%!important;font:italic 700 12px Georgia,serif!important;background:#4a8fe0!important;color:#fff!important;border:2px solid #2a5a9a!important;box-shadow:none!important;vertical-align:middle;cursor:help;line-height:1}
+.ibtn:hover{background:#2a6ac0!important}#infoPop{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:400;max-width:min(440px,92vw);background:#fffaf0;border:4px solid var(--ink,#3a2a1a);border-radius:12px;padding:12px 16px;box-shadow:0 8px 0 rgba(0,0,0,.2)}#infoPop[hidden]{display:none}#infoPop p{line-height:1.45}
+.newb{display:inline-block;font-size:13px;margin-right:2px;filter:drop-shadow(0 1px 0 rgba(0,0,0,.25))}.eggchip.newegg{background:#eaf6ff;border-color:#7ab8f0}
 </style>
 </head>
 <body>
@@ -276,7 +279,7 @@ html,body{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
    POKETABS EGGS COLLECTOR  (V00.01.00)
    Réglages rapides : objet T ci-dessous (durées en secondes, chances en 0..1)
    ===================================================================== */
-const VERSION='V00.46.00';
+const VERSION='V00.50.00';
 const T={
   breed:45,        // durée de base d'une ponte (s)
   hatch:75,        // durée de base d'éclosion (s), modulée par l'espèce (stats totales et rareté)
@@ -490,7 +493,7 @@ function tick(){
     if(now>=t.t0+t.dur){const xp=Math.round(ballRate(b)*t.dur/1000);const lv0=m.lv;gainXP(m,xp);gainHap(m,Math.round(2*t.dur/3600000));b.mons=b.mons.filter(x=>x!==u);delete b.tr[u];SAVE.st.train=(SAVE.st.train||0)+1;if(t.dur>=1440*60000)SAVE.st.tr24=(SAVE.st.tr24||0)+1;dirty=true;
       toast(`🥊 ${esc(DEX[m.n].name)} a fini son entraînement : +${fmt(xp)} XP${m.lv>lv0?` (niveau ${lv0} → ${m.lv})`:''}`)}})});
   SAVE.nests.forEach(n=>{if(n.a&&n.b&&nestEggN(n)<nestCap(n)&&n.t0&&now>=n.t0+n.dur){const A=mon(n.a),B=n.b==='solo'?A:mon(n.b);if(A&&B){const egg=makeEgg(A,B,n.lvl);if(!n.egg)n.egg=egg;else(n.more=n.more||[]).push(egg);
-    if(n.b==='solo'){n.a=null;n.b=null;n.t0=0;toast('🧬 Le Gène miroir est épuisé : le Pokémon quitte le nid.')}
+    if(n.b==='solo'){n.mirN=(n.mirN||1)-1;if(n.mirN>0){if(nestEggN(n)<nestCap(n)){n.t0=n.t0+n.dur;if(now>=n.t0+n.dur)n.t0=now;n.dur=breedDur(n,A,B)}}else{n.a=null;n.b=null;n.t0=0;n.mirN=0;toast('🧬 Les Gènes miroirs sont épuisés : le Pokémon quitte le nid.')}}
     else if(!n.dna&&nestEggN(n)<nestCap(n)){n.t0=n.t0+n.dur;if(now>=n.t0+n.dur)n.t0=now;n.dur=breedDur(n,A,B)}
     if(n.dna){[A,B].forEach(m=>{if(LEGEND.has(m.n)){m.rest=now+864e5;toast(`😴 ${esc(DEX[m.n].name)} est épuisé par la ponte : inutilisable pendant 24 h`)}});n.a=null;n.b=null;n.t0=0;n.dna=0;SAVE.st.dna=(SAVE.st.dna||0)+1}dirty=true;if(SAVE.tuto===1)setTuto(2)}}});
   if(dirty&&cur==='nursery')renderNursery();
@@ -507,7 +510,7 @@ function tick(){
 function nestHTML(n,i){
   const A=mon(n.a),B=n.b==='solo'?null:mon(n.b);
   let cap='Clique pour placer un couple';
-  if(A)cap=esc(DEX[A.n].name)+' Nv'+A.lv+(n.b==='solo'?' (Gène miroir)':B?' + '+esc(DEX[B.n].name)+' Nv'+B.lv:' · cherche un partenaire');
+  if(A)cap=esc(DEX[A.n].name)+' Nv'+A.lv+(n.b==='solo'?` (Gène miroir${(n.mirN||1)>1?' ×'+n.mirN:''})`:B?' + '+esc(DEX[B.n].name)+' Nv'+B.lv:' · cherche un partenaire');
   return `<div class="st nest" data-act="nest" data-i="${i}">
     <span class="lvl">Nid ${i+1} · Nv ${n.lvl}${n.lvl>=5?' ★':''} · ${nestEggN(n)}/${nestCap(n)} 🥚</span>
     ${n.egg?`${eggH(n.egg.n,54,'egg-ico',`data-act="collect" data-i="${i}" title="Récupérer les œufs"`)}<span class="readyTag">${nestEggN(n)>1?nestEggN(n)+' œufs !':'Œuf !'}</span>`:''}
@@ -528,7 +531,10 @@ function ballHTML(b,i){
     <div class="trainees">${b.mons.map(u=>{const m=mon(u),t=(b.tr||{})[u];return m?`<span title="${esc(DEX[m.n].name)}${t?' · fin dans '+fmtT(t.t0+t.dur-Date.now()):''}">${sprHTML(m.n,m.sh,40)}</span>`:''}).join('')}</div>
     <img class="base" src="assets/${img}.png" alt="">
     <div class="cap">${b.mons.length}/${BALL_SLOT[b.lvl]} Pokémon · ${ballRate(b).toFixed(1)} XP/s</div></div>`}
-function eggChip(e){return `<div class="eggchip" title="${esc(DEX[e.n].name)}">${eggH(e.n,40)}${esc(DEX[e.n].name)}</div>`}
+/* œuf jamais éclos par le joueur : l'espèce n'est pas encore au Pokédex → nom caché « ??? » et badge 🆕 */
+const eggKnown=n=>!!(SAVE.dex[n]&&SAVE.dex[n].o);const eggNm=n=>eggKnown(n)?esc(DEX[n].name):'???';
+const newB=n=>eggKnown(n)?'':'<span class="newb" title="Jamais éclos : nouvelle espèce pour ton Pokédex et ta collection d\'œufs">🆕</span>';
+function eggChip(e){return `<div class="eggchip ${eggKnown(e.n)?'':'newegg'}" title="${eggKnown(e.n)?esc(DEX[e.n].name):'Œuf mystère : espèce jamais éclose'}">${eggH(e.n,40)}${newB(e.n)}${eggNm(e.n)}</div>`}
 function renderNursery(){
   const el=$('tab-nursery');
   const anyNest=SAVE.nests.some(n=>n.egg),anyReady=SAVE.incs.some(c=>c.slots.some(s=>Date.now()>=s.t0+s.dur));
@@ -542,7 +548,7 @@ function renderNursery(){
     <div class="zone"><h3>Incubateurs <button class="sm go" data-act="hatchAll" ${anyReady?'':'disabled'}>Tout faire éclore</button>${SAVE.items.autofill?`<button class="sm" data-act="fillAll" ${SAVE.eggs.length?'':'disabled'}>Tout remplir</button>${prioHTML()}`:''}</h3><div class="row">${SAVE.incs.map(incHTML).join('')}</div></div>
     <div class="zone"><h3>Entraînement <button class="sm go" data-act="trainFillAsk" title="Place les Pokémon libres les plus forts dans les places vides des punching-balls (tu choisis la durée)">⚡ Remplir les punching-balls</button> <span class="muted">Un Pokémon à l'entraînement ne peut pas se reproduire ni combattre.</span></h3><div class="row">${SAVE.balls.map(ballHTML).join('')}</div></div>
     <div class="zone"><h3>🗄️ Armoire à œufs <button class="sm go" data-act="cabOpen" ${cab().length>=CAB_MAX?'disabled':''}>Ranger un œuf du sac</button> <span class="muted">Clique sur un œuf de l'armoire pour le reprendre.</span></h3>${cabHTML(cab(),true)}</div>
-    <div class="zone"><h3>Sac d'œufs (${SAVE.eggs.length}/${bagCap()}) <span class="muted">Clique sur un incubateur pour y placer des œufs.</span> ${eggSel?'':`<button class="sm" data-act="eselOn">☑ Vendre des œufs</button>`}</h3>${filtHTML('bag',EGG_SORTS)}${eggSel?eggSelHTML():''}<div class="eggbag">${applyEggFilt('bag').map(({e})=>eggSel?`<div class="eggchip" data-act="eggTog" data-id="${e.id}" style="cursor:pointer;${eggSel.has(e.id)?'outline:3px solid #e0a030;background:#fff1cc':''}">${eggH(e.n,40)}${esc(DEX[e.n].name)} <small>Nv ${e.lv}${e.sh?' ★':''} · ${fmt(eggVal(e))}</small></div>`:eggChip(e)).join('')||'<span class="muted">Aucun œuf'+(SAVE.eggs.length?' avec ce filtre.':' pour le moment.')+'</span>'}</div></div>
+    <div class="zone"><h3>Sac d'œufs (${SAVE.eggs.length}/${bagCap()}) <span class="muted">Clique sur un incubateur pour y placer des œufs.</span> ${eggSel?'':`<button class="sm" data-act="eselOn">☑ Vendre des œufs</button>`}</h3>${filtHTML('bag',EGG_SORTS)}${eggSel?eggSelHTML():''}<div class="eggbag">${applyEggFilt('bag').map(({e})=>eggSel?`<div class="eggchip" data-act="eggTog" data-id="${e.id}" style="cursor:pointer;${eggSel.has(e.id)?'outline:3px solid #e0a030;background:#fff1cc':''}">${eggH(e.n,40)}${newB(e.n)}${eggNm(e.n)} <small>Nv ${e.lv}${e.sh?' ★':''} · ${fmt(eggVal(e))}</small></div>`:eggChip(e)).join('')||'<span class="muted">Aucun œuf'+(SAVE.eggs.length?' avec ce filtre.':' pour le moment.')+'</span>'}</div></div>
    </div></div>`;
   buildWalkers();liveNursery();
 }
@@ -613,7 +619,7 @@ function pickParent(){
   const ok=m=>!monStatus(m.u)&&(!A||canBreed(A,m));
   openModal(`<h2>${A?'Choisis le 2ᵉ parent pour '+esc(DEX[A.n].name):'Choisis le 1ᵉʳ parent'}</h2>
    <p class="muted">Il faut un mâle ♂ et une femelle ♀ de la même famille, ou de deux espèces qui ont un type en commun. Métamorph peut se reproduire avec n'importe quel Pokémon, même sans sexe. Le bébé est de l'espèce de la mère (sauf rares surprises entre espèces différentes…).</p>
-   ${SAVE.items.dna>0?`<p class="muted">🧬 ADN légendaire : ${SAVE.items.dna} (un légendaire peut se reproduire une fois, puis il est épuisé 24 h)</p>`:''}${ps.fixed&&n0.egg?`<p><button class="go" data-act="collect" data-i="${ps.nest}">Récupérer l'œuf</button></p>`:''}${ps.fixed?`<p><button data-act="split" data-i="${ps.nest}">Retirer ${esc(DEX[A.n].name)} du nid</button></p>`:''}${A&&SAVE.items.mirror>0&&!LEGEND.has(A.n)&&A.n!==132?`<p><button data-act="solo">🧬 Utiliser un Gène miroir (${SAVE.items.mirror}) : ${esc(DEX[A.n].name)} pond un seul œuf tout seul</button></p>`:''}
+   ${SAVE.items.dna>0?`<p class="muted">🧬 ADN légendaire : ${SAVE.items.dna} (un légendaire peut se reproduire une fois, puis il est épuisé 24 h)</p>`:''}${ps.fixed&&n0.egg?`<p><button class="go" data-act="collect" data-i="${ps.nest}">Récupérer l'œuf</button></p>`:''}${ps.fixed?`<p><button data-act="split" data-i="${ps.nest}">Retirer ${esc(DEX[A.n].name)} du nid</button></p>`:''}${A&&SAVE.items.mirror>1&&!LEGEND.has(A.n)&&A.n!==132?`<p class="flexr" style="align-items:center">🧬 Utiliser <input type="number" id="mirN" min="1" max="${SAVE.items.mirror}" value="${Math.min(SAVE.items.mirror,nestCap(n0))}" style="width:64px"> Gènes miroirs à la suite (1 œuf chacun, tu en as ${SAVE.items.mirror}) <button class="go" data-act="soloN">Lancer</button></p>`:''}${A&&SAVE.items.mirror>0&&!LEGEND.has(A.n)&&A.n!==132?`<p><button data-act="solo">🧬 Utiliser un Gène miroir (${SAVE.items.mirror}) : ${esc(DEX[A.n].name)} pond un seul œuf tout seul</button></p>`:''}
    ${filtHTML('nest')}<div class="grid" id="flist_nest">${nestList()}</div>`);
 }
 function nestList(){const ps=pickState;if(!ps)return '';const A=ps.a?mon(ps.a):null;const ok=m=>!monStatus(m.u)&&(!A||canBreed(A,m));
@@ -635,7 +641,7 @@ function collect(i,quiet){const n=SAVE.nests[i];if(!n.egg)return 0;let got=0,why
 function collectOld(i,quiet){const n=SAVE.nests[i];if(!n.egg)return 0;if(bagFull()){if(!quiet)bagMsg();return 0}addEgg(n.egg);SAVE.st.lay=(SAVE.st.lay||0)+1;n.egg=null;const A=mon(n.a),B=n.b==='solo'?A:mon(n.b);if(A&&B){n.t0=Date.now();n.dur=breedDur(n,A,B)}else{n.t0=0}dirty=true;if(!quiet){toast('🥚 Œuf récupéré !');saveGame()}if(SAVE.tuto<=2&&SAVE.tuto>=1)setTuto(3);return 1}
 /* --- actions incubateur --- */
 let pickInc=null;
-function incEggList(i){const c=SAVE.incs[i],cap=INC_CAP[c.lvl];return applyEggFilt('egg').map(({e,k})=>`<div class="eggchip ${SAVE.dex[e.n]&&SAVE.dex[e.n].o?'':'newegg'}" title="${SAVE.dex[e.n]&&SAVE.dex[e.n].o?'':'Pas encore au Pokédex'}">${eggH(e.n,40)}${esc(DEX[e.n].name)} <small>Nv ${e.lv}</small><button class="sm" data-act="incAdd" data-i="${i}" data-k="${k}" ${c.slots.length>=cap?'disabled':''}>Couver</button></div>`).join('')||'<span class="muted">Aucun œuf trouvé.</span>'}
+function incEggList(i){const c=SAVE.incs[i],cap=INC_CAP[c.lvl];return applyEggFilt('egg').map(({e,k})=>`<div class="eggchip ${SAVE.dex[e.n]&&SAVE.dex[e.n].o?'':'newegg'}" title="${SAVE.dex[e.n]&&SAVE.dex[e.n].o?'':'Pas encore au Pokédex'}">${eggH(e.n,40)}${newB(e.n)}${eggNm(e.n)} <small>Nv ${e.lv}</small><button class="sm" data-act="incAdd" data-i="${i}" data-k="${k}" ${c.slots.length>=cap?'disabled':''}>Couver</button></div>`).join('')||'<span class="muted">Aucun œuf trouvé.</span>'}
 FILT_R.egg=()=>{const el=$('flist_egg');if(el&&pickInc!==null)el.innerHTML=incEggList(pickInc)};
 function openInc(i){pickInc=null;
   const c=SAVE.incs[i],cap=INC_CAP[c.lvl],now=Date.now();
@@ -718,7 +724,7 @@ function renderTeam(){
   $('tab-team').innerHTML=`<div class="panel"><h3>Mes Pokémon (${SAVE.mons.length}/${monCap()})${L.length<SAVE.mons.length?' · '+L.length+' affichés':''} <span class="muted">⭐ = favori, toujours affiché dans la nurserie</span>
 </h3>${filtHTML('team')}
    ${koPanelHTML()}${teamSelHTML()}
-   <div class="grid">${pg(L,'team',m=>{const st=monStatus(m.u),ko=st&&st.k==='ko';return teamSel?monCard(m,{act:st&&!ko?null:'tsel',sel:teamSel.has(m.u),busy:!!st&&!ko,extra:st&&!ko?'<span class="muted">Occupé</span>':`<span class="muted">${teamSel.has(m.u)?'✅ sélectionné':'Clique pour sélectionner'}</span>`}):monCard(m,{busy:false,extra:`<button class="sm" data-act="monInfo" data-u="${m.u}">📋 Fiche</button>`+(ko?`<button class="sm go" data-act="healOne" data-u="${m.u}" data-id="maxrevive" title="${invN('maxrevive')?'Utilise un Rappel Max':'Achète et utilise un Rappel Max'}">💊 Rappel Max${invN('maxrevive')?'':' ('+fmt(MAXREV_P)+')'}</button><button class="sm" data-act="healOne" data-u="${m.u}" data-id="revive">Rappel −1 h 30${invN('revive')?'':' ('+fmt(REV_P)+')'}</button>`:'')+(st?'':`<button class="sm" data-act="release" data-u="${m.u}">Relâcher (+${relVal(m)} pièces)</button>`)})})}</div></div>`;
+   <div class="grid">${pg(L,'team',m=>{const st=monStatus(m.u),ko=st&&st.k==='ko';return teamSel?monCard(m,{act:st&&!ko?null:'tsel',sel:teamSel.has(m.u),busy:!!st&&!ko,extra:st&&!ko?'<span class="muted">Occupé</span>':`<span class="muted">${teamSel.has(m.u)?'✅ sélectionné':'Clique pour sélectionner'}</span>`}):monCard(m,{busy:false,extra:`<button class="sm" data-act="monInfo" data-u="${m.u}">📋 Fiche</button>`+(ko?`<button class="sm go" data-act="healOne" data-u="${m.u}" data-id="maxrevive" title="${invN('maxrevive')?'Utilise un Rappel Max':'Achète et utilise un Rappel Max'}">💊 Rappel Max${invN('maxrevive')?'':' ('+fmt(MAXREV_PF())+')'}</button><button class="sm" data-act="healOne" data-u="${m.u}" data-id="revive">Rappel −1 h 30${invN('revive')?'':' ('+fmt(REV_PF())+')'}</button>`:'')+(st?'':`<button class="sm" data-act="release" data-u="${m.u}">Relâcher (+${relVal(m)} pièces)</button>`)})})}</div></div>`;
 }
 const relVal=m=>Math.max(5,Math.round(m.lv*4*(m.sh?5:1)));
 /* sélection multiple pour relâcher plusieurs Pokémon d'un coup */
@@ -732,7 +738,13 @@ function autoSelHTML(k){const a=AUTOSEL[k],sel=(f,o)=>`<select data-as="${k}" da
    <label>Type ${sel('t',[['','tous'],...TYPES_ALL.map(t=>[t,TNAME[t]||t])])}</label>
    <label><input type="checkbox" data-as="${k}" data-k="dup" ${a.dup?'checked':''}> Seulement les doublons (garde le meilleur de chaque espèce)</label>
    ${k==='team'?`<label><input type="checkbox" data-as="team" data-k="fav" ${a.fav?'checked':''}> Garder les favoris ⭐</label>`:`<label><input type="checkbox" data-as="bag" data-k="nw" ${a.nw?'checked':''}> Garder les espèces pas encore obtenues</label>`}
-   <button class="sm go" data-act="autoSel" data-k="${k}">Sélectionner</button></div>`}
+   <button class="sm go" data-act="autoSel" data-k="${k}">Sélectionner</button>
+   <button class="sm" style="background:#dff3ff" data-act="smartSel" data-k="${k}" title="Sélectionne les doublons les plus faibles : garde le plus fort (non shiny, non muté) de chaque espèce, ne touche jamais aux shiny, aux mutés ni aux favoris">🧠 Sélection intelligente</button></div>`}
+/* sélection intelligente : les doublons les plus faibles (garde le meilleur de chaque espèce), jamais shiny, muté ni favori */
+function smartPick(k){const all=k==='team'?SAVE.mons:SAVE.eggs,sc=x=>k==='team'?pc(x):x.lv*100+Object.values(x.g||{}).reduce((a,v)=>a+v,0),best={};
+  const norm=x=>!x.sh&&!x.mut&&!x.bst&&!x.fav;all.filter(norm).forEach(x=>{const v=sc(x);if(!best[x.n]||v>best[x.n].v)best[x.n]={x,v}});
+  const L=k==='team'?applyFilt(SAVE.mons.slice(),'team').filter(m=>!monStatus(m.u)):applyEggFilt('bag').map(x=>x.e);
+  return L.filter(x=>norm(x)&&best[x.n]&&best[x.n].x!==x).sort((a,b)=>sc(a)-sc(b))}
 function autoPick(k){const a=AUTOSEL[k],lv=+a.lv||0,pcM=+a.pc||0;
   let L=k==='team'?applyFilt(SAVE.mons.slice(),'team').filter(m=>!monStatus(m.u)):applyEggFilt('bag').map(x=>x.e);
   L=L.filter(x=>(a.sh==='any'||(a.sh==='only')===!!x.sh)&&(a.leg==='any'||(a.leg==='only')===LEGEND.has(x.n))&&(!lv||x.lv<=lv)&&(!a.t||DEX[x.n].t1===a.t||DEX[x.n].t2===a.t)
@@ -815,12 +827,12 @@ const SHOP=[
  {id:'it_ice',name:ITEMS.ice.n,desc:ITEMS.ice.d,ic:ITDIR+ITEMS.ice.ic+'.png',price:()=>3000,buy:()=>invAdd('ice')},
  {id:'it_luckyegg',name:'Œuf Chance',desc:'Objet à tenir : +50 % d\'XP. À équiper depuis la fiche du Pokémon (📋 Fiche).',ic:ITDIR+'LUCKYEGG.png',price:()=>15000,buy:()=>invAdd('luckyegg')},
  {id:'it_expshare',name:'Multi Exp',desc:'Objet à tenir : XP ×2. À équiper depuis la fiche du Pokémon (📋 Fiche).',ic:ITDIR+'EXPSHARE.png',price:()=>60000,buy:()=>invAdd('expshare')},
- {id:'it_maxrevive',name:'Rappel Max',desc:'Soigne tout de suite un Pokémon K.O. dans l\'Antre Dynamax.',ic:ITDIR+'MAXREVIVE.png',price:()=>MAXREV_P,buy:()=>invAdd('maxrevive')},
- {id:'it_revive',name:'Rappel',desc:'Un Pokémon K.O. guérit 1 h 30 plus vite.',ic:ITDIR+'REVIVE.png',price:()=>REV_P,buy:()=>invAdd('revive')},
+ {id:'it_maxrevive',name:'Rappel Max',desc:'Soigne tout de suite un Pokémon K.O. dans l\'Antre Dynamax.',ic:ITDIR+'MAXREVIVE.png',price:()=>MAXREV_PF(),buy:()=>invAdd('maxrevive')},
+ {id:'it_revive',name:'Rappel',desc:'Un Pokémon K.O. guérit 1 h 30 plus vite.',ic:ITDIR+'REVIVE.png',price:()=>REV_PF(),buy:()=>invAdd('revive')},
  {id:'it_soothebell',name:ITEMS.soothebell.n,desc:ITEMS.soothebell.d,ic:ITDIR+ITEMS.soothebell.ic+'.png',price:()=>5000,buy:()=>invAdd('soothebell')},
  {id:'it_everstone',name:ITEMS.everstone.n,desc:ITEMS.everstone.d,ic:ITDIR+ITEMS.everstone.ic+'.png',price:()=>1000,buy:()=>invAdd('everstone')},
  {id:'it_rarecandy',name:ITEMS.rarecandy.n,desc:ITEMS.rarecandy.d,ic:ITDIR+ITEMS.rarecandy.ic+'.png',price:()=>2000,buy:()=>invAdd('rarecandy')},
- {id:'mirror',name:'Gène miroir',desc:'Un Pokémon seul pond un unique œuf, puis il quitte le nid.',ic:'sprites/Graphics/Items/DNASPLICERS.png',price:()=>500,buy:()=>SAVE.items.mirror++},
+ {id:'mirror',name:'Gène miroir',desc:'Un Pokémon seul pond un œuf par Gène miroir (tu peux en utiliser plusieurs à la suite), puis il quitte le nid.',ic:'sprites/Graphics/Items/DNASPLICERS.png',price:()=>500,buy:()=>SAVE.items.mirror++},
 ];
 const lowNest=()=>SAVE.nests.filter(n=>n.lvl<5).sort((a,b)=>a.lvl-b.lvl)[0];
 const lowInc=()=>SAVE.incs.filter(n=>n.lvl<7).sort((a,b)=>a.lvl-b.lvl)[0];
@@ -837,7 +849,7 @@ function renderShop(){
   if(open)h+='</div>';
   h+=dealsHTML();
   {const M=marketToday(),lg=M.leg,p=legDayPrice(),got=SAVE.legDay===M.day;const nx=new Date();nx.setHours(24,0,0,0);
-   h+=`<h3 style="margin:22px 0 8px">✨ Légendaire du jour <span class="muted">un seul achat par jour · change dans ${fmtT(nx-Date.now())}</span></h3><div class="market"><div class="mk leg"><span class="lg">Légendaire</span>${eggH(lg,56)}<b>#${pad3(lg)} ${esc(DEX[lg].name)}</b>${tyHTML(DEX[lg])}<button class="go sm" data-act="buyLegDay" ${got||SAVE.coins<p?'disabled':''}>${got?'Déjà acheté':`<span class="price">${COIN}${fmt(p)}</span>`}</button></div></div>`}
+   h+=`<h3 style="margin:22px 0 8px">✨ Légendaire du jour <span class="muted">un seul achat par jour · change dans ${fmtT(nx-Date.now())}</span></h3><div class="market"><div class="mk leg"><span class="lg">Légendaire</span>${eggH(lg,56)}${eggKnown(lg)?`<b>#${pad3(lg)} ${esc(DEX[lg].name)}</b>${tyHTML(DEX[lg])}`:`<b>${newB(lg)} ???</b><span class="muted">Légendaire mystère</span>`}<button class="go sm" data-act="buyLegDay" ${got||SAVE.coins<p?'disabled':''}>${got?'Déjà acheté':`<span class="price">${COIN}${fmt(p)}</span>`}</button></div></div>`}
   h+=`<h3 style="margin:22px 0 8px">Marché du jour <span class="muted">${MK_PER_GEN} Pokémon par génération + Métamorph, prix normal · nouveau marché à minuit</span> <button class="sm go" data-act="mkReroll" ${SAVE.coins<rerollPrice()?'disabled':''} title="Change les ${MK_PER_GEN} Pokémon de chaque génération et le légendaire du jour. Le prix double à chaque relance, il revient à 2 000 le lendemain.">🎲 Relancer (${COIN}${fmt(rerollPrice())})</button> <input id="eggQ" placeholder="Rechercher un Pokémon ou un n°" value="${esc(marketQ)}" style="font:inherit;padding:4px 8px;border:2px solid var(--ink);border-radius:8px"> <select id="eggT" style="font:inherit"><option value="">Tous les types</option>${Object.keys(TNAME).map(t=>`<option value="${t}" ${t===marketT?'selected':''}>${TNAME[t]}</option>`).join('')}</select></h3><div class="market" id="market"></div>`;
   $('tab-shop').innerHTML=h;renderMarket();
   $('eggQ').oninput=e=>{marketQ=e.target.value;renderMarket()};$('eggT').onchange=e=>{marketT=e.target.value;renderMarket()};
@@ -852,11 +864,11 @@ function marketToday(){const day=dayNo(),nr=mkRolls();if(!marketToday.c||marketT
   const L=EGG_SPECIES.filter(n=>LEGEND.has(n));marketToday.c={day,nr,list,leg:L[Math.floor(R()*L.length)]}}return marketToday.c}
 const legDayPrice=()=>rp(eggPrice(marketToday().leg)*LEG_DAY_MUL);
 function rerollMarket(){const p=rerollPrice();if(SAVE.coins<p){toast('Pas assez de pièces');return}SAVE.coins-=p;mkRolls();SAVE.mk.n++;dirty=true;saveGame();renderTop();renderShop();toast('🎲 Nouveau marché du jour !')}
-function buyLegDay(){const M=marketToday(),p=legDayPrice();if(SAVE.legDay===M.day){toast('Déjà acheté aujourd\'hui.');return}if(SAVE.coins<p)return;if(bagFull()){bagMsg();return}SAVE.coins-=p;SAVE.legDay=M.day;const e=eggOf(M.leg);e.src='legende';addEgg(e,true);toast(`✨ Œuf légendaire de <b>${esc(DEX[M.leg].name)}</b> acheté !`);dirty=true;saveGame();renderTop();renderShop()}
+function buyLegDay(){const M=marketToday(),p=legDayPrice();if(SAVE.legDay===M.day){toast('Déjà acheté aujourd\'hui.');return}if(SAVE.coins<p)return;if(bagFull()){bagMsg();return}SAVE.coins-=p;SAVE.legDay=M.day;const e=eggOf(M.leg);e.src='legende';addEgg(e,true);toast(`✨ Œuf légendaire ${eggKnown(M.leg)?'de <b>'+esc(DEX[M.leg].name)+'</b>':'<b>mystère</b> 🆕'} acheté !`);dirty=true;saveGame();renderTop();renderShop()}
 function renderMarket(){const q=marketQ.trim().toLowerCase();
-  const L=[...marketToday().list,132].filter(n=>{const d=DEX[n];return(!marketT||d.t1===marketT||d.t2===marketT)&&(!q||d.name.toLowerCase().includes(q)||String(n)===q.replace(/^#?0*/,''))});
+  const L=[...marketToday().list,132].filter(n=>{const d=DEX[n];return(!marketT||d.t1===marketT||d.t2===marketT)&&(!q||(eggKnown(n)&&(d.name.toLowerCase().includes(q)||String(n)===q.replace(/^#?0*/,''))))});
   $('market').innerHTML=L.map(n=>{const d=DEX[n],p=eggPrice(n),ev=[];let c=n;for(let k=0;k<2;k++){const t=evoTargets(c);if(!t.length)break;ev.push(t.map(x=>DEX[x].name).join('/'));c=t[0]}
-    return `<div class="mk ${LEGEND.has(n)?'leg':''}">${LEGEND.has(n)?'<span class="lg">Légendaire</span>':n===132?'':`<span class="lg" style="background:#9ad0ff">Gén ${genOf(n)}</span>`}${eggH(n,44)}<b>#${pad3(n)} ${esc(d.name)}</b>${tyHTML(d)}<span class="muted">${ev.length?'→ '+esc(ev.join(' → ')):'Pas d\'évolution'}</span>${n===132||marketToday().list.includes(n)?`<button class="go sm" data-act="buyEgg" data-n="${n}" ${SAVE.coins<p?'disabled':''}><span class="price">${COIN}${fmt(p)}</span></button>`:`<span class="muted" style="font-size:10px">${esc(METHOD_TXT[eggMethod(n)])}</span>`}</div>`}).join('')||'<p class="muted">Aucun œuf trouvé.</p>';
+    return `<div class="mk ${LEGEND.has(n)?'leg':''}">${LEGEND.has(n)?'<span class="lg">Légendaire</span>':n===132?'':`<span class="lg" style="background:#9ad0ff">Gén ${genOf(n)}</span>`}${eggH(n,44)}${eggKnown(n)?`<b>#${pad3(n)} ${esc(d.name)}</b>${tyHTML(d)}<span class="muted">${ev.length?'→ '+esc(ev.join(' → ')):'Pas d\'évolution'}</span>`:`<b>${newB(n)} ???</b><span class="muted">Œuf mystère : jamais éclos</span>`}${n===132||marketToday().list.includes(n)?`<button class="go sm" data-act="buyEgg" data-n="${n}" ${SAVE.coins<p?'disabled':''}><span class="price">${COIN}${fmt(p)}</span></button>`:`<span class="muted" style="font-size:10px">${esc(METHOD_TXT[eggMethod(n)])}</span>`}</div>`}).join('')||'<p class="muted">Aucun œuf trouvé.</p>';
 }
 /* ---------- boutique aléatoire : un œuf par génération, renouvelée toutes les heures, parfois un œuf légendaire ---------- */
 const GENS=[[1,151],[152,251],[252,386],[387,493],[494,649],[650,721],[722,809]];
@@ -867,9 +879,9 @@ function dealsNow(){const w=Math.floor(Date.now()/DEAL_MS);if(!SAVE.deals||SAVE.
   SAVE.deals={w,list}}return SAVE.deals}
 function dealPrice(d){return rp(eggPrice(d.n)*DEAL_OFF)}
 function dealsHTML(){const D=dealsNow(),left=DEAL_MS-(Date.now()%DEAL_MS);
-  return `<h3 style="margin:22px 0 8px">Œufs du moment <span class="muted">-30 % · nouveaux œufs dans ${fmtT(left)}${D.list.some(x=>x.leg)?' · ✨ un œuf légendaire est disponible !':''}</span></h3><div class="market">${D.list.map((d,i)=>{const p=dealPrice(d),dd=DEX[d.n];return `<div class="mk ${d.leg?'leg':''}">${d.leg?'<span class="lg">Légendaire</span>':`<span class="lg" style="background:#9ad0ff">Gén ${d.gen}</span>`}${eggH(d.n,44)}<b>#${pad3(d.n)} ${esc(dd.name)}</b>${tyHTML(dd)}<button class="go sm" data-act="buyDeal" data-i="${i}" ${d.sold||SAVE.coins<p?'disabled':''}>${d.sold?'Vendu':`<span class="price">${COIN}${fmt(p)}</span>`}</button></div>`}).join('')}</div>`}
-function buyDeal(i){const D=dealsNow(),d=D.list[i];if(!d||d.sold)return;const p=dealPrice(d);if(SAVE.coins<p)return;if(bagFull()){bagMsg();return}SAVE.coins-=p;d.sold=1;addEgg(eggOf(d.n));SAVE.st.buy=(SAVE.st.buy||0)+1;toast(`🥚 Œuf de <b>${esc(DEX[d.n].name)}</b> acheté !`);dirty=true;saveGame();renderTop();renderShop()}
-function buyEgg(n){if(n!==132&&!marketToday().list.includes(n))return;const p=eggPrice(n);if(SAVE.coins<p)return;if(bagFull()){bagMsg();return}let k=0;while(k<qMax()&&SAVE.coins>=p&&!bagFull()){MK_FORCE=n;SAVE.coins-=p;addEgg(eggOf(n));MK_FORCE=0;SAVE.st.buy=(SAVE.st.buy||0)+1;k++}toast(`🥚 ${k>1?k+' œufs':'Œuf'} de <b>${esc(DEX[n].name)}</b> acheté${k>1?'s':''} ! ${k>1?'Ils sont':'Il est'} dans le sac d'œufs.${k<BUYQ&&BUYQ?' (arrêt : pièces ou place)':''}`);dirty=true;saveGame();renderTop();renderMarket()}
+  return `<h3 style="margin:22px 0 8px">Œufs du moment <span class="muted">-30 % · nouveaux œufs dans ${fmtT(left)}${D.list.some(x=>x.leg)?' · ✨ un œuf légendaire est disponible !':''}</span></h3><div class="market">${D.list.map((d,i)=>{const p=dealPrice(d),dd=DEX[d.n];return `<div class="mk ${d.leg?'leg':''}">${d.leg?'<span class="lg">Légendaire</span>':`<span class="lg" style="background:#9ad0ff">Gén ${d.gen}</span>`}${eggH(d.n,44)}${eggKnown(d.n)?`<b>#${pad3(d.n)} ${esc(dd.name)}</b>${tyHTML(dd)}`:`<b>${newB(d.n)} ???</b><span class="muted">Œuf mystère</span>`}<button class="go sm" data-act="buyDeal" data-i="${i}" ${d.sold||SAVE.coins<p?'disabled':''}>${d.sold?'Vendu':`<span class="price">${COIN}${fmt(p)}</span>`}</button></div>`}).join('')}</div>`}
+function buyDeal(i){const D=dealsNow(),d=D.list[i];if(!d||d.sold)return;const p=dealPrice(d);if(SAVE.coins<p)return;if(bagFull()){bagMsg();return}SAVE.coins-=p;d.sold=1;addEgg(eggOf(d.n));SAVE.st.buy=(SAVE.st.buy||0)+1;toast(`🥚 Œuf ${eggKnown(d.n)?'de <b>'+esc(DEX[d.n].name)+'</b>':'<b>mystère</b> 🆕'} acheté !`);dirty=true;saveGame();renderTop();renderShop()}
+function buyEgg(n){if(n!==132&&!marketToday().list.includes(n))return;const p=eggPrice(n);if(SAVE.coins<p)return;if(bagFull()){bagMsg();return}let k=0;while(k<qMax()&&SAVE.coins>=p&&!bagFull()){MK_FORCE=n;SAVE.coins-=p;addEgg(eggOf(n));MK_FORCE=0;SAVE.st.buy=(SAVE.st.buy||0)+1;k++}toast(`🥚 ${k>1?k+' œufs':'Œuf'} ${eggKnown(n)?'de <b>'+esc(DEX[n].name)+'</b>':'<b>mystère</b> 🆕'} acheté${k>1?'s':''} ! ${k>1?'Ils sont':'Il est'} dans le sac d'œufs.${k<BUYQ&&BUYQ?' (arrêt : pièces ou place)':''}`);dirty=true;saveGame();renderTop();renderMarket()}
 let BUYQ=1;const BUYQS=[1,5,10,25,0];/* 0 = autant que possible */
 const qMax=()=>BUYQ||1e6;
 function buy(i){const it=SHOP[i];let n=0,tot=0;while(n<qMax()){const p=it.price();if((it.max&&it.max())||SAVE.coins<p)break;SAVE.coins-=p;tot+=p;it.buy();n++}
@@ -1562,7 +1574,7 @@ function synInfo(){openModal(`<h2>Bonus d'équipe par type</h2><p class="muted">
 /* XP d'une victoire : suit le niveau des ennemis (mode Maître : ennemis au niveau de ton meilleur Pokémon dès le tableau 1) */
 const stEqOf=L=>Math.pow(Math.max(0,L-3)/3.4,1/.62);
 function winXP(st){const L=B&&B.eLv||enemyLv(st);return Math.round(15+14*(B&&B.defi?stEqOf(L):Math.max(effSt(st),stEqOf(L)))*(B&&B.defi?1:1+.1*PCY()))}
-function startFight(){if(B){const E=B.units.filter(u=>u.team===1);B.eLv=E.length?E.reduce((a,u)=>a+u.lv,0)/E.length:0}
+function startFight(){if(B&&B.dmax&&B.placed.length){dmhN();SAVE.dmh.n++}if(B){const E=B.units.filter(u=>u.team===1);B.eLv=E.length?E.reduce((a,u)=>a+u.lv,0)/E.length:0}
   if(!B.placed.length)return;if(B.arena){const bad=teamOk(B.placed.map(p=>mon(p.u)).filter(Boolean),B.arena.rule);if(bad){toast('🏟️ '+bad);return}}AUTO_LAST=B.placed.map(p=>({u:p.u,x:p.x,y:p.y}));
   B.placed=B.placed.filter(p=>{const m=mon(p.u);return m&&!monStatus(p.u)});
   B.units=B.units.filter(u=>u.team===1);
@@ -1715,7 +1727,10 @@ function endFight(win){if(B.dmax){dmaxEnd(win);return}
    jusqu'à 50 Pokémon, Pokémon vaincus K.O. pendant 3 h
    ===================================================================== */
 const GMAX=[25,52,133,12,94,131,143,3,6,9],GMAX_SET=new Set(GMAX);
-const DMAX_ARMY=50,KO_MS=3*3600e3,DMAX_HPM=10,MAXREV_P=400,REV_P=120;
+const DMAX_ARMY=50,KO_MS=3*3600e3,DMAX_HPM=10,MAXREV_B=400,REV_B=120;
+/* prix des soins : +25 % à chaque combat contre un Gigamax dans la journée, remis à zéro chaque jour */
+function dmhN(){const k=dayKey();if(!SAVE.dmh||SAVE.dmh.day!==k)SAVE.dmh={day:k,n:0};return SAVE.dmh.n}
+const healMul=()=>1+.25*dmhN();const MAXREV_PF=()=>Math.round(MAXREV_B*healMul()),REV_PF=()=>Math.round(REV_B*healMul());
 const DEN_BI={name:'Antre Dynamax',g:['#4b3b56','#43354d','#56445f'],sh:'#6a5470',liq:'#c03cff',liq2:'#8a1fd0',trees:[],dens:0,types:[],fl:['#ff4fa0','#c03cff','#ffd0f0'],den:true,hab:-1};
 const gmaxSrc=n=>'sprites/gmax/'+n+'.png';
 const armyMax=()=>B&&B.dmax?DMAX_ARMY:SAVE.army;
@@ -1774,10 +1789,18 @@ function dmaxEnd(win){B.phase='end';const S=SAVE.dmax,D=B.dmax,boss=B.units.find
 /* soins */
 const isKO=m=>m&&m.ko>Date.now();
 const koList=()=>SAVE.mons.filter(isKO);
-function healOne(m,id){if(!isKO(m))return false;if(!invN(id)){const p=id==='maxrevive'?MAXREV_P:REV_P;if(SAVE.coins<p)return false;SAVE.coins-=p;invAdd(id)}invUse(id);m.ko=id==='maxrevive'?0:m.ko-90*60000;if(m.ko<=Date.now())m.ko=0;return true}
+function healOne(m,id){if(!isKO(m))return false;if(!invN(id)){const p=id==='maxrevive'?MAXREV_PF():REV_PF();if(SAVE.coins<p)return false;SAVE.coins-=p;invAdd(id)}invUse(id);m.ko=id==='maxrevive'?0:m.ko-90*60000;if(m.ko<=Date.now())m.ko=0;return true}
 function healMany(L){let n=0,c0=SAVE.coins;for(const m of L){if(!isKO(m))continue;if(!healOne(m,'maxrevive'))break;n++}const left=L.filter(isKO).length;
   toast(n?`💊 ${n} Pokémon soigné${n>1?'s':''}${c0>SAVE.coins?` (${fmt(c0-SAVE.coins)} pièces de Rappels Max achetés)`:''}${left?` · ${left} restent K.O. (pas assez de pièces)`:''}`:'Pas assez de pièces pour un Rappel Max.');dirty=true;saveGame();renderTop()}
-const healCost=L=>Math.max(0,L.filter(isKO).length-invN('maxrevive'))*MAXREV_P;
+const healCost=L=>Math.max(0,L.filter(isKO).length-invN('maxrevive'))*MAXREV_PF();
+let HEAL_PEND=null;
+function healAsk(L){L=L.filter(isKO);if(!L.length){toast('Aucun Pokémon K.O. à soigner.');return}const st=Math.min(invN('maxrevive'),L.length),buy=L.length-st,p=MAXREV_PF(),tot=buy*p,can=Math.min(buy,Math.floor(SAVE.coins/p));HEAL_PEND=L;
+  openModal(`<h2>💊 Soigner ${L.length} Pokémon K.O. ?</h2>
+   <p>${itIc('maxrevive',22)} Un Rappel Max par Pokémon.${st?` Tu en as <b>${st}</b> en stock, ils seront utilisés d'abord.`:''}</p>
+   ${buy?`<p>Il faut en acheter <b>${buy}</b> × ${fmt(p)} pièces = <b style="font-size:18px">${COIN} ${fmt(tot)} pièces</b></p>
+   <p class="muted">Prix du jour : ${fmt(p)} pièces le Rappel Max (${dmhN()} combat${dmhN()>1?'s':''} contre un Gigamax aujourd'hui, +25 % par combat, remis à ${fmt(MAXREV_B)} demain).</p>
+   <p>Tu as ${COIN} ${fmt(SAVE.coins)} pièces${tot>SAVE.coins?` : <b style="color:#c0392b">pas assez pour tout soigner</b>, seulement ${st+can} Pokémon seront soignés`:` · il te restera ${fmt(SAVE.coins-tot)} pièces`}.</p>`:'<p><b>Gratuit</b> : tout est couvert par ton stock.</p>'}
+   <div class="flexr"><button class="go" data-act="healDo" ${st+can?'':'disabled'}>✔ Soigner${buy?` pour ${fmt(Math.min(tot,can*p))} pièces`:''}</button><button data-act="closeModal">Annuler</button></div>`)}
 function koPanelHTML(){const L=koList();if(!L.length)return '';return `<div class="panel" style="margin:8px 0;background:#fff0f3"><b>💫 ${L.length} Pokémon K.O.</b> <span class="muted">(Antre Dynamax : 3 h de repos, ou Rappel Max)</span> · ${itIc('maxrevive',20)} Rappel Max : ${invN('maxrevive')} · ${itIc('revive',20)} Rappel : ${invN('revive')}
   <button class="sm go" data-act="healAll">💊 Soigner tous${healCost(L)?' ('+fmt(healCost(L))+' pièces)':''}</button><button class="sm" data-act="tselKO">☑ Sélectionner les K.O.</button></div>`}
 function dmaxPanelHTML(){const b=dmaxBoss(),S=SAVE.dmax,gm=GMAX_SET.has(b.n),ko=koList().length;
@@ -2030,16 +2053,18 @@ const ACT={
   collect:(t,e)=>{e.stopPropagation();collect(+t.dataset.i);pickState=null;closeModal()},
   closeM:()=>closeModal(),
   dmaxGo:()=>dmaxEnter(),dmaxLeave:()=>{closeModal();dmaxLeave()},dmaxChain:()=>{dmaxBoss();SAVE.dmax.chain=!SAVE.dmax.chain;saveGame();if(B&&B.dmax)renderBattleHead()},
-  healAll:()=>{healMany(koList());closeModal();if(cur==='team')renderTeam();if(cur==='adv')renderAdv()},
+  healAll:()=>healAsk(koList()),
+  healDo:()=>{const L=HEAL_PEND||[];HEAL_PEND=null;closeModal();healMany(L);if(cur==='team'){teamSel=null;renderTeam()}if(cur==='adv')renderAdv();if(cur==='battle'&&B&&B.dmax)renderBattleHead()},
   healOne:(t)=>{const m=mon(+t.dataset.u);if(!healOne(m,t.dataset.id||'maxrevive'))toast('Pas assez de pièces.');dirty=true;saveGame();renderTop();renderTeam()},
   tselKO:()=>{teamSel=new Set(koList().map(m=>m.u));renderTeam()},
-  tselHeal:()=>{healMany([...teamSel].map(mon).filter(Boolean));teamSel=null;renderTeam()},
+  tselHeal:()=>healAsk([...teamSel].map(mon).filter(Boolean)),
   pgMore:(t)=>{const c=t.dataset.c;PG[c]=(PG[c]||PGN)+PGN;const y=window.scrollY;(FILT_R[c]||(()=>{}))();window.scrollTo(0,y)},
   collectAll:()=>{let n=0,why='';SAVE.nests.forEach((x,i)=>{n+=collect(i,true);why=why||collect.why});if(n){toast(`🥚 ${n} œuf${n>1?'s':''} récupéré${n>1?'s':''} !`);saveGame()}if(why==='room')toast('🏠 Plus de place dans la nurserie : relâche des Pokémon ou agrandis-la pour récupérer les autres œufs.');else if(why==='bag'&&!n)bagMsg()},
-  split:(t)=>{const n=SAVE.nests[+t.dataset.i];if(n.dna){SAVE.items.dna=(SAVE.items.dna||0)+1;n.dna=0}n.a=n.b=null;n.t0=0;pickState=null;closeModal();dirty=true;saveGame()},
+  split:(t)=>{const n=SAVE.nests[+t.dataset.i];if(n.dna){SAVE.items.dna=(SAVE.items.dna||0)+1;n.dna=0}if(n.b==='solo'&&n.mirN>0){SAVE.items.mirror=(SAVE.items.mirror||0)+n.mirN;toast(`🧬 ${n.mirN} Gène${n.mirN>1?'s':''} miroir${n.mirN>1?'s':''} rendu${n.mirN>1?'s':''}`);n.mirN=0}n.a=n.b=null;n.t0=0;pickState=null;closeModal();dirty=true;saveGame()},
   splitOne:(t)=>{const n=SAVE.nests[+t.dataset.i];if(!n.a||!n.b||n.b==='solo')return;if(n.dna){SAVE.items.dna=(SAVE.items.dna||0)+1;n.dna=0}if(t.dataset.w==='a')n.a=n.b;n.b=null;n.t0=0;dirty=true;saveGame();openNest(+t.dataset.i)},
   pickMon:(t)=>{const u=+t.dataset.u;if(!pickState)return;if(!pickState.a){pickState.a=u;pickParent()}else placeCouple(u)},
-  solo:()=>{const A=pickState&&mon(pickState.a);if(SAVE.items.mirror<=0||!A||LEGEND.has(A.n)||A.n===132)return;SAVE.items.mirror--;placeCouple('solo')},
+  solo:()=>{const A=pickState&&mon(pickState.a);if(SAVE.items.mirror<=0||!A||LEGEND.has(A.n)||A.n===132)return;SAVE.items.mirror--;const ni=pickState.nest;placeCouple('solo');SAVE.nests[ni].mirN=1},
+  soloN:()=>{const A=pickState&&mon(pickState.a);const k=clamp(Math.floor(+($('mirN')||{}).value||1),1,SAVE.items.mirror||0);if(!k||!A||LEGEND.has(A.n)||A.n===132)return;SAVE.items.mirror-=k;const ni=pickState.nest;placeCouple('solo');SAVE.nests[ni].mirN=k;toast(`🧬 ${k} Gène${k>1?'s':''} miroir${k>1?'s':''} : ${esc(DEX[A.n].name)} va pondre ${k} œuf${k>1?'s':''} à la suite`)},
   inc:(t)=>openInc(+t.dataset.i),
   incAdd:(t)=>incAdd(+t.dataset.i,+t.dataset.k),
   fillAll:()=>{let n=0;SAVE.incs.forEach((c,i)=>{while(SAVE.eggs.length&&c.slots.length<INC_CAP[c.lvl]){incAdd(i,nextEggIdx(),true);n++}});if(n){toast(`🥚 ${n} œuf${n>1?'s':''} placé${n>1?'s':''} dans les incubateurs`);saveGame()}else toast('Incubateurs pleins ou sac vide.');dirty=true},
@@ -2097,6 +2122,7 @@ const ACT={
     toast(c?`💞 ${c} couple${c>1?'s':''} placé${c>1?'s':''} dans les nids`:'Aucun couple compatible disponible');renderNursery()},
   tselOn:()=>{teamSel=new Set();renderTeam()},tselOff:()=>{teamSel=null;renderTeam()},
   tsel:(t)=>{const u=+t.dataset.u;if(!teamSel)return;teamSel.has(u)?teamSel.delete(u):teamSel.add(u);const y=scrollY;renderTeam();scrollTo(0,y)},
+  smartSel:(t)=>{const k=t.dataset.k,L=smartPick(k);if(k==='team'){teamSel=new Set(L.map(m=>m.u));renderTeam()}else{eggSel=new Set(L.map(e=>e.id));renderNursery()}const sp=new Set(L.map(x=>x.n)).size;toast(L.length?`🧠 ${L.length} doublon${L.length>1?'s':''} faible${L.length>1?'s':''} sélectionné${L.length>1?'s':''} (${sp} espèce${sp>1?'s':''}) : le meilleur normal de chaque espèce, les shiny, les mutés et les favoris sont gardés. Vérifie puis vends.`:'🧠 Aucun doublon faible à vendre parmi ce qui est affiché.')},
   autoSel:(t)=>{const k=t.dataset.k,L=autoPick(k);if(k==='team'){teamSel=new Set(L.map(m=>m.u));renderTeam()}else{eggSel=new Set(L.map(e=>e.id));renderNursery()}toast(`🎯 ${L.length} ${k==='team'?'Pokémon':'œuf'+(L.length>1?'s':'')} sélectionné${L.length>1?'s':''}`)},
   eselOn:()=>{eggSel=new Set();renderNursery()},eselOff:()=>{eggSel=null;renderNursery()},eselNone:()=>{eggSel=new Set();renderNursery()},
   eselAll:()=>{eggSel=new Set(applyEggFilt('bag').map(x=>x.e.id));renderNursery()},
@@ -2325,6 +2351,63 @@ addEventListener('gamepadconnected',()=>{GP.on=true;gpShow();toast(tr2('🎮 Man
 addEventListener('gamepaddisconnected',()=>{if(GP.el)GP.el.hidden=true;GP.on=false});
 addEventListener('mousemove',e=>{if(e.isTrusted&&GP.on&&GP.el&&!GP.el.hidden&&Math.abs(e.movementX)+Math.abs(e.movementY)>2){GP.el.hidden=true;if(GP.hov){GP.hov.classList.remove('gphov');GP.hov=null}}});
 requestAnimationFrame(gpLoop);
+
+/* =====================================================================
+   PETITS « i » D'INFORMATION : ajoutés automatiquement à côté des titres des onglets et des notions
+   ===================================================================== */
+const INFO=[
+ [/^Salle de jeu/,'Salle de jeu','Tes Pokémon qui se promènent. Juste pour le plaisir des yeux : tes favoris ⭐ y sont toujours. Tu peux régler combien en afficher dans les Réglages (moins = jeu plus fluide).'],
+ [/^Nids/,'Nids','Place un mâle et une femelle (ou Métamorph avec n\'importe qui) : ils pondent des œufs avec le temps. Le bébé hérite des gènes de ses parents, avec une chance de mutation (gène boosté, niveau +5) ou de shiny. Un nid amélioré pond plus vite et garde 2 puis 3 œufs en stock. ⚡ remplit les nids tout seul avec tes meilleurs couples.'],
+ [/^Incubateurs/,'Incubateurs','Mets-y les œufs du sac pour les faire éclore. Chaque espèce a sa durée. Un incubateur amélioré a plus de places et va plus vite. Il faut de la place libre dans ta nurserie pour faire éclore.'],
+ [/^Entraînement/,'Entraînement','Les punching-balls donnent de l\'XP à tes Pokémon pendant la durée choisie (30 min à 24 h). Un Pokémon à l\'entraînement ne peut ni combattre ni se reproduire. ⚡ remplit les places vides avec tes Pokémon libres les plus forts.'],
+ [/^🗄️ Armoire|^Ton armoire/,'Armoire à œufs','Expose jusqu\'à 12 œufs que tu veux garder ou montrer. Les autres joueurs la voient sur ton profil. Clique sur un œuf de l\'armoire pour le reprendre.'],
+ [/^Sac d'œufs/,'Sac d\'œufs','Les œufs récupérés des nids, achetés ou gagnés. Mets-les dans un incubateur pour les faire éclore, range-les dans l\'armoire ou vends-les. Le sac a une place limitée (agrandissable en boutique).'],
+ [/^Mes Pokémon/,'Mes Pokémon','Tous tes Pokémon. 📋 Fiche : stats réelles, talent, déplacement, objet tenu, évolution. ⭐ = favori (protégé des relâchers auto). ☑ Sélectionner plusieurs : relâcher en lot avec des filtres.'],
+ [/^Tableau$/,'Tableaux','L\'aventure : 1000 tableaux répartis en biomes. Un boss tous les 5 tableaux (il donne des œufs), un légendaire à la fin de chaque biome, Arceus au tableau 1000. Ensuite, le mode Maître I à V recommence avec des ennemis plus forts qu\'Arceus.'],
+ [/^Armée$/,'Armée','Les Pokémon que tu poses dans la zone bleue. Glisse-les depuis la liste ou utilise « Placement auto » (qui suit tes filtres et ton tri). La taille de l\'armée s\'agrandit en boutique (15 max). Les équipes 💾 enregistrent un placement.'],
+ [/^Combat$/,'Combat','Les combats sont automatiques et durent 2 minutes au plus. Clique sur un ennemi pour en faire la cible principale. Vitesse ×1, ×2 ou ×4. Auto ON enchaîne les tableaux tout seul. Attention au terrain : eau, lave, boue et falaises.'],
+ [/^ℹ Bonus d'équipe|^Bonus d'équipe/,'Bonus d\'équipe (synergies)','Avec 5, 10 ou 15 espèces différentes d\'un même type dans ton armée, toute l\'équipe gagne un bonus lié à ce type. Les doublons ne comptent pas.'],
+ [/^Œufs$/,'Œufs (boutique)','Les œufs surprise donnent une espèce au hasard. Le Marché du jour et les Œufs du moment donnent des espèces précises.'],
+ [/^Nurserie$/,'Améliorations','Nouveaux nids, incubateurs et punching-balls, et leurs améliorations, plus de place dans la nurserie, dans le sac et dans l\'armée. « Possédé » indique ce que tu as déjà.'],
+ [/^Objets et boosts/,'Objets et boosts','Des bonus temporaires (10 min) : Encens d\'amour (pontes plus rapides), Pierre mutagène (plus de mutations), Charme chroma (shiny ×2), et des objets à faire tenir à tes Pokémon (Multi Exp, Œuf Chance…). Utilise la barre « Achat groupé » pour en prendre plusieurs.'],
+ [/^Objets d'évolution/,'Objets d\'évolution','Les pierres et objets qui font évoluer certains Pokémon. Utilise-les depuis la 📋 Fiche du Pokémon.'],
+ [/^Œufs du moment/,'Œufs du moment','Une sélection d\'œufs à -30 %, un seul exemplaire chacun. Elle change régulièrement et peut, très rarement, contenir un légendaire.'],
+ [/^✨ Légendaire du jour/,'Légendaire du jour','Un œuf de légendaire différent chaque jour, très cher, un seul achat par jour.'],
+ [/^Marché du jour/,'Marché du jour','7 œufs par génération, au prix plein, qui changent chaque jour. Le bouton de relance change la sélection (le prix de la relance double à chaque fois).'],
+ [/^Pokédex/,'Pokédex','Les espèces que tu as vues et possédées. Les possédées comptent pour les récompenses de palier.'],
+ [/^📖 Récompenses du Pokédex/,'Récompenses du Pokédex','Chaque palier d\'espèces possédées donne une récompense, à réclamer ici.'],
+ [/^🥚 Collection d'œufs/,'Collection d\'œufs','Un œuf de chaque espèce éclose. La vitrine de collection (6 places) est visible par les autres joueurs.'],
+ [/^Succès/,'Succès','Des objectifs qui rapportent des pièces et débloquent des titres à afficher à côté de ton nom (Profil > Titre).'],
+ [/^🌀 Antre Dynamax/,'Antre Dynamax','Des boss Gigamax géants à abattre en plusieurs combats : leurs PV ne remontent pas entre deux combats. Tu peux envoyer jusqu\'à 50 Pokémon. Les Pokémon battus sont K.O. 3 h (ou soignés avec un Rappel / Rappel Max, dont le prix monte de 25 % à chaque combat Gigamax du jour). Chaque boss vaincu donne de grosses récompenses.'],
+ [/^🗺️ Expéditions/,'Expéditions','Envoie une équipe explorer un biome pendant quelques heures, sans toi. Pendant ce temps, ces Pokémon ne peuvent ni combattre ni se reproduire. Au retour, ils rapportent des pièces (plus le biome est loin, l\'équipe nombreuse et de haut niveau, plus il y en a), des œufs des espèces de ce biome (1 de plus toutes les 2 h), parfois un objet, et ils gagnent de l\'XP. Annuler une expédition ne rapporte rien.'],
+ [/^🎯 Missions du jour/,'Missions du jour','Des petits objectifs renouvelés chaque jour (faire éclore, gagner des combats…). Chacun rapporte des pièces selon ton record de progression.'],
+ [/^⚔ Tableaux défi/,'Défis du jour','Deux combats par jour avec une règle spéciale (un seul type, non évolués, 3 Pokémon max, niveau max…). Ils se jouent dans un biome, contre des ennemis à ton niveau. Réussis : super œuf, objet et pièces.'],
+ [/^🎒 Sac d'objets/,'Sac d\'objets','Les objets que tu possèdes. Clique pour les utiliser ou les donner à tenir depuis la Fiche d\'un Pokémon.'],
+ [/^Classement/,'Classement','Le classement des joueurs connectés avec Google, selon la force de leur meilleure équipe et leur progression.'],
+ [/^🏆 Classement/,'Classement','Le classement des joueurs connectés avec Google.'],
+ [/^👑 Maître/,'Maître','La place la plus haute de l\'arène. Tenue par un boss PNJ tant qu\'aucun joueur ne l\'a battu. Pour le défier, il faut être au Conseil 4. 1 légendaire max, niveau 999 max. 3 000 pièces par heure tenue.'],
+ [/^🎖️ Conseil 4/,'Conseil 4','4 places de même rang. Pour les défier, il faut être champion d\'arène. Pas de légendaire, niveau 500 max. 1 500 pièces par heure tenue. Battu : 24 h d\'attente avant de retenter.'],
+ [/^🏟️ Champions/,'Champions d\'arène','8 places de même rang, la porte d\'entrée de l\'arène. Pas de légendaire, niveau 100 max. 600 pièces par heure tenue. Destitués chaque mois.'],
+ [/^🎯 Experts/,'Experts de type','Une place par type, avec une équipe 100 % de ce type (légendaires permis). Cumulable avec d\'autres places. Bonus : chance de shiny ×2 pour les Pokémon de tes types.'],
+ [/^📜 Historique/,'Historique des défis','Les derniers défis de l\'arène. Les tiens sont surlignés.'],
+ [/^💰 Hôtel des ventes|^Hôtel des ventes/,'Hôtel des ventes','Mets un de tes Pokémon aux enchères, ou enchéris sur ceux des autres joueurs. À la fin de la vente, le meilleur enchérisseur reçoit le Pokémon et le vendeur reçoit les pièces (à leur prochaine connexion).'],
+ [/^Tableau de bord/,'Tableau de bord','Le résumé de ta partie : progression, collection, combats.'],
+ [/^Ta vitrine/,'Vitrine de collection','Choisis jusqu\'à 6 œufs de ta collection à montrer aux autres joueurs.'],
+ [/^Titre$/,'Titre','Les titres se débloquent avec les succès. Celui choisi s\'affiche à côté de ton nom pour les autres joueurs.'],
+ [/^Compte$/,'Compte','Connecte-toi avec Google pour sauvegarder ta partie en ligne et jouer sur plusieurs appareils, et pour accéder au classement, à l\'arène et à l\'hôtel des ventes.'],
+ [/^Sauvegarde$/,'Sauvegarde','La partie est sauvegardée automatiquement dans le navigateur, et en ligne si tu es connecté avec Google.'],
+ [/^Talent$/,'Talent','Une capacité spéciale tirée des vrais jeux, que seuls certains Pokémon ont (Camouflage de Kecleon, Absentéisme de Monaflemit…). Elle agit toute seule en combat.'],
+ [/^Déplacement$/,'Déplacement','🪽 Vol : passe au-dessus de l\'eau, de la lave et de la boue, mais pas des falaises. 🦶 Terrestre : marche, ralenti dans la boue. 🌊 Nage : traverse l\'eau. 🌋 Lave : traverse la lave.'],
+ [/^📊 Stats$/,'Stats','PV, Attaque (corps à corps), Att. Spé (à distance), Défense (contre tout) et Vitesse (attaques plus fréquentes et déplacement). Base = stat officielle lissée ; Gène = 0 à 31 ; Valeur = stat réelle à ce niveau.']];
+const INFO_SEL='h2,h3,.lab,.zone>h3,#mbody p>b:first-child';
+function infoBtnFor(el){if(el.dataset.inf)return;el.dataset.inf=1;const f=[...el.childNodes].find(n=>n.nodeType===3&&n.nodeValue.trim())||el.firstChild;if(!f)return;const t=(f.textContent||'').trim();const i=INFO.findIndex(x=>x[0].test(t));if(i<0)return;
+  const b=document.createElement('button');b.className='ibtn';b.type='button';b.textContent='i';b.title='À quoi ça sert ?';b.dataset.act='info';b.dataset.k=i;f.parentNode.insertBefore(b,f.nextSibling)}
+function infoScan(root){if(!root||root.nodeType!==1)return;if(root.matches&&root.matches(INFO_SEL))infoBtnFor(root);root.querySelectorAll&&root.querySelectorAll(INFO_SEL).forEach(infoBtnFor)}
+new MutationObserver(L=>{for(const m of L)m.addedNodes.forEach(infoScan)}).observe(document.body,{childList:true,subtree:true});
+ACT.info=(t,e)=>{if(e){e.stopPropagation();e.preventDefault()}const x=INFO[+t.dataset.k];if(!x)return;const back=!$('modal').hidden?$('mbody').innerHTML:null;
+  if(back){let d=$('infoPop');if(!d){d=document.createElement('div');d.id='infoPop';document.body.appendChild(d)}d.innerHTML=`<b>ℹ ${x[1]}</b><p>${x[2]}</p><button class="sm" onclick="this.parentNode.hidden=true">OK</button>`;d.hidden=false;return}
+  openModal(`<h2>ℹ ${x[1]}</h2><p style="line-height:1.5">${x[2]}</p><div class="flexr"><button class="go" data-act="closeModal">OK</button></div>`)};
+setTimeout(()=>infoScan(document.body),0);
 
 /* ---------- démarrage ---------- */
 SAVE=loadSave();

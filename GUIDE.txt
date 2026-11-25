@@ -398,3 +398,33 @@ V00.45.00
    Maître V             gènes parfaits, 2 ennemis de plus, boss avec 2 fois plus de PV, un talent pour chaque ennemi,
                         œufs de boss 3 fois plus souvent shiny
    Succès et titres     « Maître III » (vaincre Arceus en Maître III, 500 000 pièces) et « Maître V » (2 000 000 pièces)
+
+V00.46.00
+   Défis du jour        se jouent dans un biome (parmi ceux que tu as atteints, tous en mode Maître), plus sur un tableau
+                        niveau des ennemis calculé sur TES Pokémon autorisés par le défi, au moment où tu le lances :
+                          « niveau X maximum » : ennemis niveau X+1 à X+3
+                          autres défis : niveau moyen de tes meilleurs Pokémon autorisés + 2 (+5 pour « sans légendaire »),
+                          avec 0 à 2 niveaux d'écart entre ennemis
+                        autant d'ennemis que de Pokémon autorisés (3 pour « 3 Pokémon maximum », sinon la taille de ton armée),
+                        pas de boss ; l'XP suit le niveau des ennemis
+
+V00.47.00
+   Soigner les K.O.     « Soigner tous les K.O. » et « Soigner la sélection » ouvrent d'abord une fenêtre avec le prix :
+                        Rappels Max en stock utilisés d'abord, nombre à acheter × prix = total, pièces restantes,
+                        et combien seront soignés si tu n'as pas assez ; bouton Confirmer ou Annuler
+   Prix du jour         Rappel Max (400) et Rappel (120) : +25 % à chaque combat contre un Gigamax dans la journée
+                        (ex. 3 combats : 700 et 210) ; retour au prix de base chaque jour ; la boutique suit le même prix
+
+V00.48.00
+   Bulles ℹ             un petit « i » bleu à côté des titres explique à quoi sert chaque partie (clic = explication) :
+                        Nurserie (salle de jeu, nids, incubateurs, entraînement, armoire, sac d'œufs), Pokémon,
+                        Combat (tableaux, armée, combat), Boutique (œufs, améliorations, objets et boosts, évolution,
+                        œufs du moment, légendaire du jour, marché du jour), Pokédex, Succès, Aventures (antre Dynamax,
+                        expéditions, missions, défis, sac d'objets), En ligne (classement, Maître, Conseil 4, champions,
+                        experts, historique, hôtel des ventes), Profil, Réglages, et dans la Fiche (stats, talent, déplacement)
+
+V00.49.00
+   Sélection intelligente  bouton « 🧠 Sélection intelligente » dans la sélection auto (Pokémon et sac d'œufs) :
+                        sélectionne les doublons les plus faibles ; pour chaque espèce, garde le plus fort parmi les normaux
+                        et ne touche jamais aux shiny, aux mutés (mutation ou super mutation) ni aux favoris ⭐ ;
+                        seulement parmi ce qui est affiché et pas occupé ; tu vérifies, puis tu vends / relâches
