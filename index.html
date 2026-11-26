@@ -296,7 +296,7 @@ html,body{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
    POKETABS EGGS COLLECTOR  (V00.01.00)
    Réglages rapides : objet T ci-dessous (durées en secondes, chances en 0..1)
    ===================================================================== */
-const VERSION='V01.02.00';
+const VERSION='V01.03.00';
 const T={
   breed:45,        // durée de base d'une ponte (s)
   hatch:75,        // durée de base d'éclosion (s), modulée par l'espèce (stats totales et rareté)
@@ -516,9 +516,9 @@ function tick(){
     if(now>=t.t0+t.dur){const xp=Math.round(ballRate(b)*t.dur/1000);const lv0=m.lv;gainXP(m,xp);gainHap(m,Math.round(2*t.dur/3600000));b.mons=b.mons.filter(x=>x!==u);delete b.tr[u];SAVE.st.train=(SAVE.st.train||0)+1;if(t.dur>=1440*60000)SAVE.st.tr24=(SAVE.st.tr24||0)+1;dirty=true;
       toast(`🥊 ${esc(DEX[m.n].name)} a fini son entraînement : +${fmt(xp)} XP${m.lv>lv0?` (niveau ${lv0} → ${m.lv})`:''}`)}})});
   SAVE.nests.forEach(n=>{if(n.a&&n.b&&nestEggN(n)<nestCap(n)&&n.t0&&now>=n.t0+n.dur){const A=mon(n.a),B=n.b==='solo'?A:mon(n.b);if(A&&B){const egg=makeEgg(A,B,n.lvl);if(!n.egg)n.egg=egg;else(n.more=n.more||[]).push(egg);
-    if(n.b==='solo'){n.mirN=(n.mirN||1)-1;if(n.mirN>0){if(nestEggN(n)<nestCap(n)){n.t0=n.t0+n.dur;if(now>=n.t0+n.dur)n.t0=now;n.dur=breedDur(n,A,B)}}else{n.a=null;n.b=null;n.t0=0;n.mirN=0;toast('🧬 Les Gènes miroirs sont épuisés : le Pokémon quitte le nid.')}}
+    if(n.b==='solo'){n.mirN=(n.mirN||1)-1;if(n.mirN>0){if(nestEggN(n)<nestCap(n)){n.t0=n.t0+n.dur;if(now>=n.t0+n.dur)n.t0=now;n.dur=breedDur(n,A,B)}}else{n.a=null;n.b=null;n.t0=0;n.mirN=0;if(!n.dna)toast('🧬 Les Gènes miroirs sont épuisés : le Pokémon quitte le nid.')}}
     else if(!n.dna&&nestEggN(n)<nestCap(n)){n.t0=n.t0+n.dur;if(now>=n.t0+n.dur)n.t0=now;n.dur=breedDur(n,A,B)}
-    if(n.dna){[A,B].forEach(m=>{if(LEGEND.has(m.n)){m.rest=now+864e5;toast(`😴 ${esc(DEX[m.n].name)} est épuisé par la ponte : inutilisable pendant 24 h`)}});n.a=null;n.b=null;n.t0=0;n.dna=0;SAVE.st.dna=(SAVE.st.dna||0)+1}dirty=true;if(SAVE.tuto===1)setTuto(2)}}});
+    if(n.dna){[...new Set([A,B])].forEach(m=>{if(LEGEND.has(m.n)){m.rest=now+864e5;toast(`😴 ${esc(DEX[m.n].name)} est épuisé par la ponte : inutilisable pendant 24 h`)}});n.a=null;n.b=null;n.t0=0;n.dna=0;SAVE.st.dna=(SAVE.st.dna||0)+1}dirty=true;if(SAVE.tuto===1)setTuto(2)}}});
   if(dirty&&cur==='nursery')renderNursery();
   else if(cur==='nursery')liveNursery();
   if(dirty&&cur==='team')renderTeam();
@@ -642,7 +642,7 @@ function pickParent(){
   const ok=m=>!monStatus(m.u)&&(!A||canBreed(A,m));
   openModal(`<h2>${A?'Choisis le 2ᵉ parent pour '+esc(DEX[A.n].name):'Choisis le 1ᵉʳ parent'}</h2>
    <p class="muted">Il faut un mâle ♂ et une femelle ♀ de la même famille, ou de deux espèces qui ont un type en commun. Métamorph peut se reproduire avec n'importe quel Pokémon, même sans sexe. Le bébé est de l'espèce de la mère (sauf rares surprises entre espèces différentes…).</p>
-   ${SAVE.items.dna>0?`<p class="muted">🧬 ADN légendaire : ${SAVE.items.dna} (un légendaire peut se reproduire une fois, puis il est épuisé 24 h)</p>`:''}${ps.fixed&&n0.egg?`<p><button class="go" data-act="collect" data-i="${ps.nest}">Récupérer l'œuf</button></p>`:''}${ps.fixed?`<p><button data-act="split" data-i="${ps.nest}">Retirer ${esc(DEX[A.n].name)} du nid</button></p>`:''}${A&&SAVE.items.mirror>1&&!LEGEND.has(A.n)&&A.n!==132?`<p class="flexr" style="align-items:center">🧬 Utiliser <input type="number" id="mirN" min="1" max="${SAVE.items.mirror}" value="${Math.min(SAVE.items.mirror,nestCap(n0))}" style="width:64px"> Gènes miroirs à la suite (1 œuf chacun, tu en as ${SAVE.items.mirror}) <button class="go" data-act="soloN">Lancer</button></p>`:''}${A&&SAVE.items.mirror>0&&!LEGEND.has(A.n)&&A.n!==132?`<p><button data-act="solo">🧬 Utiliser un Gène miroir (${SAVE.items.mirror}) : ${esc(DEX[A.n].name)} pond un seul œuf tout seul</button></p>`:''}
+   ${A&&LEGEND.has(A.n)?`<div class="banner ${SAVE.items.dna>0?'s':''}" style="margin:6px 0">🧬 <b>ADN légendaire</b> : ${SAVE.items.dna>0?`tu en as ${SAVE.items.dna}. ${esc(DEX[A.n].name)} peut pondre <b>seul</b> un œuf de son espèce (comme un Gène miroir), puis il est épuisé 24 h. <button class="sm go" data-act="soloDna">🧬 Pondre seul avec l'ADN légendaire</button>`:`il en faut un pour faire pondre un légendaire (boutique, 100 000). Les Gènes miroirs ne marchent pas sur les légendaires.`}</div>`:SAVE.items.dna>0?`<p class="muted">🧬 ADN légendaire : ${SAVE.items.dna} (un légendaire peut pondre seul ou avec Métamorph, une fois, puis il est épuisé 24 h)</p>`:''}${ps.fixed&&n0.egg?`<p><button class="go" data-act="collect" data-i="${ps.nest}">Récupérer l'œuf</button></p>`:''}${ps.fixed?`<p><button data-act="split" data-i="${ps.nest}">Retirer ${esc(DEX[A.n].name)} du nid</button></p>`:''}${A&&SAVE.items.mirror>1&&!LEGEND.has(A.n)&&A.n!==132?`<p class="flexr" style="align-items:center">🧬 Utiliser <input type="number" id="mirN" min="1" max="${SAVE.items.mirror}" value="${Math.min(SAVE.items.mirror,nestCap(n0))}" style="width:64px"> Gènes miroirs à la suite (1 œuf chacun, tu en as ${SAVE.items.mirror}) <button class="go" data-act="soloN">Lancer</button></p>`:''}${A&&SAVE.items.mirror>0&&!LEGEND.has(A.n)&&A.n!==132?`<p><button data-act="solo">🧬 Utiliser un Gène miroir (${SAVE.items.mirror}) : ${esc(DEX[A.n].name)} pond un seul œuf tout seul</button></p>`:''}
    ${filtHTML('nest')}<div class="grid" id="flist_nest">${nestList()}</div>`);
 }
 function nestList(){const ps=pickState;if(!ps)return '';const A=ps.a?mon(ps.a):null;const ok=m=>!monStatus(m.u)&&(!A||canBreed(A,m));
@@ -836,7 +836,7 @@ const SHOP=[
  {id:'love',name:'Encens d\'amour',desc:'Pontes 2 fois plus rapides pendant 5 min (nouvelles pontes).',ic:'sprites/Graphics/Items/LUCKINCENSE.png',price:()=>250,buy:()=>addBoost('love',5)},
  {id:'mut',name:'Pierre mutagène',desc:'+15 % de chance de mutation pendant 5 min.',ic:'sprites/Graphics/Items/BERSERKGENE.png',price:()=>400,buy:()=>addBoost('mut',5)},
  {id:'shiny',name:'Charme chroma',desc:'Chance shiny ×2 pendant 10 min.',ic:'sprites/Graphics/Items/COMETSHARD.png',price:()=>1500,buy:()=>addBoost('shiny',10)},
- {id:'dna',name:'ADN légendaire',desc:'Seul moyen de faire pondre un légendaire, une seule fois (avec Métamorph ou un partenaire compatible). Le couple se sépare après la ponte et le légendaire est épuisé 24 h.',ic:'sprites/Graphics/Items/DNASPLICERS.png',price:()=>100000,buy:()=>{SAVE.items.dna=(SAVE.items.dna||0)+1}},
+ {id:'dna',name:'ADN légendaire',desc:'Seul moyen de faire pondre un légendaire, une seule fois : il pond seul (pose-le dans un nid) ou avec Métamorph. Il quitte le nid après la ponte et il est épuisé 24 h.',ic:'sprites/Graphics/Items/DNASPLICERS.png',price:()=>100000,buy:()=>{SAVE.items.dna=(SAVE.items.dna||0)+1}},
  {h:'Objets d\'évolution'},
  {id:'it_fire',name:ITEMS.fire.n,desc:ITEMS.fire.d,ic:ITDIR+ITEMS.fire.ic+'.png',price:()=>3000,buy:()=>invAdd('fire')},
  {id:'it_water',name:ITEMS.water.n,desc:ITEMS.water.d,ic:ITDIR+ITEMS.water.ic+'.png',price:()=>3000,buy:()=>invAdd('water')},
@@ -888,7 +888,7 @@ function marketToday(){const day=dayNo(),nr=mkRolls();if(!marketToday.c||marketT
   const L=EGG_SPECIES.filter(n=>LEGEND.has(n));marketToday.c={day,nr,list,leg:L[Math.floor(R()*L.length)]}}return marketToday.c}
 const legDayPrice=()=>rp(eggPrice(marketToday().leg)*LEG_DAY_MUL);
 function rerollMarket(){const p=rerollPrice();if(SAVE.coins<p){toast('Pas assez de pièces');return}SAVE.coins-=p;mkRolls();SAVE.mk.n++;dirty=true;saveGame();renderTop();renderShop();toast('🎲 Nouveau marché du jour !')}
-function buyLegDay(){const M=marketToday(),p=legDayPrice();if(SAVE.legDay===M.day){toast('Déjà acheté aujourd\'hui.');return}if(SAVE.coins<p)return;if(bagFull()){bagMsg();return}SAVE.coins-=p;SAVE.legDay=M.day;const e=eggOf(M.leg);e.src='legende';addEgg(e,true);toast(`✨ Œuf légendaire ${eggKnown(M.leg)?'de <b>'+esc(DEX[M.leg].name)+'</b>':'<b>mystère</b> 🆕'} acheté !`);dirty=true;saveGame();renderTop();renderShop()}
+function buyLegDay(){const M=marketToday(),p=legDayPrice();if(SAVE.legDay===M.day){toast('Déjà acheté aujourd\'hui.');return}if(SAVE.coins<p)return;if(bagFull()){bagMsg();return}SAVE.coins-=p;SAVE.legDay=M.day;const e=eggOf(M.leg);e.src='legende';addEgg(e,true);jingle('victoire_legendaire');toast(`✨ Œuf légendaire ${eggKnown(M.leg)?'de <b>'+esc(DEX[M.leg].name)+'</b>':'<b>mystère</b> 🆕'} acheté !`);dirty=true;saveGame();renderTop();renderShop()}
 function renderMarket(){const q=marketQ.trim().toLowerCase();
   const L=[...marketToday().list,132].filter(n=>{const d=DEX[n];return(!marketT||d.t1===marketT||d.t2===marketT)&&(!q||(eggKnown(n)&&(d.name.toLowerCase().includes(q)||String(n)===q.replace(/^#?0*/,''))))});
   $('market').innerHTML=L.map(n=>{const d=DEX[n],p=eggPrice(n),ev=[];let c=n;for(let k=0;k<2;k++){const t=evoTargets(c);if(!t.length)break;ev.push(t.map(x=>DEX[x].name).join('/'));c=t[0]}
@@ -912,7 +912,7 @@ function buy(i){const it=SHOP[i];const e0=SAVE.eggs.length,isEgg=/^egg/.test(it.
   if(!n)return;toast(`Acheté${n>1?' ×'+n:''} : <b>${it.name}</b>${n>1?` (${COIN}${fmt(tot)})`:''}`);dirty=true;saveGame();renderShop();renderTop();
   if(isEgg){const got=SAVE.eggs.slice(e0);if(got.length)showGotEggs(got,it.name,tot)}}
 const RARN=['Commun','Peu commun','Rare','Très rare'];
-function showGotEggs(L,title,tot){const lg=L.some(e=>LEGEND.has(e.n));
+function showGotEggs(L,title,tot){const lg=L.some(e=>LEGEND.has(e.n));if(lg)jingle('victoire_legendaire');
   openModal(`<h2>🥚 ${L.length} ${esc(L.length>1?title.replace(/^Œuf/,'Œufs'):title)} reçu${L.length>1?'s':''}${tot?` <span class="muted">(${COIN}${fmt(tot)})</span>`:''}</h2>${lg?'<div class="banner s">✨ INCROYABLE : un œuf légendaire (1 chance sur 1 000 000) !</div>':''}
    <div class="gotegg">${L.map(e=>`<div class="ge r${LEGEND.has(e.n)?4:DEX[e.n].rar}">${eggH(e.n,56)}<b>${newB(e.n)}${eggNm(e.n)}</b><small>${LEGEND.has(e.n)?'✨ Légendaire':RARN[DEX[e.n].rar]||''}${e.sh?' · ★ super mutation':''} · Nv ${e.lv}</small></div>`).join('')}</div>
    <p class="muted">Ils sont dans le sac d'œufs.</p><div class="flexr"><button class="go" data-act="closeModal">OK</button></div>`)}
@@ -1739,8 +1739,8 @@ function endFight(win){if(B.dmax){dmaxEnd(win);return}
     if(SAVE.tuto>=5&&SAVE.tuto<6)setTuto(6)}
   let gift=null;const gc=PCY();if(win&&st===MAXST&&gc>=1&&!B.defi&&!B.arena){SAVE.arcD=SAVE.arcD||{};const td=new Date().toDateString();
     if(SAVE.arcD[gc]!==td){SAVE.arcD[gc]=td;const r=rnd(),pS=.02*gc,pL=pS+.08+.04*gc,pM=pL+.20,pC=pM+.25;
-      if(r<pS){const e=legendEgg();e.sh=true;e.g=randGenes(25,31);addEgg(e,true);gift={t:'egg',e,txt:'✨ un œuf légendaire SHINY'}}
-      else if(r<pL){const e=legendEgg();e.g=randGenes(25,31);addEgg(e,true);gift={t:'egg',e,txt:'un œuf légendaire (gènes 25 à 31)'}}
+      if(r<pS){const e=legendEgg();e.sh=true;e.g=randGenes(25,31);addEgg(e,true);jingle('victoire_legendaire');gift={t:'egg',e,txt:'✨ un œuf légendaire SHINY'}}
+      else if(r<pL){const e=legendEgg();e.g=randGenes(25,31);addEgg(e,true);jingle('victoire_legendaire');gift={t:'egg',e,txt:'un œuf légendaire (gènes 25 à 31)'}}
       else if(r<pM){SAVE.items.mirror=(SAVE.items.mirror||0)+3;gift={t:'it',txt:'3 Gènes miroirs'}}
       else if(r<pC){invAdd('rarecandy',5);gift={t:'it',txt:'5 Super Bonbons'}}
       else{const c=rp(50000*(1+gc));SAVE.coins+=c;gift={t:'c',txt:fmt(c)+' pièces'}}
@@ -2100,9 +2100,10 @@ const ACT={
   tselHeal:()=>healAsk([...teamSel].map(mon).filter(Boolean)),
   pgMore:(t)=>{const c=t.dataset.c;PG[c]=(PG[c]||PGN)+PGN;const y=window.scrollY;(FILT_R[c]||(()=>{}))();window.scrollTo(0,y)},
   collectAll:()=>{let n=0,why='';SAVE.nests.forEach((x,i)=>{n+=collect(i,true);why=why||collect.why});if(n){toast(`🥚 ${n} œuf${n>1?'s':''} récupéré${n>1?'s':''} !`);saveGame()}if(why==='room')toast('🏠 Plus de place dans la nurserie : relâche des Pokémon ou agrandis-la pour récupérer les autres œufs.');else if(why==='bag'&&!n)bagMsg()},
-  split:(t)=>{const n=SAVE.nests[+t.dataset.i];if(n.dna){SAVE.items.dna=(SAVE.items.dna||0)+1;n.dna=0}if(n.b==='solo'&&n.mirN>0){SAVE.items.mirror=(SAVE.items.mirror||0)+n.mirN;toast(`🧬 ${n.mirN} Gène${n.mirN>1?'s':''} miroir${n.mirN>1?'s':''} rendu${n.mirN>1?'s':''}`);n.mirN=0}n.a=n.b=null;n.t0=0;pickState=null;closeModal();dirty=true;saveGame()},
+  split:(t)=>{const n=SAVE.nests[+t.dataset.i];if(n.dna){SAVE.items.dna=(SAVE.items.dna||0)+1;n.dna=0}if(n.b==='solo'&&n.mirN>0&&!n.dna){SAVE.items.mirror=(SAVE.items.mirror||0)+n.mirN;toast(`🧬 ${n.mirN} Gène${n.mirN>1?'s':''} miroir${n.mirN>1?'s':''} rendu${n.mirN>1?'s':''}`);n.mirN=0}n.a=n.b=null;n.t0=0;pickState=null;closeModal();dirty=true;saveGame()},
   splitOne:(t)=>{const n=SAVE.nests[+t.dataset.i];if(!n.a||!n.b||n.b==='solo')return;if(n.dna){SAVE.items.dna=(SAVE.items.dna||0)+1;n.dna=0}if(t.dataset.w==='a')n.a=n.b;n.b=null;n.t0=0;dirty=true;saveGame();openNest(+t.dataset.i)},
   pickMon:(t)=>{const u=+t.dataset.u;if(!pickState)return;if(!pickState.a){pickState.a=u;pickParent()}else placeCouple(u)},
+  soloDna:()=>{const A=pickState&&mon(pickState.a);if(!A||!LEGEND.has(A.n)||!(SAVE.items.dna>0))return;const ni=pickState.nest;SAVE.items.dna--;placeCouple('solo');const n=SAVE.nests[ni];n.dna=1;n.mirN=1;toast(`🧬 ${esc(DEX[A.n].name)} va pondre un œuf grâce à l'ADN légendaire`)},
   solo:()=>{const A=pickState&&mon(pickState.a);if(SAVE.items.mirror<=0||!A||LEGEND.has(A.n)||A.n===132)return;SAVE.items.mirror--;const ni=pickState.nest;placeCouple('solo');SAVE.nests[ni].mirN=1},
   soloN:()=>{const A=pickState&&mon(pickState.a);const k=clamp(Math.floor(+($('mirN')||{}).value||1),1,SAVE.items.mirror||0);if(!k||!A||LEGEND.has(A.n)||A.n===132)return;SAVE.items.mirror-=k;const ni=pickState.nest;placeCouple('solo');SAVE.nests[ni].mirN=k;toast(`🧬 ${k} Gène${k>1?'s':''} miroir${k>1?'s':''} : ${esc(DEX[A.n].name)} va pondre ${k} œuf${k>1?'s':''} à la suite`)},
   inc:(t)=>openInc(+t.dataset.i),
@@ -2469,6 +2470,7 @@ setTimeout(()=>infoScan(document.body),0);
    MESSAGES : courrier (nouveautés + avis), chat monde, messages privés (Firestore : chat, dm, feedback)
    ===================================================================== */
 const PATCH=[
+ ['V01.03','🧬 L\'ADN légendaire fait pondre un légendaire seul dans le nid (plus besoin de Métamorph). 🎵 Jingle quand tu obtiens un œuf légendaire (légendaire du jour, œufs surprise, cadeau d\'Arceus).'],
  ['V01.02','🎁 Cadeau d\'Arceus quotidien : 1 par jour dans chaque mode Maître (I à V), meilleures chances dans les modes hauts. Liens vers nos pages itch.io : laisse un avis, un j\'aime et abonne-toi !'],
  ['V01.01','Icône d\'appli et mode appli sans barre de navigateur (iPhone : Partager → Sur l\'écran d\'accueil). Liens vers nos autres jeux. Bouton « Passer en mode Maître » si tu avais cliqué sur Plus tard. 🎁 Cadeau d\'Arceus : 1 par jour et par mode Maître, en battant Arceus dans ce mode. Plus le mode est haut, plus l\'œuf légendaire (et shiny) a de chances de tomber.'],
  ['V01.00','🎉 Sortie officielle de PokeTabs Eggs Collector ! Merci à tous les testeurs. Envoie ton avis depuis l\'onglet 💬 Messages.'],
