@@ -2,11 +2,20 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="PokeTabs">
+<meta name="theme-color" content="#2a1650">
+<link rel="manifest" href="manifest.webmanifest">
 <title>PokeTabs Eggs Collector</title>
+<link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
 <link rel="icon" type="image/svg+xml" href="assets/logo.svg">
-<link rel="apple-touch-icon" href="assets/logo.svg">
+<link rel="apple-touch-icon" sizes="180x180" href="assets/icon-180.png">
 <style>
+@media (display-mode:standalone),(display-mode:fullscreen){header{padding-top:max(10px,env(safe-area-inset-top))}body{padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right);padding-bottom:env(safe-area-inset-bottom)}}
+.glinks{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-top:8px}.glinks a{display:inline-block;background:#fff;border:2px solid var(--ink);border-radius:8px;padding:3px 9px;color:var(--ink);text-decoration:none;font-size:12px;box-shadow:0 2px 0 var(--ink)}.glinks a:hover{background:#fff3c9}
 :root{--ink:#4a2f22;--paper:#fff8ee;--cream:#f6e9d8;--gold:#f2b632;--blue:#5f9be8;--red:#e0604f;--green:#5fb86a;--pink:#ef8fb6;--shadow:0 3px 0 #4a2f22}
 *{box-sizing:border-box}
 body{margin:0;background:#e9d6bf;color:var(--ink);font:600 14px/1.35 "Trebuchet MS",Verdana,sans-serif}
@@ -287,7 +296,7 @@ html,body{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
    POKETABS EGGS COLLECTOR  (V00.01.00)
    Réglages rapides : objet T ci-dessous (durées en secondes, chances en 0..1)
    ===================================================================== */
-const VERSION='V01.00.00';
+const VERSION='V01.02.00';
 const T={
   breed:45,        // durée de base d'une ponte (s)
   hatch:75,        // durée de base d'éclosion (s), modulée par l'espèce (stats totales et rareté)
@@ -1210,7 +1219,8 @@ function renderBattleHead(){
   const army=B.phase==='place'?`<span>Armée : <b>${used}/${SAVE.army}</b></span><button class="sm" data-act="autoPlace">Placement auto</button>${presetSelHTML()}<button class="sm" data-act="presets" title="Enregistrer ou charger une équipe">💾 Équipes</button><button class="sm" data-act="clearPlace">Vider</button>`:`<span>Armée : <b>${B.units.filter(u=>u.team===0&&u.hp>0).length}/${used}</b> debout</span>`;
   const fight=`<button class="sm" data-act="speed" title="Vitesse du combat (x1, x2, x4), gardée pour les combats suivants">Vitesse ×${bSpeed}</button>${B.phase==='place'?`<button class="go" data-act="fight" ${used?'':'disabled'}>⚔ Combat !</button>`:''}<button class="sm ${AUTO?'go':''}" data-act="autoRun" title="Rejoue automatiquement les tableaux suivants avec la même armée, jusqu'à une défaite">🔁 Auto ${AUTO?'ON':'OFF'}</button>${B.phase==='fight'?`<button class="sm" data-act="flee">Abandonner</button>`:''}<button class="sm" data-act="bfull" title="Plein écran">${document.body.classList.contains('bfull')?'⤡ Quitter':'⤢ Plein écran'}</button>`;
   const cycSel=SAVE.cycle?`<select id="cycSel" title="Rejouer un mode précédent (tous ses tableaux sont ouverts)" ${lk?'disabled':''}>${Array.from({length:SAVE.cycle+1},(_,c)=>`<option value="${c}" ${c===PCY()?'selected':''}>${cycLbl(c)}${c===SAVE.cycle?' (actuel)':''}</option>`).join('')}</select>`:'';
-  $('bhead').innerHTML=`<div class="bhrow"><div class="bhg"><span class="lab">Tableau</span>${cycSel}${nav}</div><div class="bhg"><span class="lab">Infos</span>${info}</div></div>
+  const cycUp=(SAVE.best||0)>=MAXST&&(SAVE.cycle||0)<MAX_CYCLE&&!lk?`<button class="sm go" data-act="newCycle" title="Tu as battu Arceus : passe au mode suivant">🔥 Passer en ${cycName((SAVE.cycle||0)+1)}</button>`:'';
+  $('bhead').innerHTML=`<div class="bhrow"><div class="bhg"><span class="lab">Tableau</span>${cycSel}${cycUp}${nav}</div><div class="bhg"><span class="lab">Infos</span>${info}</div></div>
    <div class="bhrow"><div class="bhg"><span class="lab">Armée</span>${army}</div><div class="bhg"><span class="lab">Combat</span>${fight}</div></div>
    <div class="bhrow syn">${synHTML(B.placed)}</div>`;
   const cs=$('cycSel');if(cs)cs.onchange=e=>{const c=+e.target.value;SAVE.pc=c<(SAVE.cycle||0)?c:null;dirty=true;saveGame();setupStage(c<(SAVE.cycle||0)?1:SAVE.best+1);renderTop();toast(c?`🔥 ${cycName(c)}${c<SAVE.cycle?' : mode déjà terminé, tous les tableaux sont ouverts':''}`:'Mode normal : tous les tableaux sont ouverts')}
@@ -1727,6 +1737,14 @@ function endFight(win){if(B.dmax){dmaxEnd(win);return}
     /* œuf du boss lui-même : 10 % pour un légendaire, 35 % sinon ; sinon super œuf (tous les 10 tableaux) ou œuf niveau 5 du biome */
     egg=st===MAXST&&first?legendEgg():LEGEND.has(boss.n)?(rnd()<.1&&EGG_HAS.has(own)?Object.assign(eggOf(own),{src:'legende'}):superEgg()):EGG_HAS.has(own)&&rnd()<.35?mk(own,st%10===0?10:5):st%10===0?superEgg():(()=>{const P=EGG_SPECIES.filter(x=>!LEGEND.has(x)&&x!==132&&eggMethod(x)==='marche'&&(HAB[x]?HAB[x].includes(B.M.bi.hab):(B.M.bi.types.includes(DEX[x].t1)||B.M.bi.types.includes(DEX[x].t2))));const n=P.length?pick(P):pick(EGG_SPECIES.filter(x=>eggMethod(x)==='marche'&&x!==132));const sh=rnd()<T.sh0;return{id:SAVE.uid++,n,sx:rollSex(n),lv:5+(sh?T.mutLv:0),g:randGenes(5,20),sh,mut:0,bst:sh?pick(BST_K):null,src:'boss'}})();if(!addEgg(egg,egg.src==='arceus'||egg.src==='legende')){const v=rp(eggPrice(egg.n)*.3);SAVE.coins+=v;egg.sold=v}}
     if(SAVE.tuto>=5&&SAVE.tuto<6)setTuto(6)}
+  let gift=null;const gc=PCY();if(win&&st===MAXST&&gc>=1&&!B.defi&&!B.arena){SAVE.arcD=SAVE.arcD||{};const td=new Date().toDateString();
+    if(SAVE.arcD[gc]!==td){SAVE.arcD[gc]=td;const r=rnd(),pS=.02*gc,pL=pS+.08+.04*gc,pM=pL+.20,pC=pM+.25;
+      if(r<pS){const e=legendEgg();e.sh=true;e.g=randGenes(25,31);addEgg(e,true);gift={t:'egg',e,txt:'✨ un œuf légendaire SHINY'}}
+      else if(r<pL){const e=legendEgg();e.g=randGenes(25,31);addEgg(e,true);gift={t:'egg',e,txt:'un œuf légendaire (gènes 25 à 31)'}}
+      else if(r<pM){SAVE.items.mirror=(SAVE.items.mirror||0)+3;gift={t:'it',txt:'3 Gènes miroirs'}}
+      else if(r<pC){invAdd('rarecandy',5);gift={t:'it',txt:'5 Super Bonbons'}}
+      else{const c=rp(50000*(1+gc));SAVE.coins+=c;gift={t:'c',txt:fmt(c)+' pièces'}}
+      SAVE.st.arcGift=(SAVE.st.arcGift||0)+1}}
   xp=win?winXP(st):0;B.placed.forEach(p=>{const m=mon(p.u);if(m){gainXP(m,xp);if(win)gainHap(m,3)}});
   if(win&&B.units.some(u=>u.boss&&u.team===1))jingle(B.units.some(u=>u.boss&&u.team===1&&LEGEND.has(u.n))?'victoire_legendaire':'victoire_boss');
   if(AUTO&&win)SAVE.st.autoW=(SAVE.st.autoW||0)+1;
@@ -1740,7 +1758,8 @@ function endFight(win){if(B.dmax){dmaxEnd(win);return}
    ${win?`<p class="price">${COIN} +${fmt(coins)} pièces${first?'':' (rejouer rapporte moitié moins)'}</p>`:'<p>Fais se reproduire tes Pokémon pour des bébés plus forts, entraîne-les, ou change ton placement.</p>'}
    ${win?'':'<p class="muted">Pas d\'XP en cas de défaite.</p>'}<p ${win?'':'hidden'}>+${xp} XP pour chaque Pokémon de ton armée.</p>
    ${drop?`<p>${itIc(drop,28)} Objet trouvé : <b>${ITEMS[drop].n}</b> (dans ton sac d'objets, onglet Aventures).</p>`:''}${egg&&egg.sold?`<p>🎒 Sac d'œufs plein : l'œuf de ${esc(DEX[egg.n].name)} a été revendu (+${fmt(egg.sold)} pièces).</p>`:''}${egg&&!egg.sold?`<p>${eggH(egg.n,48)} ${egg.src==='legende'?'<b>✨ Incroyable ! Le légendaire a laissé son propre œuf :</b>':egg.src==='arceus'?'<b>Arceus t\'offre un œuf légendaire :</b>':egg.src==='super'?'<b>Super œuf rare</b> (niveau 10) :':'Le boss a laissé un œuf niveau 5 :'} <b>${esc(DEX[egg.n].name)}</b> !</p>`:''}
-   ${win&&first&&st>=MAXST?`<div class="banner s" style="margin:8px 0">🌍 Tu es arrivé au bout de l'aventure ! Tu as traversé les ${BIOMES.length-1} biomes du continent, la Route Victoire et la Vallée des légendes.</div><p>${(SAVE.cycle||0)>=MAX_CYCLE?`Tu as vaincu le mode <b>${cycName(SAVE.cycle)}</b>, le plus haut du jeu. Bravo !</p><div class="flexr">`:`Tu peux passer en <b>mode ${cycName((SAVE.cycle||0)+1)}</b> : tous les ennemis sont entièrement évolués et plus forts qu'Arceus : Nv ${Math.min(LV_MAX,ARCEUS_LV()*((SAVE.cycle||0)+1)+lvCurve(1))} au tableau 1, jusqu'à Nv ${Math.min(LV_MAX,ARCEUS_LV()*((SAVE.cycle||0)+1)+lvCurve(MAXST))} au tableau ${MAXST} (niveau maximum du jeu : ${LV_MAX}).</p><div class="flexr"><button class="go" data-act="newCycle">Passer en mode ${cycName((SAVE.cycle||0)+1)}</button>`}<button data-act="closeModal">Plus tard</button></div>`:''}
+   ${gift?`<div class="banner s" style="margin:8px 0">🎁 <b>Cadeau d'Arceus !</b> Cadeau du jour du mode ${cycName(gc)} : Arceus t'offre ${gift.txt}${gift.e?' : '+eggH(gift.e.n,40)+' <b>'+esc(DEX[gift.e.n].name)+'</b>':''}.</div>`:''}${win&&st>=MAXST&&gc>=1&&!B.defi&&!B.arena&&!gift?`<p class="muted small">🎁 Cadeau d'Arceus du mode ${cycName(gc)} déjà reçu aujourd'hui. Reviens demain, ou bats Arceus dans un autre mode Maître.</p>`:''}
+   ${win&&st>=MAXST&&PCY()===(SAVE.cycle||0)&&(first||SAVE.best>=MAXST)&&!B.defi&&!B.arena?`<div class="banner s" style="margin:8px 0">🌍 Tu es arrivé au bout de l'aventure ! Tu as traversé les ${BIOMES.length-1} biomes du continent, la Route Victoire et la Vallée des légendes.</div><p>${(SAVE.cycle||0)>=MAX_CYCLE?`Tu as vaincu le mode <b>${cycName(SAVE.cycle)}</b>, le plus haut du jeu. Bravo !</p><div class="flexr">`:`Tu peux passer en <b>mode ${cycName((SAVE.cycle||0)+1)}</b> : tous les ennemis sont entièrement évolués et plus forts qu'Arceus : Nv ${Math.min(LV_MAX,ARCEUS_LV()*((SAVE.cycle||0)+1)+lvCurve(1))} au tableau 1, jusqu'à Nv ${Math.min(LV_MAX,ARCEUS_LV()*((SAVE.cycle||0)+1)+lvCurve(MAXST))} au tableau ${MAXST} (niveau maximum du jeu : ${LV_MAX}).</p><div class="flexr"><button class="go" data-act="newCycle">Passer en mode ${cycName((SAVE.cycle||0)+1)}</button>`}<button data-act="closeModal">Plus tard</button></div>`:''}
    <div class="flexr">${win&&st<MAXST?`<button class="go" data-act="nextStage">Tableau suivant ▶</button>`:''}<button data-act="retry">${win?'Rejouer ce tableau':'Réessayer'}</button></div>`);
 }
 /* =====================================================================
@@ -2173,6 +2192,7 @@ const ACT={
   rsel:(t)=>{const u=+t.dataset.u;if(monStatus(u)){toast('Ce Pokémon est occupé (nid ou entraînement).');return}battleSel=u;renderRoster()},
   autoPlace:()=>autoPlace(),clearPlace:()=>{B.placed=[];renderBattleHead();renderRoster()},
   bfull:()=>toggleBattleFull(),
+  optFull:()=>{try{if(document.fullscreenElement)document.exitFullscreen();else document.documentElement.requestFullscreen().catch(()=>{})}catch(e){}setTimeout(renderSettings,300)},
   fullscreen:()=>{try{if(document.fullscreenElement)document.exitFullscreen();else document.documentElement.requestFullscreen({navigationUI:'hide'}).catch(()=>toast('Plein écran refusé par le navigateur'))}catch(e){toast('Plein écran non disponible sur ce navigateur')}},
   fight:()=>startFight(),
   autoRun:()=>{AUTO=!AUTO;AUTO_SPEED=null;if(AUTO&&B){if(B.phase==='place'){if(!B.placed.length){if(AUTO_LAST.length){B.phase='end';autoNextSame()}else autoPlace()}if(B.phase==='place'&&B.placed.length)startFight()}else if(B.phase==='end'&&B.res&&B.res.win)autoNext()}renderBattleHead()},speed:()=>{bSpeed=bSpeed>=4?1:bSpeed*2;OPT.mspd=bSpeed;saveOpt();if(AUTO)AUTO_SPEED=bSpeed;renderBattleHead()},flee:()=>endFight(false),
@@ -2243,8 +2263,10 @@ function renderSettings(){
    <div class="setrow"><label>Langue / Language</label>${[['fr','🇫🇷 Français'],['en','🇬🇧 English']].map(([k,t])=>`<button class="sm ${OPT.lang===k?'go':''}" data-act="setLang" data-v="${k}">${t}</button>`).join('')}<span class="muted">${OPT.lang==='en'?'English: menus, buttons, home page and tutorial. Long descriptions are still in French.':''}</span></div>
    <div class="setrow"><label>Tutoriel des onglets</label><button class="sm" data-act="tourStart">📖 Revoir le tutoriel</button></div>
    <div class="setrow"><label>Vitesse de combat par défaut</label>${[1,2,4].map(v=>`<button class="sm ${OPT.speed===v?'go':''}" data-act="optSpeed" data-v="${v}">×${v}</button>`).join('')}</div>
+   <div class="setrow"><label>Plein écran</label>${document.fullscreenEnabled?`<button class="sm" data-act="optFull">${document.fullscreenElement?'⤡ Quitter le plein écran':'⤢ Plein écran'}</button>`:`<span class="muted">${isApp()?'Tu joues déjà en mode appli.':'Sur iPhone et iPad : Partager → Sur l\'écran d\'accueil → « Ouvrir comme app web ». Le jeu s\'ouvre alors sans la barre du navigateur.'}</span>`}</div>
+   <h3 style="margin-top:14px">🎮 Nos autres jeux et liens</h3>${gamesHTML()}
    <h3 style="margin-top:14px">Sauvegarde</h3>
-   <p class="muted">Ta partie est sauvegardée automatiquement dans ce navigateur, et en ligne si tu es connecté avec Google.</p>
+   <p class="muted">Ta partie est sauvegardée automatiquement dans ce navigateur, et en ligne si tu es connecté avec Google. L'appli de l'écran d'accueil et le navigateur ont chacun leur sauvegarde locale : connecte-toi avec Google des deux côtés pour retrouver la même partie.</p>
    <div class="setrow"><label>Recommencer à zéro</label><button class="sm" data-act="optReset" style="background:#f6c9c0">Effacer ma partie…</button></div>
    <p class="muted">Les réglages sont gardés sur cet appareil. ${VERSION}</p></div>`;
   $('optVol').oninput=e=>{OPT.vol=+e.target.value;$('volV').textContent=OPT.vol;saveOpt();if(MUS.a)MUS.a.volume=OPT.vol/100};
@@ -2279,6 +2301,13 @@ function i18c(t){return OPT.lang==='en'&&EN[t]||t}
 const LG=()=>OPT.lang==='en'?'en':'fr';const tr2=(fr,en)=>LG()==='en'?en:fr;
 const HOME={on:false,want:false};
 function homeShow(){HOME.on=true;let h=$('home');if(!h){h=document.createElement('div');h.id='home';document.body.appendChild(h)}h.hidden=false;homeRender()}
+const GAMES=[['🥚','PokeTabs Eggs Collector','https://misterlebn.github.io/poketabs-eggs-collector/','poketabs'],['🧬','Everything is Métamorph','https://misterlebn.github.io/everything-is-metamorph/','metamorph'],['🦀','Everything is PokeCrab','https://misterlebn.github.io/everything-is-pokecrab/','pokecrab']];
+/* pages itch.io : coller l'adresse de chaque page quand elle est en ligne (avis, j'aime, abonnement) */
+const ITCH={poketabs:'https://le-bn.itch.io/pokmon-tabsmon-eggs',metamorph:'https://le-bn.itch.io/everything-is-metamorph',pokecrab:''};
+const GH_URL='https://github.com/misterlebn';
+const isApp=()=>{try{return matchMedia('(display-mode: standalone)').matches||matchMedia('(display-mode: fullscreen)').matches||navigator.standalone===true}catch(e){return false}};
+const linkA=(u,t)=>`<a href="${u}" target="_blank" rel="noopener">${t}</a>`;
+function gamesHTML(){return `<div class="glinks">${GAMES.filter(g=>g[3]!=='poketabs').map(g=>linkA(g[2],g[0]+' '+g[1])).join('')}${linkA(GH_URL,'🐙 GitHub')}${Object.entries(ITCH).filter(([k,u])=>u).map(([k,u])=>linkA(u,'⭐ itch.io : '+GAMES.find(g=>g[3]===k)[1])).join('')}</div>${ITCH.poketabs?`<p class="muted small" style="margin:6px 0 0">${tr2('Le jeu te plaît ? Laisse un avis et abonne-toi sur itch.io pour suivre les nouveautés.','Enjoying the game? Leave a review and follow on itch.io for updates.')}</p>`:''}`}
 function homeRender(){const h=$('home');if(!h||!HOME.on)return;const ok=cloudReady(),u=CLOUD.user;
   h.innerHTML=`<div class="hbox"><img src="assets/logo.svg" alt="" class="hlogo"><h1>POKETABS<span>EGGS COLLECTOR</span></h1>
    <p class="muted">${tr2('Élève, fais éclore et entraîne tes Pokémon, puis lance-les au combat.','Breed, hatch and train your Pokémon, then send them into battle.')}</p>
@@ -2286,7 +2315,7 @@ function homeRender(){const h=$('home');if(!h||!HOME.on)return;const ok=cloudRea
    ${u?`<button class="go big" data-act="homeEnter">▶ ${tr2('Continuer en tant que','Continue as')} ${esc(u.displayName||u.email||'')}</button><button class="sm" data-act="homeOut">${tr2('Changer de compte','Switch account')}</button>`
      :`<button class="go big" data-act="homeGoogle" ${ok&&CLOUD.auth?'':'disabled'}><b>G</b> ${tr2('Se connecter avec Google','Sign in with Google')}</button>`}
    <button class="big" data-act="homeGuest">👤 ${tr2('Jouer en invité','Play as guest')}</button>
-   <p class="muted small">${u?'':ok?(CLOUD.auth?tr2('Avec Google, ta partie est sauvegardée en ligne et tu as accès au classement, à l\'arène et à l\'hôtel des ventes. En invité, la partie reste dans ce navigateur.','With Google, your game is saved online and you get the ranking, the arena and the auction house. As a guest, your game stays in this browser.'):tr2('Connexion à Google en cours…','Connecting to Google…')):tr2('La connexion Google marche seulement sur le site en ligne. Ici, joue en invité.','Google sign-in only works on the online site. Here, play as a guest.')}</p></div>`}
+   <p class="muted small">${u?'':ok?(CLOUD.auth?tr2('Avec Google, ta partie est sauvegardée en ligne et tu as accès au classement, à l\'arène et à l\'hôtel des ventes. En invité, la partie reste dans ce navigateur.','With Google, your game is saved online and you get the ranking, the arena and the auction house. As a guest, your game stays in this browser.'):tr2('Connexion à Google en cours…','Connecting to Google…')):tr2('La connexion Google marche seulement sur le site en ligne. Ici, joue en invité.','Google sign-in only works on the online site. Here, play as a guest.')}</p>${gamesHTML()}</div>`}
 function homeEnter(){if(!SAVE.mailSeen&&!SAVE.mons.length&&typeof PATCH!=='undefined')SAVE.mailSeen=PATCH[1][0];setTimeout(()=>typeof msgBadge==='function'&&msgBadge(),300);HOME.on=false;const h=$('home');if(h)h.hidden=true;updateMusic();showTab(cur||'nursery');
   if(!SAVE.mons.length)starterModal();else{if(SAVE.tuto>=1&&SAVE.tuto<6)setTip(TUTO[SAVE.tuto]);if(!SAVE.tour)setTimeout(tourStart,400)}}
 /* ---- traduction anglaise : textes exacts + quelques mots fréquents (le reste reste en français) ---- */
@@ -2440,6 +2469,8 @@ setTimeout(()=>infoScan(document.body),0);
    MESSAGES : courrier (nouveautés + avis), chat monde, messages privés (Firestore : chat, dm, feedback)
    ===================================================================== */
 const PATCH=[
+ ['V01.02','🎁 Cadeau d\'Arceus quotidien : 1 par jour dans chaque mode Maître (I à V), meilleures chances dans les modes hauts. Liens vers nos pages itch.io : laisse un avis, un j\'aime et abonne-toi !'],
+ ['V01.01','Icône d\'appli et mode appli sans barre de navigateur (iPhone : Partager → Sur l\'écran d\'accueil). Liens vers nos autres jeux. Bouton « Passer en mode Maître » si tu avais cliqué sur Plus tard. 🎁 Cadeau d\'Arceus : 1 par jour et par mode Maître, en battant Arceus dans ce mode. Plus le mode est haut, plus l\'œuf légendaire (et shiny) a de chances de tomber.'],
  ['V01.00','🎉 Sortie officielle de PokeTabs Eggs Collector ! Merci à tous les testeurs. Envoie ton avis depuis l\'onglet 💬 Messages.'],
  ['V00.54','Le sac d\'œufs et la nurserie ont maintenant des places séparées : tu peux récupérer les œufs des nids même si la nurserie est pleine (seule la place du sac compte).'],
  ['V00.52','Filtre automatique des insultes et des liens dans le chat, les messages privés, les avis et les pseudos.'],
