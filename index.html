@@ -264,6 +264,7 @@ html,body{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
     <button data-tab="adv">🗺️ Aventures</button>
     <button data-tab="rank">🌐 En ligne</button>
     <button data-tab="msg" id="msgBtn">💬 Messages<span class="nbadge" id="msgBadge" hidden></span></button>
+    <button id="saveBtn" data-act="saveNow" title="Sauvegarder maintenant">💾</button>
     <button data-tab="profile" id="cloudBtn">👤 Profil</button>
     <button data-tab="settings" title="Réglages">⚙</button>
     <button data-act="fullscreen" id="fsBtn" title="Jouer en plein écran (Échap pour quitter)">⛶</button>
@@ -296,7 +297,7 @@ html,body{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
    POKETABS EGGS COLLECTOR  (V00.01.00)
    Réglages rapides : objet T ci-dessous (durées en secondes, chances en 0..1)
    ===================================================================== */
-const VERSION='V01.03.00';
+const VERSION='V01.04.00';
 const T={
   breed:45,        // durée de base d'une ponte (s)
   hatch:75,        // durée de base d'éclosion (s), modulée par l'espèce (stats totales et rareté)
@@ -437,7 +438,40 @@ function fixSave(s){if(s.bagLvl===undefined){let l=0;while(bagOf(l)<(s.eggs||[])
     if(n.b!=='solo'&&A&&B&&!n.dna&&(LEGEND.has(A.n)||LEGEND.has(B.n)||!canBreed(A,B))){n.b=null;n.t0=0}})}
 function showMig(){const g=SAVE&&SAVE.migMsg;if(!g)return;delete SAVE.migMsg;setTimeout(()=>openModal(`<h2>📦 Mise à jour V00.21.00</h2><p>Les limites sont maintenant de 6 nids, 6 incubateurs (4 œufs chacun) et 6 punching-balls.</p><p>${g.nn?g.nn+' nid(s) en trop retiré(s). ':''}${g.ni?g.ni+' incubateur(s) en trop retiré(s). ':''}${g.nb?g.nb+' punching-ball(s) en trop retiré(s). ':''}</p><p>Tes Pokémon qui y étaient sont revenus libres${g.eg?' et <b>'+g.eg+' œuf(s)</b> ont été remis dans ton sac d\'œufs':''}. Rien n'est perdu.</p><button class="go" data-act="closeM">OK</button>`),600);saveGame()}
 function saveJson(){return JSON.stringify(SAVE)}
-function saveGame(){try{localStorage.setItem(SAVEKEY,saveJson())}catch(e){}if(CLOUD.user)cloudPush(false)}
+/* ===== SAUVEGARDE SÛRE (V01.04) =====
+   - SAVE.srev = numéro de la version en ligne dont cette partie descend ; SAVE.ch = changements pas encore envoyés.
+   - L'envoi en ligne vérifie (transaction) que personne n'a écrit entre-temps : sinon on demande quelle partie garder.
+   - Sauvegardes de secours dans IndexedDB (toutes les 20 min, et avant chaque remplacement).
+   - Un seul onglet actif par navigateur. */
+const SID=(()=>{try{let x=sessionStorage.getItem('pte-sid');if(!x){x=Math.random().toString(36).slice(2,10);sessionStorage.setItem('pte-sid',x)}return x}catch(e){return Math.random().toString(36).slice(2,10)}})();
+const SV={sig:'',paused:false,conf:null,state:'',cloudT:0,bkT:0,force:false,busy:false};
+const sigOfObj=o=>JSON.stringify(o,(k,v)=>k==='last'||k==='hapT'||k==='ch'||k==='srev'?undefined:v);
+const sigOf=()=>sigOfObj(SAVE);
+function saveGame(force){if(SV.paused)return;const g=sigOf();if(g!==SV.sig){if(SV.sig)SAVE.ch=true;SV.sig=g}try{localStorage.setItem(SAVEKEY,saveJson())}catch(e){}bkMaybe();
+  if(SV.conf){if($('modal').hidden)showConflict(SV.conf);return}
+  if(CLOUD.user&&(SAVE.ch||force))cloudPush(!!force);renderSaveBtn()}
+/* --- sauvegardes de secours (IndexedDB) --- */
+const BK={db:null,max:12};
+function bkOpen(){return new Promise(res=>{if(BK.db)return res(BK.db);try{const r=indexedDB.open('pte-backups',1);r.onupgradeneeded=()=>{try{r.result.createObjectStore('bk',{keyPath:'t'})}catch(e){}};r.onsuccess=()=>{BK.db=r.result;res(BK.db)};r.onerror=()=>res(null)}catch(e){res(null)}})}
+async function bkAll(){const db=await bkOpen();if(!db)return[];return new Promise(r=>{try{const q=db.transaction('bk').objectStore('bk').getAll();q.onsuccess=()=>r((q.result||[]).sort((a,b)=>b.t-a.t));q.onerror=()=>r([])}catch(e){r([])}})}
+async function bkAdd(json,why){try{const o=JSON.parse(json);if(!o||!Array.isArray(o.mons)||o.mons.length<1)return}catch(e){return}const db=await bkOpen();if(!db)return;try{db.transaction('bk','readwrite').objectStore('bk').put({t:Date.now(),why,json});const L=await bkAll();const tx=db.transaction('bk','readwrite');L.slice(BK.max).forEach(b=>tx.objectStore('bk').delete(b.t))}catch(e){}}
+function bkMaybe(){const now=Date.now();if(now-SV.bkT>20*60000&&SAVE.mons&&SAVE.mons.length>1){SV.bkT=now;bkAdd(saveJson(),'auto')}}
+function saveSum(o){const L=(o.mons||[]).slice().sort((a,b)=>b.lv-a.lv);return `${(o.mons||[]).length} Pokémon · ${(o.eggs||[]).length} œufs · tableau ${o.best||0}${o.cycle?' (Maître '+(ROMAN[o.cycle]||o.cycle)+')':''} · ${fmt(o.coins||0)} pièces<br><span class="muted">Plus forts : ${L.slice(0,3).map(m=>esc((DEX[m.n]||{}).name||'?')+' Nv'+m.lv+(m.sh?'★':'')).join(', ')||'aucun'} · dernière partie ${o.last?new Date(o.last).toLocaleString('fr-FR',{dateStyle:'short',timeStyle:'short'}):'?'}</span>`}
+function onlyIn(a,b){const ids=new Set((b.mons||[]).map(m=>m.u+':'+m.n));return (a.mons||[]).filter(m=>!ids.has(m.u+':'+m.n)).sort((x,y)=>y.lv-x.lv)}
+/* --- remplacement de la partie --- */
+function loadInto(o,srev,why){bkAdd(saveJson(),why||'avant remplacement');const keep=SAVE.srev;SAVE=Object.assign(newSave(),o);try{fixSave(SAVE)}catch(e){console.error(e)}SAVE.srev=srev===undefined?keep:srev;SAVE.ch=false;SV.sig=sigOf();try{localStorage.setItem(SAVEKEY,saveJson())}catch(e){}B=null;dirty=true;closeModal();renderTop();showTab(cur);renderSaveBtn()}
+function takeRemote(D,auto){SV.conf=null;loadInto(JSON.parse(D.data||'{}'),D.rev||0,'avant chargement de la partie en ligne');toast(auto?'☁️ Ta partie a été mise à jour depuis un autre appareil.':'☁️ Partie en ligne chargée. L\'ancienne version de cet appareil est dans les sauvegardes de secours.')}
+function showConflict(D){SV.conf=D;let R={};try{R=JSON.parse(D.data||'{}')}catch(e){}const a=onlyIn(SAVE,R),b=onlyIn(R,SAVE);
+  const li=L=>L.length?L.slice(0,6).map(m=>`${esc((DEX[m.n]||{}).name||'?')} Nv${m.lv}${m.sh?'★':''}`).join(', ')+(L.length>6?` et ${L.length-6} autres`:''):'aucun';
+  openModal(`<h2>⚠️ Deux versions de ta partie</h2><p>Ta partie a été modifiée sur un <b>autre appareil ou onglet</b>. Choisis celle à garder. L'autre sera mise dans les <b>sauvegardes de secours</b> de cet appareil : rien n'est perdu.</p>
+   <div class="flexr" style="align-items:stretch;gap:12px">
+    <div style="flex:1;min-width:240px;text-align:left;padding:10px;border:3px solid var(--ink);border-radius:12px;background:#fff"><b>📱 Cet appareil</b><p>${saveSum(SAVE)}</p><p class="small">Seulement ici : ${li(a)}</p><button class="go" data-act="confLocal">Garder celle-ci</button></div>
+    <div style="flex:1;min-width:240px;text-align:left;padding:10px;border:3px solid var(--ink);border-radius:12px;background:#fff"><b>☁️ En ligne</b><p>${saveSum(R)}</p><p class="small">Seulement en ligne : ${li(b)}</p><button class="go" data-act="confRemote">Prendre celle-ci</button></div></div>`);
+  const x=document.querySelector('#modal .x');if(x)x.style.display='none'}
+function renderSaveBtn(){const b=$('saveBtn');if(!b)return;const st=SV.paused?'⏸':SV.conf?'⚠️':CLOUD.user?(SAVE.ch?'⏳':'✅'):'';b.textContent='💾'+st;b.title=SV.paused?'Jeu en pause (ouvert ailleurs)':SV.conf?'Deux versions de ta partie : choisis laquelle garder':CLOUD.user?(SAVE.ch?'Envoi en ligne en attente':'Partie sauvegardée en ligne'+(SV.cloudT?' à '+new Date(SV.cloudT).toLocaleTimeString('fr-FR',{timeStyle:'short'}):'')):'Partie sauvegardée sur cet appareil'}
+/* --- un seul onglet actif --- */
+try{const BC=new BroadcastChannel('pte-tabs');BC.onmessage=e=>{const m=e.data||{};if(m.t==='hello'&&m.sid!==SID&&!SV.paused){saveGame(true);SV.paused=true;renderSaveBtn();openModal(`<h2>⏸ Jeu ouvert ailleurs</h2><p>PokeTabs vient d'être ouvert dans un autre onglet ou une autre fenêtre de ce navigateur. Cet onglet est en pause pour protéger ta sauvegarde.</p><div class="flexr"><button class="go" data-act="playHere">Jouer ici</button></div>`);const x=document.querySelector('#modal .x');if(x)x.style.display='none'}};BC.postMessage({t:'hello',sid:SID})}catch(e){}
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')saveGame(true)});
 let _MI=null,_MA=null,_ML=-1;const mon=u=>{const A=SAVE.mons;if(A!==_MA||A.length!==_ML){_MI=new Map();for(const m of A)_MI.set(m.u,m);_MA=A;_ML=A.length}return _MI.get(u)};
 function monStatus(u){const mm=mon(u);if(mm&&mm.ko&&mm.ko>Date.now())return{k:'ko',t:mm.ko};if(mm&&mm.rest&&mm.rest>Date.now())return{k:'rest',t:mm.rest};for(let i=0;i<(SAVE.exps||[]).length;i++){const x=SAVE.exps[i];if(x.mons.includes(u)&&!x.done)return{k:'exp',i}}for(let i=0;i<SAVE.nests.length;i++){const n=SAVE.nests[i];if(n.a===u||n.b===u)return{k:'nest',i}}for(let i=0;i<SAVE.balls.length;i++)if(SAVE.balls[i].mons.includes(u))return{k:'ball',i};return null}
 const statusTxt=s=>!s?'Libre':s.k==='ko'?'💫 K.O. '+fmtT(s.t-Date.now()):s.k==='rest'?'😴 Épuisé '+fmtT(s.t-Date.now()):s.k==='exp'?'Expédition':s.k==='nest'?'Au nid '+(s.i+1):'Entraînement '+(s.i+1);
@@ -2183,8 +2217,17 @@ const ACT={
   optJingles:()=>{OPT.jingles=!OPT.jingles;saveOpt();renderSettings()},
   optShow:(t)=>{OPT.show=+t.dataset.v;saveOpt();renderSettings()},
   optSpeed:(t)=>{OPT.speed=+t.dataset.v;OPT.mspd=+t.dataset.v;saveOpt();renderSettings()},
+  saveNow:async()=>{if(SV.paused){toast('Ce jeu est en pause : il est ouvert ailleurs.');return}if(SV.conf){showConflict(SV.conf);return}saveGame();bkAdd(saveJson(),'manuelle');if(CLOUD.user){await cloudPush(true);toast(CLOUD.err?'⚠️ Sauvé sur cet appareil, mais pas en ligne : '+CLOUD.err:'💾 Partie sauvegardée sur cet appareil et en ligne ✅')}else toast('💾 Partie sauvegardée sur cet appareil. Connecte-toi avec Google pour la sauvegarder aussi en ligne.')},
+  confLocal:async()=>{const D=SV.conf;if(!D)return;bkAdd(D.data,'version en ligne écartée');SAVE.srev=D.rev||0;SAVE.ch=true;SV.force=D.rev===undefined;SV.conf=null;closeModal();await cloudPush(true);toast('📱 Partie de cet appareil gardée et envoyée en ligne.')},
+  confRemote:()=>{const D=SV.conf;if(D)takeRemote(D)},
+  playHere:()=>location.reload(),
+  bkOpen:async()=>{const L=await bkAll();openModal(`<h2>🛟 Sauvegardes de secours</h2><p class="muted">Copies gardées sur cet appareil : toutes les 20 min de jeu, à chaque sauvegarde manuelle et avant chaque remplacement de ta partie (${BK.max} au maximum).</p>${L.length?L.map(b=>{let o={};try{o=JSON.parse(b.json)}catch(e){}return `<div style="text-align:left;padding:8px 10px;margin:6px 0;border:2px solid var(--ink);border-radius:10px;background:#fff"><b>${new Date(b.t).toLocaleString('fr-FR',{dateStyle:'short',timeStyle:'short'})}</b> <span class="muted">(${esc(b.why||'')})</span><br>${saveSum(o)}<br><button class="sm" data-act="bkRestore" data-t="${b.t}">Restaurer</button></div>`}).join(''):'<p>Aucune sauvegarde de secours pour le moment.</p>'}<div class="flexr"><button data-act="saveExport">⬇ Télécharger ma partie (fichier)</button><button onclick="document.getElementById('saveImp').click()">⬆ Charger un fichier</button><input type="file" id="saveImp" accept=".json,application/json" hidden></div>`);
+    const f=$('saveImp');if(f)f.onchange=e=>{const F=e.target.files[0];if(!F)return;const r=new FileReader();r.onload=()=>{try{const o=JSON.parse(r.result);if(!o||!Array.isArray(o.mons))throw 0;SV.imp=o;openModal(`<h2>Charger ce fichier ?</h2><p>${saveSum(o)}</p><p class="muted">Ta partie actuelle sera mise dans les sauvegardes de secours.</p><div class="flexr"><button class="go" data-act="impOk">Charger</button><button data-act="closeModal">Annuler</button></div>`)}catch(e){toast('Fichier de sauvegarde invalide.')}};r.readAsText(F)}},
+  bkRestore:async(t)=>{const L=await bkAll();const b=L.find(x=>x.t===+t.dataset.t);if(!b)return;let o={};try{o=JSON.parse(b.json)}catch(e){return}SV.imp=o;openModal(`<h2>Restaurer cette sauvegarde ?</h2><p>${saveSum(o)}</p><p class="muted">Ta partie actuelle sera d'abord mise dans les sauvegardes de secours. La version restaurée sera envoyée en ligne si tu es connecté.</p><div class="flexr"><button class="go" data-act="impOk">Restaurer</button><button data-act="closeModal">Annuler</button></div>`)},
+  impOk:()=>{const o=SV.imp;if(!o)return;SV.imp=null;loadInto(o,undefined,'avant restauration');SAVE.ch=true;SV.sig='';saveGame(true);toast('🛟 Partie restaurée.')},
+  saveExport:()=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([saveJson()],{type:'application/json'}));a.download='poketabs-sauvegarde-'+new Date().toISOString().slice(0,10)+'.json';document.body.appendChild(a);a.click();a.remove()},
   optReset:()=>openModal(`<h2>Effacer ta partie ?</h2><p>Tous tes Pokémon, œufs, pièces et ta progression seront perdus. ${CLOUD.user?'La sauvegarde en ligne sera aussi remplacée.':''}</p><p><b>Cette action est définitive.</b></p><div class="flexr"><button style="background:#f6c9c0" data-act="optResetOk">Oui, tout effacer</button><button data-act="closeModal">Annuler</button></div>`),
-  optResetOk:()=>{SAVE=newSave();SAVE.last=Date.now();dirty=true;try{localStorage.setItem(SAVEKEY,saveJson())}catch(e){}if(CLOUD.user)cloudPush(true);closeModal();B=null;renderTop();showTab('nursery');starterModal()},
+  optResetOk:()=>{bkAdd(saveJson(),'avant remise à zéro');const sr=SAVE.srev;SAVE=newSave();SAVE.srev=sr;SAVE.ch=true;SAVE.last=Date.now();dirty=true;try{localStorage.setItem(SAVEKEY,saveJson())}catch(e){}if(CLOUD.user)cloudPush(true);closeModal();B=null;renderTop();showTab('nursery');starterModal()},
   sellPend:()=>{const p=(SAVE.pend||[]).shift();if(!p)return;SAVE.coins+=relVal(p);toast(`Bébé ${esc(DEX[p.n].name)} vendu (+${relVal(p)} pièces)`);pendAfter()},
   keepPend:()=>{if(!(SAVE.pend||[]).length||monsFull())return;pendAccept();pendAfter()},
   sellForPend:(t)=>{const u=+t.dataset.u,m=mon(u);if(!m||monStatus(u)||!(SAVE.pend||[]).length)return;SAVE.coins+=relVal(m);SAVE.mons=SAVE.mons.filter(x=>x.u!==u);toast(`${esc(DEX[m.n].name)} vendu (+${relVal(m)} pièces)`);if(!monsFull())pendAccept();pendAfter()},
@@ -2231,8 +2274,29 @@ async function cloudInit(){if(!cloudReady()||CLOUD.auth)return;
   try{const u='https://cdn.jsdelivr.net/npm/firebase@'+FB_VER+'/';await loadJs(u+'firebase-app-compat.js');await loadJs(u+'firebase-auth-compat.js');await loadJs(u+'firebase-firestore-compat.js');
     firebase.initializeApp(FB_CONFIG);CLOUD.auth=firebase.auth();CLOUD.db=firebase.firestore();CLOUD.on=true;CLOUD.auth.getRedirectResult().catch(()=>{});
     CLOUD.auth.onAuthStateChanged(async u=>{CLOUD.user=u;homeRender();if(u&&HOME.want){HOME.want=false;homeEnter()}if(u){await cloudPull();setTimeout(()=>arenaLoad(true),2500)}renderCloud()});setInterval(()=>{if(CLOUD.user)arenaLoad(true)},600000)}catch(e){CLOUD.err='Connexion impossible';renderCloud()}}
-async function cloudPull(){if(!CLOUD.user)return;CLOUD.busy=true;try{const d=await CLOUD.db.collection('saves').doc(CLOUD.user.uid).get();if(d.exists){const r=JSON.parse(d.data().data||'{}');if(progress(r)>progress(SAVE)){SAVE=Object.assign(newSave(),r);try{fixSave(SAVE)}catch(e){console.error(e)}showMig();dirty=true;showTab(cur)}}try{localStorage.setItem(SAVEKEY,saveJson())}catch(e){}await cloudPush(true)}catch(e){CLOUD.err='Erreur de synchronisation'}CLOUD.busy=false}
-async function cloudPush(now){if(!CLOUD.user||!CLOUD.db)return;clearTimeout(CLOUD.timer);const go=async()=>{try{await CLOUD.db.collection('saves').doc(CLOUD.user.uid).set({data:saveJson(),name:(CLOUD.user.displayName||'').split(' ')[0].slice(0,14),updated:firebase.firestore.FieldValue.serverTimestamp()});CLOUD.err='';profilePush()}catch(e){CLOUD.err='Erreur de sauvegarde'}};if(now)return go();CLOUD.timer=setTimeout(go,5000)}
+async function cloudPull(){if(!CLOUD.user)return;CLOUD.busy=true;SV.pulled=true;try{const ref=CLOUD.db.collection('saves').doc(CLOUD.user.uid);const d=await ref.get();
+  if(!d.exists){await cloudPush(true)}
+  else{const D=d.data(),rr=D.rev||0;let R={};try{R=JSON.parse(D.data||'{}')}catch(e){}
+   const fresh=!SAVE.best&&(SAVE.mons||[]).length<=1&&!SAVE.srev;
+   if(sigOfObj(R)===sigOf()){SAVE.srev=rr;SAVE.ch=false}
+   else if(fresh)takeRemote(D);
+   else if(D.rev===undefined||SAVE.srev===undefined)showConflict(D);
+   else if(rr>SAVE.srev){if(!SAVE.ch)takeRemote(D,true);else showConflict(D)}
+   else if(SAVE.ch)await cloudPush(true)}
+  try{localStorage.setItem(SAVEKEY,saveJson())}catch(e){}
+  if(CLOUD.unsub)CLOUD.unsub();CLOUD.unsub=ref.onSnapshot(x=>{if(!x.exists||x.metadata.hasPendingWrites)return;const D=x.data();if(D.sid===SID||D.rev===undefined)return;if((D.rev||0)>(SAVE.srev||0)&&!SV.conf){if(!SAVE.ch)takeRemote(D,true);else showConflict(D)}},()=>{});
+ }catch(e){console.error(e);CLOUD.err='Erreur de synchronisation'}CLOUD.busy=false;renderSaveBtn()}
+async function cloudPush(now){if(!CLOUD.user||!CLOUD.db||SV.paused||SV.conf||!SV.pulled)return;clearTimeout(CLOUD.timer);
+  const go=async()=>{if(SV.busy){CLOUD.timer=setTimeout(go,1500);return}SV.busy=true;const g0=sigOf();
+   try{const ref=CLOUD.db.collection('saves').doc(CLOUD.user.uid);
+    const res=await CLOUD.db.runTransaction(async tx=>{const d=await tx.get(ref);const rr=d.exists?(d.data().rev||0):0;
+     if(d.exists&&!SV.force&&(SAVE.srev===undefined?sigOfObj(JSON.parse(d.data().data||'{}'))!==g0:rr!==SAVE.srev))return{conflict:d.data()};
+     const nr=rr+1;const o=JSON.parse(saveJson());o.srev=nr;o.ch=false;
+     tx.set(ref,{data:JSON.stringify(o),rev:nr,sid:SID,name:(CLOUD.user.displayName||'').split(' ')[0].slice(0,14),updated:firebase.firestore.FieldValue.serverTimestamp()});return{rev:nr}});
+    if(res.conflict){showConflict(res.conflict)}
+    else{SAVE.srev=res.rev;SV.force=false;if(sigOf()===g0)SAVE.ch=false;SV.cloudT=Date.now();CLOUD.err='';try{localStorage.setItem(SAVEKEY,saveJson())}catch(e){}profilePush()}}
+   catch(e){console.error(e);CLOUD.err='Erreur de sauvegarde'}SV.busy=false;renderSaveBtn()};
+  if(now)return go();CLOUD.timer=setTimeout(go,4000)}
 async function cloudSignIn(){if(!CLOUD.auth)return;const p=new firebase.auth.GoogleAuthProvider();p.setCustomParameters({prompt:'select_account'});try{await CLOUD.auth.signInWithPopup(p)}catch(e){if(e&&/popup|iframe|operation-not-supported/.test(e.code||''))CLOUD.auth.signInWithRedirect(p)}}
 async function cloudSignOut(){if(!CLOUD.auth)return;try{await cloudPush(true)}catch(e){}await CLOUD.auth.signOut()}
 function renderCloud(){$('cloudBtn').textContent='👤 '+myPseudo();if(cur==='profile')renderProfile();if(!$('modal').hidden&&$('mbody').dataset.cloud)openCloud()}
@@ -2268,6 +2332,7 @@ function renderSettings(){
    <h3 style="margin-top:14px">🎮 Nos autres jeux et liens</h3>${gamesHTML()}
    <h3 style="margin-top:14px">Sauvegarde</h3>
    <p class="muted">Ta partie est sauvegardée automatiquement dans ce navigateur, et en ligne si tu es connecté avec Google. L'appli de l'écran d'accueil et le navigateur ont chacun leur sauvegarde locale : connecte-toi avec Google des deux côtés pour retrouver la même partie.</p>
+   <div class="setrow"><label>Sauvegarder</label><button class="sm go" data-act="saveNow">💾 Sauvegarder maintenant</button> <button class="sm" data-act="bkOpen">🛟 Sauvegardes de secours</button></div>
    <div class="setrow"><label>Recommencer à zéro</label><button class="sm" data-act="optReset" style="background:#f6c9c0">Effacer ma partie…</button></div>
    <p class="muted">Les réglages sont gardés sur cet appareil. ${VERSION}</p></div>`;
   $('optVol').oninput=e=>{OPT.vol=+e.target.value;$('volV').textContent=OPT.vol;saveOpt();if(MUS.a)MUS.a.volume=OPT.vol/100};
@@ -2470,6 +2535,7 @@ setTimeout(()=>infoScan(document.body),0);
    MESSAGES : courrier (nouveautés + avis), chat monde, messages privés (Firestore : chat, dm, feedback)
    ===================================================================== */
 const PATCH=[
+ ['V01.04','💾 Sauvegardes renforcées : bouton Sauvegarder (en haut), sauvegardes de secours dans les Réglages (restaurer une ancienne version, télécharger ta partie), et protection quand le jeu est ouvert sur deux appareils ou onglets : le jeu te demande quelle version garder au lieu d\'écraser ta partie.'],
  ['V01.03','🧬 L\'ADN légendaire fait pondre un légendaire seul dans le nid (plus besoin de Métamorph). 🎵 Jingle quand tu obtiens un œuf légendaire (légendaire du jour, œufs surprise, cadeau d\'Arceus).'],
  ['V01.02','🎁 Cadeau d\'Arceus quotidien : 1 par jour dans chaque mode Maître (I à V), meilleures chances dans les modes hauts. Liens vers nos pages itch.io : laisse un avis, un j\'aime et abonne-toi !'],
  ['V01.01','Icône d\'appli et mode appli sans barre de navigateur (iPhone : Partager → Sur l\'écran d\'accueil). Liens vers nos autres jeux. Bouton « Passer en mode Maître » si tu avais cliqué sur Plus tard. 🎁 Cadeau d\'Arceus : 1 par jour et par mode Maître, en battant Arceus dans ce mode. Plus le mode est haut, plus l\'œuf légendaire (et shiny) a de chances de tomber.'],
@@ -2558,14 +2624,14 @@ Object.assign(ACT,{
 setInterval(()=>{if(CLOUD.user&&CLOUD.db)dmStart();msgBadge()},5000);
 
 /* ---------- démarrage ---------- */
-SAVE=loadSave();
+SAVE=loadSave();SV.sig=sigOf();
 tick();
 showTab('nursery');renderTop();
 showMig();
 i18nInit();homeShow();
 setInterval(tick,500);
 setInterval(saveGame,5000);
-window.addEventListener('beforeunload',()=>{try{localStorage.setItem(SAVEKEY,saveJson())}catch(e){}});
+window.addEventListener('beforeunload',()=>{if(SV.paused)return;try{localStorage.setItem(SAVEKEY,saveJson())}catch(e){}});
 requestAnimationFrame(frame);
 cloudInit();
 </script>
