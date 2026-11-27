@@ -299,7 +299,7 @@ html,body{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
    POKETABS EGGS COLLECTOR  (V00.01.00)
    Réglages rapides : objet T ci-dessous (durées en secondes, chances en 0..1)
    ===================================================================== */
-const VERSION='V01.06.01';
+const VERSION='V01.06.02';
 const T={
   breed:45,        // durée de base d'une ponte (s)
   hatch:75,        // durée de base d'éclosion (s), modulée par l'espèce (stats totales et rareté)
@@ -1262,7 +1262,7 @@ function setupStage(st,defi,anim){
   let E=genEnemies(st,M);if(defi&&defi.elv)E=E.filter(e=>!e.boss).slice(0,defi.max||armyMax());if(defi){const RD=rng(st*41+(defi.elv||1));E.forEach(e=>{if(defi.elv){e.lv=Math.min(LV_MAX,defi.elv+Math.floor(RD()*3));e.n=evolveTo(baseOf(e.n),e.lv,RD);if(!(PCY()>=4))e.g=randGenesR(RD,8,24)}else e.lv+=defi.plus||5})}
   const free=[];for(let y=1;y<GH-1;y++)for(let x=EZ+1;x<GW-1;x++)free.push([x,y]);
   const R=rng(st*77+3);
-  const units=E.map(e=>{const d=DEX[e.n],mode=unitMode(d,M.bi);let k=0,p;if(mode==='sea'){const wi=free.map((q,j)=>[q,j]).filter(([q])=>passable(M,q[1]*GW+q[0],'sea'));if(wi.length){const [q,j]=wi[Math.floor(R()*wi.length)];free.splice(j,1);const u=mkUnit(e,1,q[0]*TW+TW/2,q[1]*TW+TW/2,M);dexSee(e.n);return u}}do{p=free.splice(Math.floor(R()*free.length),1)[0];k++}while(p&&!passable(M,p[1]*GW+p[0],mode)&&k<50);dexSee(e.n);const u=mkUnit(e,1,p[0]*TW+TW/2,p[1]*TW+TW/2,M);if(u.mode==='sea'&&!passable(M,p[1]*GW+p[0],'sea'))u.mode='swim';return u});
+  const units=E.map(e=>{const d=DEX[e.n],mode=unitMode(d,M.bi);let k=0,p;if(mode==='sea'){const wi=free.map((q,j)=>[q,j]).filter(([q])=>passable(M,q[1]*GW+q[0],'sea'));if(wi.length){const [q,j]=wi[Math.floor(R()*wi.length)];free.splice(j,1);const u=mkUnit(e,1,q[0]*TW+TW/2,q[1]*TW+TW/2,M);dexSee(e.n);return u}}{const ok=free.map((q,j)=>j).filter(j=>passable(M,free[j][1]*GW+free[j][0],mode));const pool=ok.length?ok:free.map((q,j)=>j);if(pool.length){const j=pool[Math.floor(R()*pool.length)];p=free.splice(j,1)[0]}else{let c=null;for(let x=GW-2;x>EZ-4&&!c;x--)for(let y=1;y<GH-1&&!c;y++)if(passable(M,y*GW+x,mode))c=[x,y];p=c||[GW-3,Math.floor(GH/2)]}}dexSee(e.n);const u=mkUnit(e,1,p[0]*TW+TW/2,p[1]*TW+TW/2,M);if(u.mode==='sea'&&!passable(M,p[1]*GW+p[0],'sea'))u.mode='swim';return u});
   bSpeed=AUTO&&AUTO_SPEED?AUTO_SPEED:(typeof OPT!=='undefined'&&OPT.mspd)?OPT.mspd:st<=stBest()?4:((typeof OPT!=='undefined'&&OPT.speed)||1);B={stage:st,defi:defi||null,M,units,proj:[],fx:[],phase:'place',placed:[],t:0,fieldT:0,F:null,res:null,trans:snap?{t:0,d:1.15,prev:snap}:null};
   battleSel=null;renderBattleHead();renderRoster();if(typeof renderTop==='function'&&$('stN'))renderTop();
 }
