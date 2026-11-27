@@ -187,6 +187,8 @@ body.bfull .roster{flex:none;padding:6px 2px}
 .dc.un .spr img{filter:brightness(0);opacity:.3}
 .dc.seen .spr img{filter:grayscale(1);opacity:.6}
 .dc .s{position:absolute;top:0;right:2px;color:#e8a400}
+.rarb{display:inline-block;color:#fff;font-weight:800;font-size:10px;border-radius:6px;padding:0 6px;text-shadow:0 1px 0 rgba(0,0,0,.35);vertical-align:middle}
+.relist{max-height:48vh;overflow-y:auto;border:2px solid var(--ink);border-radius:10px;padding:6px;background:#fff}.relist .pmon{cursor:pointer;position:relative}.relist .pmon:hover{outline:2px solid #e0604f;border-radius:8px}.relist .pmon:hover::after{content:'✖';position:absolute;top:0;right:2px;color:#e0604f;font-weight:900}
 /* ---------- modale, toasts ---------- */
 #modal{position:fixed;inset:0;background:rgba(40,25,15,.55);display:flex;align-items:center;justify-content:center;z-index:50;padding:12px}
 #modal[hidden]{display:none}
@@ -297,7 +299,7 @@ html,body{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
    POKETABS EGGS COLLECTOR  (V00.01.00)
    Réglages rapides : objet T ci-dessous (durées en secondes, chances en 0..1)
    ===================================================================== */
-const VERSION='V01.05.01';
+const VERSION='V01.06.01';
 const T={
   breed:45,        // durée de base d'une ponte (s)
   hatch:75,        // durée de base d'éclosion (s), modulée par l'espèce (stats totales et rareté)
@@ -382,7 +384,7 @@ function sprBox(im){const src=im.src;if(SPRC[src])return SPRC[src];const fw=(im.
 /* zoom d'un sprite (en pixels d'écran par pixel source, pour une case de 64 affichée en "size") : même densité pour toutes les planches,
    les grands légendaires pas trop petits, et tout tient dans la case */
 function sprZoom(b,n,size){let z=size/64;const c=Math.max(b.w,b.h);if(LEGEND.has(n)&&c<56)z*=Math.min(1.5,56/c);if(c*z>size*.98)z=size*.98/c;return z}
-function sprFix(im,n,size,row){const b=sprBox(im),z=sprZoom(b,n,size),W=b.fw*4*z;im.style.width=W+'px';im.style.height=W+'px';im.style.marginLeft=Math.round(size/2-b.cx*z)+'px';im.style.top=Math.round(size*.94-b.by*z-row*b.fw*z)+'px';im.parentNode.style.setProperty('--w',-W+'px')}
+function sprFix(im,n,size,row){const b=sprBox(im),z=sprZoom(b,n,size),W=b.fw*4*z;im.style.width=W+'px';im.style.height=W+'px';im.style.marginLeft=Math.round(size/2-b.cx*z)+'px';im.dataset.t0=size*.94-b.by*z;im.dataset.rs=b.fw*z;im.style.top=Math.round(size*.94-b.by*z-row*b.fw*z)+'px';im.parentNode.style.setProperty('--w',-W+'px')}
 function sprHTML(n,sh,size=48,still=false,row=0){const w=size*4;return `<span class="spr${still?' still':''}" style="width:${size}px;height:${size}px;--w:-${w}px"><img loading="lazy" src="${ovSrc(n,sh)}" style="width:${w}px;height:${w}px;top:-${row*size}px" onload="sprFix(this,${n},${size},${row})" onerror="this.parentNode.classList.add('miss')" alt=""></span>`}
 
 /* ---------- espèces, évolutions ---------- */
@@ -618,7 +620,7 @@ function buildWalkers(){const pf=$('playfield');if(!pf)return;const W=Math.max(2
     +free.map(m=>`<div class="walker" id="wk${m.u}" data-act="monInfo" data-u="${m.u}" title="${esc(DEX[m.n].name)} Nv${m.lv}">${sprHTML(m.n,m.sh,WS,true)}</div>`).join('')
     +(free.length?'':'<span class="muted" style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%)">Aucun Pokémon libre pour le moment.</span>');
   free.forEach(m=>{let w=WALK[m.u];if(!w)w=WALK[m.u]={x:rnd()*W,y:rnd()*H,tx:0,ty:0,wait:rnd()*1.5,dir:0,mv:false};w.el=$('wk'+m.u);w.mv=null;placeW(w,false)})}
-function placeW(w,mv){if(!w.el)return;w.el.style.transform=`translate(${w.x|0}px,${w.y|0}px)`;w.el.style.zIndex=10+(w.y|0);const im=w.el.querySelector('img');if(im)im.style.top=-(w.dir*WS)+'px';if(w.mv!==mv){w.mv=mv;const sp=w.el.querySelector('.spr');if(sp)sp.classList.toggle('still',!mv)}}
+function placeW(w,mv){if(!w.el)return;w.el.style.transform=`translate(${w.x|0}px,${w.y|0}px)`;w.el.style.zIndex=10+(w.y|0);const im=w.el.querySelector('img');if(im)im.style.top=(im.dataset.rs?Math.round(+im.dataset.t0-w.dir*+im.dataset.rs):-(w.dir*WS))+'px';if(w.mv!==mv){w.mv=mv;const sp=w.el.querySelector('.spr');if(sp)sp.classList.toggle('still',!mv)}}
 function stepWalkers(dt){const pf=$('playfield');if(!pf)return;const W=pf.clientWidth-WS,H=pf.clientHeight-WS;
   for(const k in WALK){const w=WALK[k];if(!w.el||!w.el.isConnected)continue;
     if(w.wait>0){w.wait-=dt;if(w.wait<=0){w.tx=rnd()*W;w.ty=rnd()*H;if(rnd()<.3)w.dir=0}placeW(w,false);continue}
@@ -949,6 +951,10 @@ function buy(i){const it=SHOP[i];const e0=SAVE.eggs.length,isEgg=/^egg/.test(it.
   if(!n)return;toast(`Acheté${n>1?' ×'+n:''} : <b>${it.name}</b>${n>1?` (${COIN}${fmt(tot)})`:''}`);dirty=true;saveGame();renderShop();renderTop();
   if(isEgg){const got=SAVE.eggs.slice(e0);if(got.length)showGotEggs(got,it.name,tot)}}
 const RARN=['Commun','Peu commun','Rare','Très rare'];
+const RAR_COL=['#8a8a8a','#4f9f4f','#3b7fd6','#9a44d6','#d99a00'];
+const rarOf=n=>LEGEND.has(n)||LEGEND.has(baseOf(n))?4:((DEX[baseOf(n)]||DEX[n]||{}).rar??0);
+const rarName=n=>{const r=rarOf(n);return r===4?'Légendaire':RARN[r]||'Spécial'};
+const rarB=(n,sm)=>{const r=rarOf(n);return `<span class="rarb" style="background:${RAR_COL[r]||'#888'}${sm?';font-size:8px;padding:0 4px':''}">${r===4?'✨ ':''}${rarName(n)}</span>`};
 function showGotEggs(L,title,tot){const lg=L.some(e=>LEGEND.has(e.n));if(lg)jingle('victoire_legendaire');
   openModal(`<h2>🥚 ${L.length} ${esc(L.length>1?title.replace(/^Œuf/,'Œufs'):title)} reçu${L.length>1?'s':''}${tot?` <span class="muted">(${COIN}${fmt(tot)})</span>`:''}</h2>${lg?'<div class="banner s">✨ INCROYABLE : un œuf légendaire (1 chance sur 1 000 000) !</div>':''}
    <div class="gotegg">${L.map(e=>`<div class="ge r${LEGEND.has(e.n)?4:DEX[e.n].rar}">${eggH(e.n,56)}<b>${newB(e.n)}${eggNm(e.n)}</b><small>${LEGEND.has(e.n)?'✨ Légendaire':RARN[DEX[e.n].rar]||''}${e.sh?' · ★ super mutation':''} · Nv ${e.lv}</small></div>`).join('')}</div>
@@ -972,7 +978,7 @@ function edexList(){const f=FILT.edex||(FILT.edex={q:'',t:'',s:'n'}),q=norm(f.q.
   let L=EGG_SPECIES.filter(n=>n!==132||true).filter(n=>(!f.t||DEX[n].t1===f.t||DEX[n].t2===f.t)&&(!q||norm(DEX[n].name).includes(q)));
   const S={n:(a,b)=>a-b,name:(a,b)=>DEX[a].name.localeCompare(DEX[b].name),cnt:(a,b)=>(eg[b]||0)-(eg[a]||0)||a-b,got:(a,b)=>(eg[b]?1:0)-(eg[a]?1:0)||a-b,miss:(a,b)=>(eg[a]?1:0)-(eg[b]?1:0)||a-b}[f.s];if(S)L.sort(S);
   const sh=SAVE.shelf||[];
-  return L.map(n=>{const c=eg[n]||0;return `<div class="dc ${c?'':'un'} edc" title="${esc(METHOD_TXT[eggMethod(n)])}">${c?eggH(n,44):`<span class="eggsil">${eggH(n,44)}</span>`}<div>${pad3(n)}</div><div>${c?esc(DEX[n].name):'???'}</div><div class="muted">${c?'×'+c:METHOD_TXT[eggMethod(n)].split(' ')[0]}</div>${c?`<button class="sm ${sh.includes(n)?'go':''}" data-act="shelfTog" data-n="${n}" title="Mettre dans la vitrine (visible sur ton profil)">${sh.includes(n)?'🏆 Dans la vitrine':'🗄️ Exposer'}</button>`:''}</div>`}).join('')||'<p class="muted">Aucun œuf trouvé.</p>'}
+  return L.map(n=>{const c=eg[n]||0;return `<div class="dc ${c?'':'un'} edc" title="${esc(METHOD_TXT[eggMethod(n)])}">${c?eggH(n,44):`<span class="eggsil">${eggH(n,44)}</span>`}<div>${pad3(n)}</div><div>${c?esc(DEX[n].name):'???'}</div><div>${rarB(n,1)}</div><div class="muted">${c?'×'+c:METHOD_TXT[eggMethod(n)].split(' ')[0]}</div>${c?`<button class="sm ${sh.includes(n)?'go':''}" data-act="shelfTog" data-n="${n}" title="Mettre dans la vitrine (visible sur ton profil)">${sh.includes(n)?'🏆 Dans la vitrine':'🗄️ Exposer'}</button>`:''}</div>`}).join('')||'<p class="muted">Aucun œuf trouvé.</p>'}
 FILT_R.edex=()=>{const el=$('flist_edex');if(el)el.innerHTML=edexList()};
 function renderDex(){
   const tabs=`<div class="flexr" style="margin-bottom:8px"><button class="${dexMode==='mons'?'go':''}" data-act="dexMode" data-v="mons">📖 Pokémon</button><button class="${dexMode==='eggs'?'go':''}" data-act="dexMode" data-v="eggs">🥚 Collection d'œufs</button></div>`;
@@ -980,11 +986,11 @@ function renderDex(){
     <p class="muted">Chaque œuf qui arrive dans ton sac (nid, boutique, boss…) entre dans la collection. Choisis jusqu'à ${SHELF_MAX} espèces à exposer dans ta vitrine de collection : elle est visible par les autres joueurs sur ton profil du classement.</p>
     ${shelfHTML(SAVE.shelf,true)}${filtHTML('edex',EDEX_SORTS)}<div class="dexgrid" id="flist_edex">${edexList()}</div></div>`;return}
   const own=Object.values(SAVE.dex).filter(d=>d.o).length,sh=Object.values(SAVE.dex).filter(d=>d.sh).length;
-  $('tab-dex').innerHTML=`<div class="panel">${tabs}<h3>Pokédex · ${own}/${NDEX} possédés · ${sh} shiny</h3><h3 style="font-size:14px">📖 Récompenses du Pokédex <span class="muted">(Pokémon possédés)</span></h3>${dexRwHTML()}<div class="dexgrid">${DEXRAW.map(r=>{const n=r[0],d=SAVE.dex[n]||{};const c=d.o?'':d.s?'seen':'un';return `<div class="dc ${c}" data-act="dexInfo" data-n="${n}">${d.sh?'<span class="s">★</span>':''}${sprHTML(n,false,48,true).replace('<img ','<img loading="lazy" ')}<div>${pad3(n)}</div><div>${d.s?esc(DEX[n].name):'???'}</div></div>`}).join('')}</div></div>`;
+  $('tab-dex').innerHTML=`<div class="panel">${tabs}<h3>Pokédex · ${own}/${NDEX} possédés · ${sh} shiny</h3><h3 style="font-size:14px">📖 Récompenses du Pokédex <span class="muted">(Pokémon possédés)</span></h3>${dexRwHTML()}<div class="dexgrid">${DEXRAW.map(r=>{const n=r[0],d=SAVE.dex[n]||{};const c=d.o?'':d.s?'seen':'un';return `<div class="dc ${c}" data-act="dexInfo" data-n="${n}">${d.sh?'<span class="s">★</span>':''}${sprHTML(n,false,48,true).replace('<img ','<img loading="lazy" ')}<div>${pad3(n)}</div><div>${d.s?esc(DEX[n].name):'???'}</div>${d.s?`<div>${rarB(n,1)}</div>`:''}</div>`}).join('')}</div></div>`;
 }
 function dexInfo(n){const d=DEX[n],s=SAVE.dex[n]||{};if(!s.s){openModal('<h2>???</h2><p>Tu n\'as pas encore rencontré ce Pokémon.</p>');return}
   const ev=evoTargets(n);
-  openModal(`<h2>${pad3(n)} · ${esc(d.name)}</h2><div class="flexr">${sprHTML(n,false,96)}${s.sh?sprHTML(n,true,96):''}<div>${tyHTML(d)}<p>PV ${d.hp} · Att ${d.atk} · Déf ${d.def} · Att.Spé ${d.spa} · Vit ${d.spd}</p><p>Rareté : ${['Commun','Peu commun','Rare','Très rare'][d.rar]||'Spécial'}</p><p>Œuf : ${esc(DEX[baseOf(n)].name)} · ${esc(methodTxt(n))}</p>${(EVO[n]||[]).map(([to,l,c])=>`<p>Évolue en ${esc(DEX[to].name)}${c&&(c.startsWith('stone')||c.startsWith('hap'))?'':' au niveau '+l}${condTxt(c)}</p>`).join('')}<p>Œuf : ${eggH(n,40)}</p></div></div>`)}
+  openModal(`<h2>${pad3(n)} · ${esc(d.name)}</h2><div class="flexr">${sprHTML(n,false,96)}${s.sh?sprHTML(n,true,96):''}<div>${tyHTML(d)}<p>PV ${d.hp} · Att ${d.atk} · Déf ${d.def} · Att.Spé ${d.spa} · Vit ${d.spd}</p><p>Rareté : ${rarB(n)}</p><p>Œuf : ${esc(DEX[baseOf(n)].name)} · ${esc(methodTxt(n))}</p>${(EVO[n]||[]).map(([to,l,c])=>`<p>Évolue en ${esc(DEX[to].name)}${c&&(c.startsWith('stone')||c.startsWith('hap'))?'':' au niveau '+l}${condTxt(c)}</p>`).join('')}<p>Œuf : ${eggH(baseOf(n),40)} ${rarB(baseOf(n))}</p></div></div>`)}
 
 /* =====================================================================
    COMBAT : terrains, armées, IA
@@ -1221,7 +1227,7 @@ const FLY_EXTRA=new Set([15,292,376,478,491,637,643,644,679,680,681,707,800,49,8
 const NO_FLY=new Set([84,85,566]);
 const SWIM_EXTRA=new Set([147,148,704,705,706]),LAVA_EXTRA=new Set([383]);
 /* Pokémon marins (sans pattes) : posés et déplacés seulement dans l'eau */
-const AQUA=new Set([72,73,90,91,116,117,118,119,120,121,129,131,170,171,211,222,223,224,230,318,319,320,321,339,340,349,350,366,367,368,369,370,382,456,457,458,489,490,550,592,593,594,746,771,779]);
+const AQUA=new Set([72,73,90,91,116,117,118,119,129,131,170,171,211,222,223,224,230,318,319,320,321,339,340,349,350,366,367,368,369,370,382,456,457,458,489,490,550,592,593,594,746,771,779]);
 function unitMode(d,bi){const ty=[d.t1,d.t2],n=d.n;if(!NO_FLY.has(n)&&(ty.includes('vol')||d.t1==='spectre'||FLY_EXTRA.has(n)))return 'fly';if(AQUA.has(n))return 'sea';if(bi.lava?(ty.includes('feu')||LAVA_EXTRA.has(n)):(ty.includes('eau')||SWIM_EXTRA.has(n)))return 'swim';return 'ground'}
 function moveTags(n){const d=DEX[n],ty=[d.t1,d.t2],T=[];const um=unitMode(d,{});if(um==='fly')T.push(['🪽','Vol','Survole l\'eau, la lave et la boue ; bloqué par les falaises']);else if(um==='sea')T.push(['🐟','Marin','Se pose et se déplace seulement dans l\'eau (rivières, mares, bassins)']);else{T.push(['🦶','Terrestre','Marche au sol ; ralenti dans la boue']);if(ty.includes('eau')||SWIM_EXTRA.has(n))T.push(['🌊','Nage','Traverse l\'eau']);if(ty.includes('feu')||LAVA_EXTRA.has(n))T.push(['🌋','Lave','Traverse la lave'])}return T}
 const moveHTML=n=>moveTags(n).map(([i,l,t])=>`<span class="mvtag" title="${t}">${i} ${l}</span>`).join(' ');
@@ -1345,7 +1351,7 @@ function openMonInfo(u){const m=mon(u);if(!m)return;const d=DEX[m.n],hap=m.hap==
   const stones=Object.keys(inv).filter(id=>ITEMS[id]&&ITEMS[id].k==='stone'&&(EVO[m.n]||[]).some(e=>e[2]==='stone:'+id));
   const held=Object.keys(inv).filter(id=>ITEMS[id]&&ITEMS[id].k==='held');
   const evs=(EVO[m.n]||[]).map(([to,l,c])=>`<li>${esc(DEX[to].name)}${c&&(c.startsWith('stone')||c.startsWith('hap'))?'':' au niveau '+l}${condTxt(c)}</li>`).join('');
-  openModal(`<h2>${esc(d.name)} <small class="muted">Nv ${m.lv}</small></h2><div class="flexr">${monCard(m)}<div style="flex:1;min-width:240px">
+  openModal(`<h2>${esc(d.name)} <small class="muted">Nv ${m.lv}</small> ${rarB(m.n)}</h2><div class="flexr">${monCard(m)}<div style="flex:1;min-width:240px">
    ${!m.sh&&invN('smut')?`<p><button class="go" data-act="smutAsk" data-u="${m.u}">💎 Utiliser un Cristal de super mutation (${invN('smut')})</button></p>`:''}<p><b>📊 Stats</b></p>${statsHTML(m)}
    <p><b>Déplacement</b> : ${moveHTML(m.n)}</p>
    ${ABIL_OF[m.n]?`<p><b>Talent</b> : ✨ <b>${ABIL[ABIL_OF[m.n]][0]}</b> · ${ABIL[ABIL_OF[m.n]][1]}</p>`:''}
@@ -2132,7 +2138,7 @@ async function rankLoad(force){if(!CLOUD.db||RANK.busy)return;if(!force&&RANK.li
   try{if(CLOUD.user)await profilePush();const q=await CLOUD.db.collection('profiles').orderBy('score','desc').limit(100).get();RANK.list=q.docs.map(d=>Object.assign({uid:d.id},d.data()));RANK.err='';RANK.t=Date.now()}
   catch(e){RANK.err=e&&e.code==='permission-denied'?'rules':'net'}RANK.busy=false;if(cur==='rank')renderRank()}
 const progTxt=p=>(p.cycle?`Maître${p.cycle>1?' '+p.cycle:''} · `:'')+`Tableau ${p.best||0}/${MAXST}`;
-function renderRank(){const el=$('tab-rank');
+function renderRank(){const el=$('tab-rank');if(el&&!renderRank.in){renderRank.in=1;try{keepInputs(el,renderRank)}finally{renderRank.in=0}return}
   if(onlineMode==='arena'){el.innerHTML=`<div class="panel">${onlineTabs()}<h3>🏟️ Arène <button class="sm" data-act="arenaReload">Actualiser</button></h3>${renderArena()}</div>`;return}
   if(onlineMode==='auction'){el.innerHTML=`<div class="panel">${onlineTabs()}<h3>💰 Hôtel des ventes</h3>${renderAuc()}</div>`;return}
   renderRankList(el)}
@@ -2257,14 +2263,16 @@ const ACT={
   eselAll:()=>{eggSel=new Set(applyEggFilt('bag').map(x=>x.e.id));renderNursery()},
   eggTog:(t)=>{const id=+t.dataset.id;if(eggSel.has(id))eggSel.delete(id);else eggSel.add(id);renderNursery()},
   eselSell:()=>{const L=SAVE.eggs.filter(e=>eggSel.has(e.id));if(!L.length)return;const tot=L.reduce((a,e)=>a+eggVal(e),0),shn=L.filter(e=>e.sh).length;
-    openModal(`<h2>Vendre ${L.length} œuf${L.length>1?'s':''} ?</h2><p>+${fmt(tot)} pièces.${shn?` <b style="color:#c0392b">Attention : ${shn} œuf${shn>1?'s':''} shiny !</b>`:''}</p><div class="flexr"><button class="go" data-act="eselSellOk">Vendre</button><button data-act="closeM">Annuler</button></div>`)},
+    openModal(`<h2>Vendre ${L.length} œuf${L.length>1?'s':''} ?</h2><p>+${fmt(tot)} pièces.${shn?` <b style="color:#c0392b">Attention : ${shn} œuf${shn>1?'s':''} shiny !</b>`:''}</p><p class="muted small">Clique sur un œuf pour le retirer de la liste.</p><div class="pmons relist">${L.map(e=>`<div class="pmon" data-act="eselRm" data-id="${e.id}" title="Retirer de la liste">${eggH(e.n,36)}<span>${eggNm(e.n)}${e.sh?' ★':''}</span></div>`).join('')}</div><div class="flexr" style="margin-top:10px"><button class="go" data-act="eselSellOk">Vendre</button><button data-act="closeM">Annuler</button></div>`)},
+  eselRm:(t)=>{const sc=(document.querySelector('#modal .relist')||{}).scrollTop||0;eggSel.delete(isNaN(+t.dataset.id)?t.dataset.id:+t.dataset.id);eggSel.delete(t.dataset.id);renderNursery();if(!SAVE.eggs.some(e=>eggSel.has(e.id))){closeModal();return}ACT.eselSell();const r=document.querySelector('#modal .relist');if(r)r.scrollTop=sc},
   eselSellOk:()=>{const L=SAVE.eggs.filter(e=>eggSel.has(e.id)),tot=L.reduce((a,e)=>a+eggVal(e),0);SAVE.eggs=SAVE.eggs.filter(e=>!eggSel.has(e.id));SAVE.coins+=tot;eggSel=null;closeModal();toast(`${L.length} œufs vendus (+${fmt(tot)} pièces)`);dirty=true;saveGame();renderTop();renderNursery()},
   tselAll:()=>{applyFilt(SAVE.mons.slice(),'team').forEach(m=>{if(!m.fav&&!monStatus(m.u))teamSel.add(m.u)});renderTeam()},
   tselNone:()=>{teamSel=new Set();renderTeam()},
   tselWeak:()=>{SAVE.mons.filter(m=>!m.fav&&!monStatus(m.u)).sort((a,b)=>pc(a)-pc(b)).slice(0,10).forEach(m=>teamSel.add(m.u));renderTeam()},
   tselRelease:()=>{const L=[...teamSel].map(mon).filter(m=>m&&!monStatus(m.u));if(!L.length)return;const tot=L.reduce((a,m)=>a+relVal(m),0),fav=L.filter(m=>m.fav).length,shn=L.filter(m=>m.sh).length;
-    openModal(`<h2>Relâcher ${L.length} Pokémon ?</h2><p>Tu gagnes ${fmt(tot)} pièces. Ce choix est définitif.</p>${fav||shn?`<p style="color:#c0392b"><b>Attention :</b> ${fav?fav+' favori'+(fav>1?'s':''):''}${fav&&shn?' et ':''}${shn?shn+' shiny':''} dans la sélection.</p>`:''}<div class="pmons">${L.slice(0,40).map(m=>`<div class="pmon">${sprHTML(m.n,m.sh,40,true)}<span>${esc(DEX[m.n].name)} Nv ${m.lv}</span></div>`).join('')}</div><div class="flexr" style="margin-top:10px"><button class="go" data-act="tselReleaseOk">Relâcher</button><button data-act="closeModal">Annuler</button></div>`)},
+    openModal(`<h2>Relâcher ${L.length} Pokémon ?</h2><p>Tu gagnes ${fmt(tot)} pièces. Ce choix est définitif.</p>${fav||shn?`<p style="color:#c0392b"><b>Attention :</b> ${fav?fav+' favori'+(fav>1?'s':''):''}${fav&&shn?' et ':''}${shn?shn+' shiny':''} dans la sélection.</p>`:''}<p class="muted small">Clique sur un Pokémon pour le retirer de la liste.</p><div class="pmons relist">${L.map(m=>`<div class="pmon" data-act="tselRm" data-u="${m.u}" title="Retirer de la liste">${sprHTML(m.n,m.sh,40,true)}<span>${esc(DEX[m.n].name)} Nv ${m.lv}${m.sh?' ★':''}</span></div>`).join('')}</div><div class="flexr" style="margin-top:10px"><button class="go" data-act="tselReleaseOk">Relâcher</button><button data-act="closeModal">Annuler</button></div>`)},
   tselReleaseOk:()=>teamSelRelease(),
+  tselRm:(t)=>{const sc=(document.querySelector('#modal .relist')||{}).scrollTop||0;teamSel.delete(+t.dataset.u);renderTeam();if(![...teamSel].some(u=>mon(u)&&!monStatus(u))){closeModal();return}ACT.tselRelease();const r=document.querySelector('#modal .relist');if(r)r.scrollTop=sc},
   optMusic:()=>{OPT.music=!OPT.music;saveOpt();MUS.ok=true;updateMusic();renderSettings()},
   optLight:()=>{OPT.light=OPT.light===false;saveOpt();renderSettings()},
   optJingles:()=>{OPT.jingles=!OPT.jingles;saveOpt();renderSettings()},
@@ -2421,9 +2429,9 @@ function i18c(t){return OPT.lang==='en'&&EN[t]||t}
 const LG=()=>OPT.lang==='en'?'en':'fr';const tr2=(fr,en)=>LG()==='en'?en:fr;
 const HOME={on:false,want:false};
 function homeShow(){HOME.on=true;let h=$('home');if(!h){h=document.createElement('div');h.id='home';document.body.appendChild(h)}h.hidden=false;homeRender()}
-const GAMES=[['🥚','PokeTabs Eggs Collector','https://misterlebn.github.io/poketabs-eggs-collector/','poketabs'],['🧬','Everything is Métamorph','https://misterlebn.github.io/everything-is-metamorph/','metamorph'],['🦀','Everything is PokeCrab','https://misterlebn.github.io/everything-is-pokecrab/','pokecrab']];
+const GAMES=[['🥚','PokeTabs Eggs Collector','https://misterlebn.github.io/poketabs-eggs-collector/','poketabs'],['🧬','Everything is Métamorph','https://misterlebn.github.io/everything-is-metamorph/','metamorph']];
 /* pages itch.io : coller l'adresse de chaque page quand elle est en ligne (avis, j'aime, abonnement) */
-const ITCH={poketabs:'https://le-bn.itch.io/pokmon-tabsmon-eggs',metamorph:'https://le-bn.itch.io/everything-is-metamorph',pokecrab:''};
+const ITCH={poketabs:'https://le-bn.itch.io/pokmon-tabsmon-eggs',metamorph:'https://le-bn.itch.io/everything-is-metamorph'};
 const GH_URL='https://github.com/misterlebn';
 const isApp=()=>{try{return matchMedia('(display-mode: standalone)').matches||matchMedia('(display-mode: fullscreen)').matches||navigator.standalone===true}catch(e){return false}};
 const linkA=(u,t)=>`<a href="${u}" target="_blank" rel="noopener">${t}</a>`;
@@ -2590,6 +2598,7 @@ setTimeout(()=>infoScan(document.body),0);
    MESSAGES : courrier (nouveautés + avis), chat monde, messages privés (Firestore : chat, dm, feedback)
    ===================================================================== */
 const PATCH=[
+ ['V01.06','🏷️ Rareté des Pokémon et des œufs dans la fiche et le Pokédex. 🗑️ Relâcher ou vendre une sélection : la liste complète défile et on peut retirer un Pokémon ou un œuf d\'un clic. 🔄 Messages et onglet En ligne actualisés automatiquement. Stari et Staross marchent à nouveau sur terre.'],
  ['V01.05.01','🏟️ Arène de l\'expert Feu : bassin de lave. Arène de l\'expert Vol : gouffres au milieu, avec un passage central pour les Pokémon qui ne volent pas.'],
  ['V01.05','🔥 Encens Chauffant (Boutique) : divise par 2 le temps des œufs d\'un incubateur, sauf les légendaires. 🌊 Rivières horizontales (en haut, en bas ou au milieu avec des ponts) et bassins dans les arènes. 🐟 Les Pokémon marins (Magicarpe, Lokhlass, Wailord…) se posent et se déplacent seulement dans l\'eau. ☀️ Lumières et ombres en combat (réglable dans les Réglages).'],
  ['V01.04','💾 Sauvegardes renforcées : bouton Sauvegarder (en haut), sauvegardes de secours dans les Réglages (restaurer une ancienne version, télécharger ta partie), et protection quand le jeu est ouvert sur deux appareils ou onglets : le jeu te demande quelle version garder au lieu d\'écraser ta partie.'],
@@ -2629,7 +2638,10 @@ function dmUnread(){const me=CLOUD.user&&CLOUD.user.uid;return MSG.dms.in.filter
 function msgBadge(){const b=$('msgBadge');if(!b)return;const n=mailNew()+dmUnread();b.hidden=!n;b.textContent=n>9?'9+':n}
 const tAgo=t=>{const m=Math.round((Date.now()-t)/60000);return m<1?'à l\'instant':m<60?m+' min':m<1440?Math.round(m/60)+' h':new Date(t).toLocaleDateString('fr-FR')};
 function msgTabs(){const u=dmUnread(),m=mailNew();return `<div class="flexr" style="margin-bottom:10px">${[['mail','📬 Courrier'+(m?` (${m})`:'')],['chat','🌍 Chat monde'],['dm','✉ Messages privés'+(u?` (${u})`:'')],...(isDev()?[['dev','🛠 Avis reçus'+(MSG.fb?` (${MSG.fb.filter(f=>!f.done).length})`:'')]]:[])].map(([k,t])=>`<button class="${MSG.mode===k?'go':''}" data-act="msgMode" data-v="${k}">${t}</button>`).join('')}</div>`}
-function renderMsg(){const el=$('tab-msg');if(!el)return;let body='';
+function keepInputs(el,fn){const V={},a=document.activeElement,fid=a&&el.contains(a)&&a.id,sel=fid&&a.selectionStart;el.querySelectorAll('input[id],textarea[id],select[id]').forEach(i=>{if(i.type!=='file')V[i.id]=i.value});const sc={};el.querySelectorAll('[id]').forEach(e=>{if(e.scrollTop)sc[e.id]=e.scrollTop});fn();
+  Object.entries(V).forEach(([k,v])=>{const i=document.getElementById(k);if(i&&!i.value&&v)i.value=v});Object.entries(sc).forEach(([k,v])=>{const e=document.getElementById(k);if(e&&k!=='chatBox'&&k!=='dmBox')e.scrollTop=v});if(fid){const i=document.getElementById(fid);if(i){i.focus();try{if(sel!=null)i.setSelectionRange(sel,sel)}catch(e){}}}}
+function renderMsg(){const el=$('tab-msg');if(!el)return;keepInputs(el,renderMsg0)}
+function renderMsg0(){const el=$('tab-msg');if(!el)return;let body='';
   if(MSG.mode==='mail'){body=`<div class="panel"><h3>📬 Courrier</h3><p class="muted">Les nouveautés du jeu, de la plus récente à la plus ancienne.</p>
      <div class="mail">${PATCH.map(([v,t])=>`<div class="mailit ${vNum(v)>vNum(SAVE.mailSeen||'V00.00')?'new':''}"><b>${v}</b>${vNum(v)>vNum(SAVE.mailSeen||'V00.00')?' <span class="newb">🆕</span>':''}<p>${t}</p></div>`).join('')}</div></div>
      <div class="panel"><h3>💡 Ton avis</h3><p class="muted">Une idée, un bug, ce que tu aimes ou pas : ton message est envoyé au créateur du jeu.</p>
@@ -2679,6 +2691,15 @@ Object.assign(ACT,{
   dmSend:async()=>{const i=$('dmTxt');const tx=(i&&i.value||'').trim(),c=MSG.conv;if(!tx||!c||!CLOUD.user)return;if(Date.now()-MSG.last<1500)return;MSG.last=Date.now();i.value='';
     try{await CLOUD.db.collection('dm').add({from:CLOUD.user.uid,fromName:myPseudo(),to:c.uid,toName:c.name||'?',txt:cleanTxt(tx).slice(0,500),t:Date.now(),read:false})}catch(e){toast(e&&e.code==='permission-denied'?'Les messages privés ne sont pas encore activés dans Firebase.':'Envoi impossible.')}}});
 setInterval(()=>{if(CLOUD.user&&CLOUD.db)dmStart();msgBadge()},5000);
+/* actualisation régulière : messages toutes les 15 s, onglet En ligne toutes les 30 s (en plus des mises à jour en direct) */
+async function msgPoll(){if(!CLOUD.user||!CLOUD.db||document.hidden)return;const me=CLOUD.user.uid,col=CLOUD.db.collection('dm');
+  try{const [a,b]=await Promise.all([col.where('to','==',me).limit(200).get(),col.where('from','==',me).limit(200).get()]);const tin=a.docs.map(d=>Object.assign({id:d.id},d.data())),tout=b.docs.map(d=>Object.assign({id:d.id},d.data()));
+   const old=new Set(MSG.dms.in.map(d=>d.id)),nw=MSG.dms.in.length?tin.filter(d=>!old.has(d.id)&&!d.read):[];const ch=tin.length!==MSG.dms.in.length||tout.length!==MSG.dms.out.length||nw.length;
+   nw.forEach(d=>toast(`✉ Nouveau message de ${esc(d.fromName||'?')}`));MSG.dms.in=tin;MSG.dms.out=tout;msgBadge();if(ch&&cur==='msg'&&MSG.mode==='dm')renderMsg()}catch(e){}
+  if(cur==='msg'&&MSG.mode==='chat'){try{const q=await CLOUD.db.collection('chat').orderBy('t','desc').limit(60).get();const L=q.docs.map(d=>Object.assign({id:d.id},d.data()));if(L.length&&(!MSG.chat||L[0].id!==(MSG.chat[0]||{}).id||L.length!==MSG.chat.length)){MSG.chat=L;const bx=$('chatBox');if(bx){const atEnd=bx.scrollTop+bx.clientHeight>=bx.scrollHeight-30;bx.innerHTML=chatHTML();if(atEnd)bx.scrollTop=bx.scrollHeight}}}catch(e){}}
+  if(cur==='msg'&&MSG.mode==='dev'&&isDev()&&!MSG.fbBusy){const n0=(MSG.fb||[]).length;await fbLoad();if((MSG.fb||[]).length!==n0&&cur==='msg'&&MSG.mode==='dev')renderMsg()}}
+setInterval(msgPoll,15000);
+setInterval(()=>{if(cur!=='rank'||document.hidden||!$('modal').hidden||!CLOUD.db)return;const el=$('tab-rank');const run=()=>{if(onlineMode==='arena')arenaLoad(true);else if(onlineMode==='auction')aucLoad(true);else rankLoad(true)};run()},30000);
 
 /* ---------- démarrage ---------- */
 try{history.scrollRestoration='manual'}catch(e){}window.scrollTo(0,0);
