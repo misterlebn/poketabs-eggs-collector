@@ -297,7 +297,7 @@ html,body{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
    POKETABS EGGS COLLECTOR  (V00.01.00)
    Réglages rapides : objet T ci-dessous (durées en secondes, chances en 0..1)
    ===================================================================== */
-const VERSION='V01.04.00';
+const VERSION='V01.05.01';
 const T={
   breed:45,        // durée de base d'une ponte (s)
   hatch:75,        // durée de base d'éclosion (s), modulée par l'espèce (stats totales et rareté)
@@ -704,6 +704,7 @@ function openInc(i){pickInc=null;
   const c=SAVE.incs[i],cap=INC_CAP[c.lvl],now=Date.now();
   openModal(`<h2>Incubateur ${i+1} (niveau ${c.lvl}) · ${c.slots.length}/${cap}</h2>
    ${c.slots.map((s,k)=>{const p=clamp((now-s.t0)/s.dur,0,1);return `<div class="slotrow">${eggH(s.egg.n,40)}<b>${esc(DEX[s.egg.n].name)}</b><div class="bar"><i style="width:${p*100}%"></i></div>${p>=1?`<button class="go sm" data-act="hatch" data-i="${i}" data-k="${k}">Faire éclore</button>`:`<span class="muted">${fmtT(s.t0+s.dur-now)}</span>`}</div>`}).join('')||'<p class="muted">Incubateur vide.</p>'}
+   ${c.slots.length?`<p>${itIc('incense',22)} <b>Encens Chauffant</b> : ${invN('incense')} <button class="sm go" data-act="incUse" data-i="${i}" ${invN('incense')&&c.slots.some(s=>!LEGEND.has(s.egg.n)&&s.t0+s.dur>now)?'':'disabled'}>🔥 Diviser le temps par 2</button> <span class="muted small">(sauf œufs légendaires ; en vente en Boutique)</span></p>`:''}
    <h3>Sac d'œufs</h3>
    ${c.slots.length>=cap?'<p class="muted">Incubateur plein. Améliore-le dans la Boutique pour couver plus d\'œufs à la fois.</p>':''}
    ${filtHTML('egg',EGG_SORTS)}<div class="eggbag" id="flist_egg">${incEggList(i)}</div>
@@ -829,6 +830,7 @@ function teamSelRelease(){const L=[...teamSel].map(mon).filter(m=>m&&!monStatus(
 const ITDIR=SPR+'Graphics/Items/';
 /* k : use = à utiliser sur un Pokémon, held = à faire tenir, stone = pierre d'évolution, sell = à revendre, nest = amélioration de nid */
 const ITEMS={smut:{n:'Cristal de super mutation',ic:'COMETSHARD',k:'use',d:'Super mutation sur le Pokémon de ton choix (depuis sa Fiche).'},expshare:{n:'Multi Exp',ic:'EXPSHARE',k:'held',d:'Tenu : XP ×2 (combats, entraînement, antre…).'},maxrevive:{n:'Rappel Max',ic:'MAXREVIVE',k:'ko',d:'Soigne tout de suite un Pokémon K.O.'},revive:{n:'Rappel',ic:'REVIVE',k:'ko',d:'Un Pokémon K.O. guérit 1 h 30 plus vite.'},rarecandy:{n:'Super Bonbon',ic:'RARECANDY',k:'use',d:'+1 niveau.'},nugget:{n:'Pépite',ic:'NUGGET',k:'sell',v:5000,d:'Se revend 5 000 pièces.'},bignugget:{n:'Maxi Pépite',ic:'BIGNUGGET',k:'sell',v:20000,d:'Se revend 20 000 pièces.'},starpiece:{n:'Morceau d\'Étoile',ic:'STARPIECE',k:'sell',v:10000,d:'Se revend 10 000 pièces.'},
+ incense:{n:'Encens Chauffant',ic:'LUCKINCENSE',k:'inc',d:'Divise par 2 le temps restant des œufs d\'un incubateur (sauf les œufs légendaires). À utiliser depuis l\'incubateur.'},
  ovalcharm:{n:'Charme Ovale',ic:'OVALCHARM',k:'nest',d:'Améliore un nid pour toujours : ponte 25 % plus rapide.'},luckyegg:{n:'Œuf Chance',ic:'LUCKYEGG',k:'held',d:'Tenu : +50 % d\'XP.'},soothebell:{n:'Grelot Zen',ic:'SOOTHEBELL',k:'held',d:'Tenu : le bonheur monte 2 fois plus vite.'},everstone:{n:'Pierre Stase',ic:'EVERSTONE',k:'held',d:'Tenu : empêche l\'évolution.'},amuletcoin:{n:'Pièce Rune',ic:'AMULETCOIN',k:'held',d:'Tenu par un Pokémon de l\'armée : +50 % de pièces gagnées en combat.'},
  fire:{n:'Pierre Feu',ic:'FIRESTONE',k:'stone'},water:{n:'Pierre Eau',ic:'WATERSTONE',k:'stone'},thunder:{n:'Pierre Foudre',ic:'THUNDERSTONE',k:'stone'},leaf:{n:'Pierre Plante',ic:'LEAFSTONE',k:'stone'},moon:{n:'Pierre Lune',ic:'MOONSTONE',k:'stone'},sun:{n:'Pierre Soleil',ic:'SUNSTONE',k:'stone'},shiny:{n:'Pierre Éclat',ic:'SHINYSTONE',k:'stone'},dusk:{n:'Pierre Nuit',ic:'DUSKSTONE',k:'stone'},dawn:{n:'Pierre Aube',ic:'DAWNSTONE',k:'stone'},ice:{n:'Pierre Glace',ic:'ICESTONE',k:'stone'}};
 Object.values(ITEMS).forEach(it=>{if(it.k==='stone')it.d='Fait évoluer certains Pokémon.'});
@@ -888,6 +890,7 @@ const SHOP=[
  {id:'it_revive',name:'Rappel',desc:'Un Pokémon K.O. guérit 1 h 30 plus vite.',ic:ITDIR+'REVIVE.png',price:()=>REV_PF(),buy:()=>invAdd('revive')},
  {id:'it_soothebell',name:ITEMS.soothebell.n,desc:ITEMS.soothebell.d,ic:ITDIR+ITEMS.soothebell.ic+'.png',price:()=>5000,buy:()=>invAdd('soothebell')},
  {id:'it_everstone',name:ITEMS.everstone.n,desc:ITEMS.everstone.d,ic:ITDIR+ITEMS.everstone.ic+'.png',price:()=>1000,buy:()=>invAdd('everstone')},
+ {id:'it_incense',name:'Encens Chauffant',desc:'Divise par 2 le temps restant de tous les œufs d\'un incubateur, sauf les œufs légendaires. Ouvre un incubateur pour l\'utiliser. Tu peux en mettre plusieurs à la suite.',ic:ITDIR+'LUCKINCENSE.png',price:()=>8000,buy:()=>invAdd('incense')},
  {id:'it_rarecandy',name:ITEMS.rarecandy.n,desc:ITEMS.rarecandy.d,ic:ITDIR+ITEMS.rarecandy.ic+'.png',price:()=>2000,buy:()=>invAdd('rarecandy')},
  {id:'it_smut',name:'Cristal de super mutation',desc:'Donne une super mutation au Pokémon de ton choix : shiny, +25 % sur la stat que tu choisis et +5 niveaux. À utiliser depuis sa 📋 Fiche.',ic:ITDIR+'COMETSHARD.png',price:()=>1000000,buy:()=>invAdd('smut')},
  {id:'mirror',name:'Gène miroir',desc:'Un Pokémon seul pond un œuf par Gène miroir (tu peux en utiliser plusieurs à la suite), puis il quitte le nid.',ic:'sprites/Graphics/Items/DNASPLICERS.png',price:()=>500,buy:()=>SAVE.items.mirror++},
@@ -1089,15 +1092,21 @@ function genMap(stage){
   const BLK=stage>10&&stage%5!==0&&!bi.temple&&!bi.valley&&RB()<.1?(CHASM.includes(bi.name)?'vide':bi.lava?'lave':'eau'):null;
   const voidc=new Uint8Array(GW*GH);
   if(BLK==='vide'){let x=13+RB()*5;for(let y=0;y<GH;y++){x=clamp(x+(RB()-.5)*1.2,12,GW-14);for(let k=0;k<3;k++)voidc[I(Math.round(x)+k,y)]=1}}
-  const river=BLK==='eau'||BLK==='lave'?true:BLK?false:stage>1&&!bi.temple&&R()<.8;
+  const RH=rng(stage*6151+29);const hz=!BLK&&stage>1&&!bi.temple&&!bi.valley&&RH()<.35?['haut','bas','centre'][Math.floor(RH()*3)]:null;const vbr=new Uint8Array(GW*GH);
+  const river=BLK==='eau'||BLK==='lave'?true:BLK?false:(stage>1&&!bi.temple&&R()<.8)&&!hz;
   if(river){let x=12+R()*6;const w=R()<.35?3:2;for(let y=0;y<GH;y++){x=clamp(x+(R()-.5)*1.4,11,GW-14);for(let k=0;k<w;k++)liq[I(Math.round(x)+k,y)]=1}
     const nb=BLK?0:1+Math.floor(R()*3),rows=[];for(let tr=0;rows.length<nb&&tr<60;tr++){const r=2+Math.floor(R()*(GH-4));if(rows.every(q=>Math.abs(q-r)>3))rows.push(r)}
     rows.forEach(r=>{for(let x2=0;x2<GW;x2++)if(liq[I(x2,r)])bridge[I(x2,r)]=1})}
+  /* rivière horizontale (en haut, en bas ou au milieu) : elle traverse les zones de placement ; au milieu, des ponts verticaux */
+  if(hz){const w=hz==='centre'?2+(RH()<.4?1:0):3+(RH()<.5?1:0);let yc=Math.round(GH/2-w/2);
+    for(let x=0;x<GW;x++){if(hz==='centre')yc=clamp(yc+Math.round((RH()-.5)*1.2),4,GH-4-w);const ww=w+(hz!=='centre'&&RH()<.3?1:0),y0=hz==='bas'?GH-ww:hz==='haut'?0:yc;for(let k=0;k<ww;k++)liq[I(x,y0+k)]=1}
+    if(hz==='centre'){const cols=[PZ+3+Math.floor(RH()*3),EZ-3-Math.floor(RH()*3)];if(RH()<.5)cols.push(Math.round((PZ+EZ)/2));cols.forEach(c=>{for(let y2=0;y2<GH;y2++)if(liq[I(c,y2)]){bridge[I(c,y2)]=1;vbr[I(c,y2)]=1}})}}
   const ponds=bi.temple||BLK?0:Math.floor(R()*(river?2:3));
   for(let p=0;p<ponds;p++){const cx=11+Math.floor(R()*10),cy=2+Math.floor(R()*(GH-4)),rx=1+R()*1.6,ry=1+R()*1.2;for(let y=0;y<GH;y++)for(let x=0;x<GW;x++){if(((x-cx)/rx)**2+((y-cy)/ry)**2<=1)liq[I(x,y)]=1}}
   /* un pont traverse toute l'étendue d'eau de sa ligne (rivière + mare collée), sinon il serait infranchissable à pied */
-  const spanBridge=y=>{for(let x=0;x<GW;x++)if(bridge[I(x,y)]){let a=x;while(a>0&&liq[I(a-1,y)])a--;let b=x;while(b<GW-1&&liq[I(b+1,y)])b++;for(let k=a;k<=b;k++)bridge[I(k,y)]=1}};
+  const spanBridge=y=>{for(let x=0;x<GW;x++)if(bridge[I(x,y)]&&!vbr[I(x,y)]){let a=x;while(a>0&&liq[I(a-1,y)])a--;let b=x;while(b<GW-1&&liq[I(b+1,y)])b++;for(let k=a;k<=b;k++)bridge[I(k,y)]=1}};
   for(let y=0;y<GH;y++)spanBridge(y);
+  for(let x=0;x<GW;x++)for(let y=0;y<GH;y++)if(vbr[I(x,y)]){let a=y;while(a>0&&liq[I(x,a-1)])a--;let b=y;while(b<GH-1&&liq[I(x,b+1)])b++;for(let k=a;k<=b;k++){bridge[I(x,k)]=1;vbr[I(x,k)]=1}}
   for(let i=0;i<GW*GH;i++)if(bridge[i])liq[i]=1;
   const nearB=(x,y)=>{for(let dy=-1;dy<=1;dy++)for(let dx=-2;dx<=2;dx++){const xx=x+dx,yy=y+dy;if(xx>=0&&yy>=0&&xx<GW&&yy<GH&&bridge[I(xx,yy)])return true}return false};
   const nearLiq=(x,y)=>{for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){const xx=x+dx,yy=y+dy;if(xx>=0&&yy>=0&&xx<GW&&yy<GH&&liq[I(xx,yy)])return true}return false};
@@ -1121,7 +1130,7 @@ function genMap(stage){
   /* boue : flaques ou gué dans la rivière ; les terrestres passent mais ralentis */
   const mud=new Uint8Array(GW*GH),RM=rng(stage*977+41);
   if(stage>1&&!bi.temple&&!bi.lava&&!isIce(bi)&&!BLK&&RM()<.5){
-    if(RM()<.4&&liq.some(v=>v)){const y0=2+Math.floor(RM()*(GH-6)),h=2+Math.floor(RM()*3);for(let y=y0;y<y0+h&&y<GH;y++)for(let x=0;x<GW;x++){const i=I(x,y);if(liq[i]){liq[i]=0;bridge[i]=0;mud[i]=1}}}
+    if(RM()<.4&&liq.some(v=>v)&&!hz){const y0=2+Math.floor(RM()*(GH-6)),h=2+Math.floor(RM()*3);for(let y=y0;y<y0+h&&y<GH;y++)for(let x=0;x<GW;x++){const i=I(x,y);if(liq[i]){liq[i]=0;bridge[i]=0;mud[i]=1}}}
     const np=1+Math.floor(RM()*3);for(let k=0;k<np;k++){const cx=3+RM()*(GW-6),cy=1.5+RM()*(GH-3),rx=1+RM()*1.6,ry=.8+RM()*1.4;
       for(let y=0;y<GH;y++)for(let x=0;x<GW;x++){const i=I(x,y);if(((x-cx)/rx)**2+((y-cy)/ry)**2<=1&&!liq[i]&&!rock[i]&&!bridge[i]&&!voidc[i])mud[i]=1}}}
   const trees=[];
@@ -1138,7 +1147,7 @@ function genMap(stage){
   if(!BLK&&!reach()){rock.fill(0);lay=null}
   if(!BLK&&!reach()){for(let k=trees.length-1;k>=0;k--){const t=trees[k];if(t.x>PZ&&t.x<EZ){tree[I(t.x,t.y)]=0;trees.splice(k,1)}}}
   const rocks=[];for(let i=0;i<GW*GH;i++)if(rock[i])rocks.push({x:i%GW,y:(i/GW)|0,v:rock[i]});
-  const M={stage,bi,liq,tree,bridge,trees,voidc,rock,rocks,lay,blk:BLK,seed:stage*31+5,cliff:rocks.some(r=>r.v===1),mud,hasMud:mud.some(v=>v)};M.cv=drawTerrain(M);return M;
+  const M={stage,bi,liq,tree,bridge,vbr,hz,trees,voidc,rock,rocks,lay,blk:BLK,seed:stage*31+5,cliff:rocks.some(r=>r.v===1),mud,hasMud:mud.some(v=>v)};M.cv=drawTerrain(M);return M;
 }
 function drawTemple(x){
   /* dalles */
@@ -1177,11 +1186,12 @@ function drawTerrain(M){
   }
   x.putImageData(im,0,0);
   if(bi.temple){drawTemple(x);return cv}
-  if(bi.arena){drawArenaDeco(x,bi);return cv}
+  if(bi.arena){drawArenaDeco(x,bi);if(!(M.voidc&&M.blk==='vide'))return cv}
   /* crevasse (vide) */
   if(M.voidc&&M.blk==='vide'){for(let i=0;i<GW*GH;i++)if(M.voidc[i]){const tx=i%GW,ty=(i/GW)|0;x.fillStyle='#120e18';x.fillRect(tx*TW,ty*TW,TW,TW);
     if(!M.voidc[i-1]){x.fillStyle='rgba(0,0,0,.45)';x.fillRect(tx*TW,ty*TW,5,TW);x.fillStyle='#6a5a48';x.fillRect(tx*TW-3,ty*TW,3,TW)}
     if(!M.voidc[i+1]){x.fillStyle='#4a3e32';x.fillRect(tx*TW+TW-6,ty*TW,6,TW);x.fillStyle='#8a7a62';x.fillRect(tx*TW+TW,ty*TW,3,TW)}}}
+  if(bi.arena)return cv;
   /* reflets dans le liquide */
   const R=rng(M.seed+3);x.fillStyle='rgba(255,255,255,.35)';
   for(let i=0;i<GW*GH;i++)if(M.liq[i]&&!M.bridge[i]&&R()<.35){const tx=i%GW,ty=Math.floor(i/GW);x.fillRect(tx*TW+4+R()*14|0,ty*TW+6+R()*16|0,6,2)}
@@ -1190,13 +1200,19 @@ function drawTerrain(M){
   /* fleurs et touffes */
   for(let k=0;k<160;k++){const tx=Math.floor(R()*GW),ty=Math.floor(R()*GH),i=ty*GW+tx;if(M.liq[i]||M.tree[i]||(M.voidc&&M.voidc[i])||(M.mud&&M.mud[i]))continue;const px=tx*TW+R()*TW|0,py=ty*TW+R()*TW|0;if(R()<.5){x.fillStyle='rgba(0,0,0,.12)';x.fillRect(px,py,2,4);x.fillRect(px+3,py+1,2,3)}else{x.fillStyle=pick(bi.fl);x.fillRect(px,py,3,3);x.fillStyle='rgba(0,0,0,.15)';x.fillRect(px,py+3,3,1)}}
   /* ponts */
-  for(let ty=0;ty<GH;ty++){const xs=[];for(let tx=0;tx<GW;tx++)if(M.bridge[ty*GW+tx])xs.push(tx);if(!xs.length)continue;
+  for(let ty=0;ty<GH;ty++){const xs=[];for(let tx=0;tx<GW;tx++)if(M.bridge[ty*GW+tx]&&!(M.vbr&&M.vbr[ty*GW+tx]))xs.push(tx);if(!xs.length)continue;
     const x0=xs[0]*TW-10,x1=(xs[xs.length-1]+1)*TW+10,y0=ty*TW+3,h=TW-6;
     x.fillStyle='rgba(0,0,0,.25)';x.fillRect(x0+2,y0+4,x1-x0,h);
     x.fillStyle='#9a6a3e';x.fillRect(x0,y0,x1-x0,h);
     for(let px=x0;px<x1;px+=6){x.fillStyle=(px/6)%2?'#b07c4a':'#a37145';x.fillRect(px,y0,5,h)}
     x.fillStyle='#6a4426';x.fillRect(x0,y0,x1-x0,3);x.fillRect(x0,y0+h-3,x1-x0,3);
   }
+  /* ponts verticaux (rivière horizontale) */
+  if(M.vbr)for(let tx=0;tx<GW;tx++){let ty=0;while(ty<GH){if(!M.vbr[ty*GW+tx]){ty++;continue}let t2=ty;while(t2+1<GH&&M.vbr[(t2+1)*GW+tx])t2++;
+    const x0=tx*TW+3,w=TW-6,y0=ty*TW-10,y1=(t2+1)*TW+10;
+    x.fillStyle='rgba(0,0,0,.25)';x.fillRect(x0+4,y0+2,w,y1-y0);x.fillStyle='#9a6a3e';x.fillRect(x0,y0,w,y1-y0);
+    for(let py=y0;py<y1;py+=6){x.fillStyle=(py/6)%2?'#b07c4a':'#a37145';x.fillRect(x0,py,w,5)}
+    x.fillStyle='#6a4426';x.fillRect(x0,y0,3,y1-y0);x.fillRect(x0+w-3,y0,3,y1-y0);ty=t2+1}}
   return cv;
 }
 /* --- passabilité et champs de déplacement --- */
@@ -1204,10 +1220,12 @@ function drawTerrain(M){
 const FLY_EXTRA=new Set([15,292,376,478,491,637,643,644,679,680,681,707,800,49,81,82,109,110,151,201,251,269,313,314,329,330,337,338,343,344,358,374,375,380,381,385,433,436,437,455,462,479,480,481,482,488,577,578,579,599,600,601,602,603,604,615,623,635,738,790]);
 const NO_FLY=new Set([84,85,566]);
 const SWIM_EXTRA=new Set([147,148,704,705,706]),LAVA_EXTRA=new Set([383]);
-function unitMode(d,bi){const ty=[d.t1,d.t2],n=d.n;if(!NO_FLY.has(n)&&(ty.includes('vol')||d.t1==='spectre'||FLY_EXTRA.has(n)))return 'fly';if(bi.lava?(ty.includes('feu')||LAVA_EXTRA.has(n)):(ty.includes('eau')||SWIM_EXTRA.has(n)))return 'swim';return 'ground'}
-function moveTags(n){const d=DEX[n],ty=[d.t1,d.t2],T=[];if(unitMode(d,{})==='fly')T.push(['🪽','Vol','Survole l\'eau, la lave et la boue ; bloqué par les falaises']);else{T.push(['🦶','Terrestre','Marche au sol ; ralenti dans la boue']);if(ty.includes('eau')||SWIM_EXTRA.has(n))T.push(['🌊','Nage','Traverse l\'eau']);if(ty.includes('feu')||LAVA_EXTRA.has(n))T.push(['🌋','Lave','Traverse la lave'])}return T}
+/* Pokémon marins (sans pattes) : posés et déplacés seulement dans l'eau */
+const AQUA=new Set([72,73,90,91,116,117,118,119,120,121,129,131,170,171,211,222,223,224,230,318,319,320,321,339,340,349,350,366,367,368,369,370,382,456,457,458,489,490,550,592,593,594,746,771,779]);
+function unitMode(d,bi){const ty=[d.t1,d.t2],n=d.n;if(!NO_FLY.has(n)&&(ty.includes('vol')||d.t1==='spectre'||FLY_EXTRA.has(n)))return 'fly';if(AQUA.has(n))return 'sea';if(bi.lava?(ty.includes('feu')||LAVA_EXTRA.has(n)):(ty.includes('eau')||SWIM_EXTRA.has(n)))return 'swim';return 'ground'}
+function moveTags(n){const d=DEX[n],ty=[d.t1,d.t2],T=[];const um=unitMode(d,{});if(um==='fly')T.push(['🪽','Vol','Survole l\'eau, la lave et la boue ; bloqué par les falaises']);else if(um==='sea')T.push(['🐟','Marin','Se pose et se déplace seulement dans l\'eau (rivières, mares, bassins)']);else{T.push(['🦶','Terrestre','Marche au sol ; ralenti dans la boue']);if(ty.includes('eau')||SWIM_EXTRA.has(n))T.push(['🌊','Nage','Traverse l\'eau']);if(ty.includes('feu')||LAVA_EXTRA.has(n))T.push(['🌋','Lave','Traverse la lave'])}return T}
 const moveHTML=n=>moveTags(n).map(([i,l,t])=>`<span class="mvtag" title="${t}">${i} ${l}</span>`).join(' ');
-function passable(M,i,mode){if(M.rock&&M.rock[i]===1)return false;if(mode==='fly')return true;if(M.rock&&M.rock[i])return false;if(M.voidc&&M.voidc[i])return false;if(M.tree[i])return false;if(M.liq[i]&&!M.bridge[i])return mode==='swim';return true}
+function passable(M,i,mode){if(M.rock&&M.rock[i]===1)return false;if(mode==='fly')return true;if(mode==='sea')return !!M.liq[i]&&!M.bi.lava&&!(M.rock&&M.rock[i])&&!(M.voidc&&M.voidc[i]);if(M.rock&&M.rock[i])return false;if(M.voidc&&M.voidc[i])return false;if(M.tree[i])return false;if(M.liq[i]&&!M.bridge[i])return mode==='swim';return true}
 function buildField(M,sources,mode){const F=new Float32Array(GW*GH).fill(Infinity);const q=[];sources.forEach(i=>{if(F[i]!==0){F[i]=0;q.push(i)}});
   for(let h=0;h<q.length;h++){const i=q[h],x=i%GW,y=(i/GW)|0;for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){if(!dx&&!dy)continue;const nx=x+dx,ny=y+dy;if(nx<0||ny<0||nx>=GW||ny>=GH)continue;const j=ny*GW+nx;if(!passable(M,j,mode))continue;if(dx&&dy&&(!passable(M,y*GW+nx,mode)||!passable(M,ny*GW+x,mode)))continue;const c=F[i]+(dx&&dy?1.414:1);if(c<F[j]){F[j]=c;q.push(j)}}}return F}
 /* --- génération de l'armée ennemie --- */
@@ -1238,7 +1256,7 @@ function setupStage(st,defi,anim){
   let E=genEnemies(st,M);if(defi&&defi.elv)E=E.filter(e=>!e.boss).slice(0,defi.max||armyMax());if(defi){const RD=rng(st*41+(defi.elv||1));E.forEach(e=>{if(defi.elv){e.lv=Math.min(LV_MAX,defi.elv+Math.floor(RD()*3));e.n=evolveTo(baseOf(e.n),e.lv,RD);if(!(PCY()>=4))e.g=randGenesR(RD,8,24)}else e.lv+=defi.plus||5})}
   const free=[];for(let y=1;y<GH-1;y++)for(let x=EZ+1;x<GW-1;x++)free.push([x,y]);
   const R=rng(st*77+3);
-  const units=E.map(e=>{const d=DEX[e.n],mode=unitMode(d,M.bi);let k=0,p;do{p=free.splice(Math.floor(R()*free.length),1)[0];k++}while(p&&!passable(M,p[1]*GW+p[0],mode)&&k<50);dexSee(e.n);return mkUnit(e,1,p[0]*TW+TW/2,p[1]*TW+TW/2,M)});
+  const units=E.map(e=>{const d=DEX[e.n],mode=unitMode(d,M.bi);let k=0,p;if(mode==='sea'){const wi=free.map((q,j)=>[q,j]).filter(([q])=>passable(M,q[1]*GW+q[0],'sea'));if(wi.length){const [q,j]=wi[Math.floor(R()*wi.length)];free.splice(j,1);const u=mkUnit(e,1,q[0]*TW+TW/2,q[1]*TW+TW/2,M);dexSee(e.n);return u}}do{p=free.splice(Math.floor(R()*free.length),1)[0];k++}while(p&&!passable(M,p[1]*GW+p[0],mode)&&k<50);dexSee(e.n);const u=mkUnit(e,1,p[0]*TW+TW/2,p[1]*TW+TW/2,M);if(u.mode==='sea'&&!passable(M,p[1]*GW+p[0],'sea'))u.mode='swim';return u});
   bSpeed=AUTO&&AUTO_SPEED?AUTO_SPEED:(typeof OPT!=='undefined'&&OPT.mspd)?OPT.mspd:st<=stBest()?4:((typeof OPT!=='undefined'&&OPT.speed)||1);B={stage:st,defi:defi||null,M,units,proj:[],fx:[],phase:'place',placed:[],t:0,fieldT:0,F:null,res:null,trans:snap?{t:0,d:1.15,prev:snap}:null};
   battleSel=null;renderBattleHead();renderRoster();if(typeof renderTop==='function'&&$('stN'))renderTop();
 }
@@ -1277,7 +1295,7 @@ function placeAt(px,py){
   const m=mon(battleSel);if(!m)return;
   if(B.defi&&!defiOk(m)){toast('Ce Pokémon ne respecte pas la règle du défi.');return}
   if(B.arena){const r=B.arena.rule;if(r.maxLv&&m.lv>r.maxLv){toast('Niveau '+r.maxLv+' maximum pour cette place.');return}if(r.nolegend&&LEGEND.has(m.n)){toast('Pas de légendaire pour cette place.');return}if(r.type&&DEX[m.n].t1!==r.type&&DEX[m.n].t2!==r.type){toast('Seulement des Pokémon de type '+(TNAME[r.type]||r.type)+'.');return}}
-  if(!passable(B.M,ty*GW+tx,unitMode(DEX[m.n],B.M.bi))){toast('Ce Pokémon ne peut pas se placer ici.');return}
+  {const um=unitMode(DEX[m.n],B.M.bi);if(!passable(B.M,ty*GW+tx,um)){toast(um==='sea'?'🐟 Ce Pokémon marin se pose seulement dans l\'eau.':'Ce Pokémon ne peut pas se placer ici.');return}}
   if(B.placed.some(p=>Math.floor(p.x/TW)===tx&&Math.floor(p.y/TW)===ty))return;
   const ex=B.placed.findIndex(p=>p.u===m.u);
   if(ex<0&&B.placed.length>=armyMax()){toast('Armée complète. Achète des places dans la Boutique.');return}
@@ -1289,11 +1307,12 @@ function placeAt(px,py){
 function autoPlace(){
   B.placed=[];const cross=m=>{if(!B.M.blk)return 0;const md=unitMode(DEX[m.n],B.M.bi);return md==='fly'||(B.M.blk!=='vide'&&md==='swim')?0:1};const R0=B.arena&&B.arena.rule;let nl=0;const L=applyFilt(freeMons(),'roster').filter(m=>(!B.defi||defiOk(m))&&!(R0&&R0.maxLv&&m.lv>R0.maxLv)&&!(R0&&R0.nolegend&&LEGEND.has(m.n))&&!(R0&&R0.type&&DEX[m.n].t1!==R0.type&&DEX[m.n].t2!==R0.type)).filter(m=>!(R0&&R0.maxLeg&&LEGEND.has(m.n)&&++nl>R0.maxLeg)).slice(0,B.defi&&B.defi.max?B.defi.max:armyMax());
   const f=FILT.roster||{};if((f.q||f.t)&&!L.length)toast('Aucun Pokémon libre ne correspond au filtre.');else{const st=(MON_SORTS.find(x=>x[0]===f.s)||MON_SORTS[0])[1];toast(`⚡ Placement auto : ${L.length} Pokémon${f.t?' '+(TNAME[f.t]||f.t):''}${f.q?' « '+esc(f.q)+' »':''}, ${st.toLowerCase()} (les Pokémon occupés sont ignorés)`)}
-  const pz=PZB(),spots=[];for(let x=pz-1;x>=1;x--)for(let y=B.dmax?1:2;y<GH-(B.dmax?1:2);y++)spots.push([x,y]);
+  const pz=PZB(),spots=[],yb=B.dmax?1:2;for(let x=pz-1;x>=1;x--)for(let y=0;y<GH;y++)spots.push([x,y]);const rowOk=(y,md)=>md==='sea'||(y>=yb&&y<GH-yb);let nSea=0;
   spots.sort((a,b)=>(b[0]-a[0])*3+(Math.abs(a[1]-GH/2)-Math.abs(b[1]-GH/2))/2);
   L.forEach(m=>{const md=unitMode(DEX[m.n],B.M.bi);const melee=!(RANGED.has(DEX[m.n].t1)||DEX[m.n].spa>DEX[m.n].atk+15);
-    const s=spots.find(([x,y])=>passable(B.M,y*GW+x,md)&&(melee?x>=pz-3:x<pz-2)&&!B.placed.some(p=>Math.floor(p.x/TW)===x&&Math.floor(p.y/TW)===y))||spots.find(([x,y])=>passable(B.M,y*GW+x,md)&&!B.placed.some(p=>Math.floor(p.x/TW)===x&&Math.floor(p.y/TW)===y));
-    if(s)B.placed.push({u:m.u,x:s[0]*TW+TW/2,y:s[1]*TW+TW/2})});
+    const s=spots.find(([x,y])=>rowOk(y,md)&&passable(B.M,y*GW+x,md)&&(melee?x>=pz-3:x<pz-2)&&!B.placed.some(p=>Math.floor(p.x/TW)===x&&Math.floor(p.y/TW)===y))||spots.find(([x,y])=>rowOk(y,md)&&passable(B.M,y*GW+x,md)&&!B.placed.some(p=>Math.floor(p.x/TW)===x&&Math.floor(p.y/TW)===y));
+    if(s)B.placed.push({u:m.u,x:s[0]*TW+TW/2,y:s[1]*TW+TW/2});else if(md==='sea')nSea++});
+  if(nSea)setTimeout(()=>toast(`🐟 ${nSea} Pokémon marin${nSea>1?'s':''} pas placé${nSea>1?'s':''} : pas assez d'eau dans ta zone.`),900);
   renderBattleHead();renderRoster();
 }
 let AUTO=false,AUTO_LAST=[];
@@ -1524,10 +1543,14 @@ function renderArena(){const g=onlineGate();if(g)return g;if(!ARENA.map&&!ARENA.
    <h3>📜 Historique des défis</h3>${arenaLogHTML()}`}
 /* terrain des duels en ligne : un vrai stade, sol plat sans obstacle, couleur selon la place */
 const ARENA_COL={champ:['#c9925e','#bf8654','#d29e6a'],c4:['#8f86b8','#857cae','#9a91c2'],master:['#e6d39a','#ddc98c','#efdfae']};
-function genArena(id){const k=seatKind(id),z=()=>new Uint8Array(GW*GH),T=seatType(id);
-  const g=k==='expert'?[hexMix(TCOL[T]||'#999999','#d8c8a0',.6),hexMix(TCOL[T]||'#999999','#d8c8a0',.66),hexMix(TCOL[T]||'#999999','#e6d8b4',.6)]:ARENA_COL[k]||ARENA_COL.champ;
+function genArena(id){const k=seatKind(id),z=()=>new Uint8Array(GW*GH),T=seatType(id);const hx=c=>c[0]==='#'?c:'#'+c.match(/\d+/g).slice(0,3).map(v=>(+v).toString(16).padStart(2,'0')).join('');
+  const g=k==='expert'?[hx(hexMix(TCOL[T]||'#999999','#d8c8a0',.6)),hx(hexMix(TCOL[T]||'#999999','#d8c8a0',.66)),hx(hexMix(TCOL[T]||'#999999','#e6d8b4',.6))]:ARENA_COL[k]||ARENA_COL.champ;
   const bi={name:'Arène',g,sh:g[1],liq:'#5aa0e6',liq2:'#3f84cf',trees:[],dens:0,types:[],fl:[],hab:-1,arena:k};
-  const M={stage:0,bi,liq:z(),tree:z(),bridge:z(),trees:[],voidc:z(),rock:z(),rocks:[],lay:null,blk:null,seed:4242+(id.length*97),cliff:false,mud:z(),hasMud:false,arena:true};M.cv=drawTerrain(M);return M}
+  /* bassin en bas (lave pour l'expert Feu) ; expert Vol : gouffres au milieu avec un passage central */
+  if(k==='expert'&&T==='feu'){bi.liq='#f06a2a';bi.liq2='#c8401a';bi.lava=1}
+  const lq=z(),vd=z(),nr=k==='expert'&&(T==='eau'||T==='feu')?5:4;if(!(k==='expert'&&T==='vol'))for(let y=GH-1-nr;y<GH-1;y++)for(let x=0;x<GW;x++)lq[y*GW+x]=1;
+  if(k==='expert'&&T==='vol'){for(let y=1;y<GH-1;y++){if(y>=7&&y<=10)continue;for(let x=12;x<=19;x++){const e=(y===1||y===GH-2||y===6||y===11)&&(x===12||x===19);if(!e)vd[y*GW+x]=1}}}
+  const M={stage:0,bi,liq:lq,tree:z(),bridge:z(),trees:[],voidc:vd,blk:k==='expert'&&T==='vol'?'vide':null,rock:z(),rocks:[],lay:null,seed:4242+(id.length*97),cliff:false,mud:z(),hasMud:false,arena:true};M.cv=drawTerrain(M);return M}
 function drawArenaDeco(x,bi){const W=CW,H=CH,R=rng(777);
   x.fillStyle='rgba(60,120,255,.09)';x.fillRect(0,0,PZ*TW,H);x.fillStyle='rgba(255,60,60,.09)';x.fillRect(EZ*TW+TW,0,W-EZ*TW-TW,H);
   /* gradins en haut et en bas, avec le public */
@@ -1736,8 +1759,8 @@ function stepBattle(dt){
   B.t+=dt;B.fieldT-=dt;if(B.dmax)dmaxStep(dt);abilTick(dt);
   const alive=B.units.filter(u=>u.hp>0);
   if(B.focus&&B.focus.hp<=0)B.focus=null;
-  if(B.fieldT<=0){B.Ffoc=null;if(B.focus){const src=[clamp(Math.floor(B.focus.y/TW),0,GH-1)*GW+clamp(Math.floor(B.focus.x/TW),0,GW-1)];B.Ffoc={};['ground','swim','fly'].forEach(md=>B.Ffoc[md]=buildField(B.M,src,md))}}
-  if(B.fieldT<=0){B.fieldT=.35;B.F=[0,1].map(t=>{const src=alive.filter(u=>u.team!==t).map(u=>clamp(Math.floor(u.y/TW),0,GH-1)*GW+clamp(Math.floor(u.x/TW),0,GW-1));const o={};['ground','swim','fly'].forEach(md=>o[md]=buildField(B.M,src,md));return o})}
+  if(B.fieldT<=0){B.Ffoc=null;if(B.focus){const src=[clamp(Math.floor(B.focus.y/TW),0,GH-1)*GW+clamp(Math.floor(B.focus.x/TW),0,GW-1)];B.Ffoc={};['ground','swim','fly','sea'].forEach(md=>B.Ffoc[md]=buildField(B.M,src,md))}}
+  if(B.fieldT<=0){B.fieldT=.35;B.F=[0,1].map(t=>{const src=alive.filter(u=>u.team!==t).map(u=>clamp(Math.floor(u.y/TW),0,GH-1)*GW+clamp(Math.floor(u.x/TW),0,GW-1));const o={};['ground','swim','fly','sea'].forEach(md=>o[md]=buildField(B.M,src,md));return o})}
   for(const u of alive){
     if(u.heal)u.hp=Math.min(u.max,u.hp+u.max*u.heal*dt);
     u.cd-=dt;u.flash=Math.max(0,u.flash-dt);u.lunge=Math.max(0,u.lunge-dt);u.tt-=dt;
@@ -1907,6 +1930,7 @@ function drawDmaxHud(x){const D=B.dmax;D.waves.forEach(w=>{x.strokeStyle=`rgba(2
 const bcx=()=>$('bcv').getContext('2d');
 function drawUnit(x,u,ghost){if(u.dmax){drawDmaxBoss(x,u);return}
   const s=62*u.scale,im=img(ovSrc(u.n,u.sh)),lx=u.lunge>0?(u.dir===2?4:u.dir===1?-4:0):0;
+  if(lightOn()){x.fillStyle='rgba(20,10,30,.18)';x.beginPath();x.ellipse(u.x+9*u.scale,u.y+2,18*u.scale,5.5*u.scale,.32,0,7);x.fill()}
   x.fillStyle='rgba(0,0,0,.25)';x.beginPath();x.ellipse(u.x,u.y,12*u.scale,5*u.scale,0,0,7);x.fill();
   x.strokeStyle=u.team?'#e0604f':'#5f9be8';x.lineWidth=2;x.beginPath();x.ellipse(u.x,u.y,13*u.scale,6*u.scale,0,0,7);x.stroke();
   if(ghost)x.globalAlpha=.85;
@@ -1943,6 +1967,32 @@ function drawRock(x,r,M){const P=rockPal(M.bi),H=18,px=r.x*TW,py=r.y*TW,R2=M.roc
 function drawTree(x,t){if(typeof t.v==='string'){const m=DECOR[t.v],im=img(DECOR_IMG);if(!im.ok)return;const f=m.n>1?(Math.floor(performance.now()/170)+t.ph)%m.n:0;x.drawImage(im,m.x+f*(m.w+2),m.y,m.w,m.h,Math.round(t.x*TW+TW/2-m.w/2),Math.round(t.y*TW+TW+3-m.h),m.w,m.h);return}const im=img(TREE_IMG);const[c,r,k]=t.v;const sy=(r?264:0)+[0,50,100][k],sh=[50,50,57][k];const cx=t.x*TW+TW/2,by=t.y*TW+TW+4;
   x.fillStyle='rgba(0,0,0,.2)';x.beginPath();x.ellipse(cx,by-5,k===1?17:20,6,0,0,7);x.fill();
   if(im.ok)x.drawImage(im,c*48,sy,48,sh,cx-36,by-sh*1.5,72,sh*1.5);else{x.fillStyle='#2f6a34';x.beginPath();x.arc(cx,by-30,18,0,7);x.fill()}}
+/* ===== lumières et ombres (V01.05) ===== */
+const lightOn=()=>OPT.light!==false;
+function rgbaOf(c,a){if(typeof c!=='string')return 'rgba(255,255,255,'+a+')';if(c[0]==='#'){const h=c.length===4?c.slice(1).split('').map(v=>v+v):[c.slice(1,3),c.slice(3,5),c.slice(5,7)];return `rgba(${h.map(v=>parseInt(v,16)).join(',')},${a})`}const m=c.match(/\d+(\.\d+)?/g);return m?`rgba(${m.slice(0,3).join(',')},${a})`:'rgba(255,255,255,'+a+')'}
+function moodOf(bi){if(bi.arena)return{sun:.22,amb:null,dark:0};if(bi.lava)return{sun:.08,amb:'rgba(255,80,20,.10)',dark:.34,dc:'26,6,8'};if(isCave(bi))return{sun:0,amb:null,dark:.48,dc:'8,8,26'};if(isDark(bi))return{sun:.05,amb:'rgba(90,60,160,.08)',dark:.36,dc:'16,10,44'};if(isIce(bi))return{sun:.28,amb:'rgba(120,170,255,.10)',dark:0};if(isDry(bi))return{sun:.32,amb:'rgba(255,160,50,.10)',dark:0};return{sun:.26,amb:null,dark:0}}
+function lightLayers(M){if(M._lt)return M._lt;const md=moodOf(M.bi);const mk=()=>{const c=document.createElement('canvas');c.width=CW;c.height=CH;return c};
+  /* ombre : vignette + bas à droite un peu plus sombre (multiply) */
+  const sh=mk(),a=sh.getContext('2d');a.fillStyle='#fff';a.fillRect(0,0,CW,CH);let g=a.createRadialGradient(CW*.4,CH*.36,CH*.18,CW/2,CH/2,CW*.66);g.addColorStop(0,'rgba(255,255,255,0)');g.addColorStop(.65,'rgba(235,225,225,.25)');g.addColorStop(1,'rgba(70,55,60,.85)');a.fillStyle=g;a.fillRect(0,0,CW,CH);
+  g=a.createLinearGradient(0,0,CW,CH);g.addColorStop(0,'rgba(255,255,255,0)');g.addColorStop(1,'rgba(120,105,110,.45)');a.fillStyle=g;a.fillRect(0,0,CW,CH);
+  /* lumière : soleil en haut à gauche, teinte du biome, reflets de l'eau et lueur de la lave (screen) */
+  const gl=mk(),b=gl.getContext('2d');if(md.sun){g=b.createRadialGradient(CW*.1,-CH*.15,10,CW*.1,-CH*.15,CW*.62);g.addColorStop(0,`rgba(255,236,180,${md.sun})`);g.addColorStop(1,'rgba(255,236,180,0)');b.fillStyle=g;b.fillRect(0,0,CW,CH)}
+  if(md.amb){b.fillStyle=md.amb;b.fillRect(0,0,CW,CH)}
+  const lights=[];for(let i=0;i<GW*GH;i+=2){if(!M.liq[i]||M.bridge[i])continue;const tx=i%GW,ty=(i/GW)|0;if(M.bi.lava){lights.push([tx*TW+TW/2,ty*TW+TW/2]);g=b.createRadialGradient(tx*TW+TW/2,ty*TW+TW/2,2,tx*TW+TW/2,ty*TW+TW/2,TW*1.6);g.addColorStop(0,'rgba(255,130,40,.30)');g.addColorStop(1,'rgba(255,90,20,0)');b.fillStyle=g;b.fillRect(tx*TW-TW*1.6,ty*TW-TW*1.6,TW*4.2,TW*4.2)}}
+  return M._lt={md,sh,gl,lights,dk:md.dark?mk():null}}
+function drawLights(x){if(!lightOn()||!B||!B.M)return;const L=lightLayers(B.M),md=L.md,t=performance.now()/1000;
+  x.save();x.globalCompositeOperation='multiply';x.drawImage(L.sh,0,0);x.globalCompositeOperation='screen';x.drawImage(L.gl,0,0);x.restore();
+  const alive=B.units.filter(u=>u.hp>0||B.phase==='place');
+  if(md.dark&&L.dk){const d=L.dk.getContext('2d');d.globalCompositeOperation='source-over';d.clearRect(0,0,CW,CH);d.fillStyle=`rgba(${md.dc},${md.dark})`;d.fillRect(0,0,CW,CH);d.globalCompositeOperation='destination-out';
+    const hole=(px,py,r,a)=>{const g=d.createRadialGradient(px,py,r*.15,px,py,r);g.addColorStop(0,`rgba(0,0,0,${a})`);g.addColorStop(1,'rgba(0,0,0,0)');d.fillStyle=g;d.fillRect(px-r,py-r,r*2,r*2)};
+    const fl=1+.05*Math.sin(t*9);alive.forEach(u=>hole(u.x,u.y-14,(u.dmax?150:62)*fl,.85));B.placed&&B.phase==='place'&&B.placed.forEach(p=>hole(p.x,p.y-14,62,.85));
+    B.proj.forEach(p=>hole(p.x,p.y,40,.9));B.fx.forEach(f=>{if(f.k==='hit')hole(f.x,f.y,50*(1-f.t/.4),.9)});L.lights.forEach(([px,py],k)=>{if(k%2===0)hole(px,py,46+6*Math.sin(t*2+k),.55)});
+    x.drawImage(L.dk,0,0)}
+  /* éclats lumineux des attaques (lighter) */
+  x.save();x.globalCompositeOperation='lighter';
+  B.proj.forEach(p=>{const g=x.createRadialGradient(p.x,p.y,1,p.x,p.y,16);g.addColorStop(0,rgbaOf(p.c,.55));g.addColorStop(1,rgbaOf(p.c,0));x.fillStyle=g;x.fillRect(p.x-16,p.y-16,32,32)});
+  B.fx.forEach(f=>{if(f.k!=='hit')return;const q=f.t/.4,r=26*(1-q*.5);const g=x.createRadialGradient(f.x,f.y,1,f.x,f.y,r);g.addColorStop(0,rgbaOf(f.c,.45*(1-q)));g.addColorStop(1,rgbaOf(f.c,0));x.fillStyle=g;x.fillRect(f.x-r,f.y-r,r*2,r*2)});
+  x.restore()}
 function drawBattle(){if(!B)return;const tr=B.trans;if(!tr){drawBattle0();return}
   const x=bcx();const q=clamp(tr.t/tr.d,0,1),e=q<.5?4*q*q*q:1-Math.pow(-2*q+2,3)/2,off=Math.round(CW*e);
   x.save();x.translate(CW-off,0);drawBattle0();x.restore();x.imageSmoothingEnabled=false;x.drawImage(tr.prev,-off,0);
@@ -1962,6 +2012,7 @@ function drawBattle0(){
   B.fx.forEach(f=>{const q=f.t/(f.k==='txt'?.9:.4);if(f.k==='txt'){x.globalAlpha=1-q;x.font='bold 12px sans-serif';x.textAlign='center';x.lineWidth=3;x.strokeStyle='#2a1a12';x.strokeText(f.s,f.x,f.y-q*18);x.fillStyle=f.c;x.fillText(f.s,f.x,f.y-q*18);x.globalAlpha=1}
     else if(f.k==='hit'){x.strokeStyle=f.c;x.globalAlpha=1-q;x.lineWidth=2;x.beginPath();x.arc(f.x,f.y,4+q*12,0,7);x.stroke();x.globalAlpha=1}
     else if(f.k==='poof'){x.fillStyle='rgba(255,255,255,'+(1-q)+')';for(let k=0;k<6;k++){const an=k/6*6.28;x.beginPath();x.arc(f.x+Math.cos(an)*q*16,f.y-10+Math.sin(an)*q*10,4*(1-q)+1,0,7);x.fill()}}});
+  drawLights(x);
   if(B.focus&&B.focus.hp>0){const f=B.focus,r=(f.dmax?70:16)*(1+.12*Math.sin(performance.now()/150)),cy=f.y-(f.dmax?90:14);x.strokeStyle='#ff2a2a';x.lineWidth=3;x.beginPath();x.arc(f.x,cy,r,0,7);x.stroke();x.beginPath();x.moveTo(f.x-r-6,cy);x.lineTo(f.x-r+6,cy);x.moveTo(f.x+r-6,cy);x.lineTo(f.x+r+6,cy);x.moveTo(f.x,cy-r-6);x.lineTo(f.x,cy-r+6);x.moveTo(f.x,cy+r-6);x.lineTo(f.x,cy+r+6);x.stroke()}
   if(B.phase==='fight'&&!B.focus&&B.t<6){x.font='bold 13px sans-serif';x.textAlign='center';x.lineWidth=4;x.strokeStyle='#2a1a12';x.fillStyle='#fff';const s2=i18c('Clique sur un ennemi pour en faire la cible principale');x.strokeText(s2,CW/2,CH-12);x.fillText(s2,CW/2,CH-12)}
   if(B.phase==='fight'){const left=Math.max(0,(B.dmax?240:FIGHT_T)-B.t),mm=Math.floor(left/60),ss=Math.floor(left%60);x.font='bold 15px sans-serif';x.textAlign='left';x.lineWidth=4;x.strokeStyle='#2a1a12';x.fillStyle=left<15?'#ff5a4a':'#fff';const tx='⏱ '+mm+':'+String(ss).padStart(2,'0');x.strokeText(tx,10,22);x.fillText(tx,10,22)}
@@ -2174,6 +2225,7 @@ const ACT={
   stone:(t)=>{const m=mon(+t.dataset.u);if(m&&useStone(m,t.dataset.id)){saveGame();openMonInfo(m.u)}},
   candy:(t)=>{const m=mon(+t.dataset.u);if(!m||!invUse('rarecandy'))return;m.lv++;m.xp=0;checkEvo(m);saveGame();openMonInfo(m.u)},
   sellIt:(t)=>{const id=t.dataset.id;if(!invUse(id))return;SAVE.coins+=ITEMS[id].v;toast(`+${fmt(ITEMS[id].v)} pièces`);saveGame();renderTop();renderAdv()},
+  incUse:(t)=>{const i=+t.dataset.i,c=SAVE.incs[i],now=Date.now();if(!c)return;const L=c.slots.filter(s=>!LEGEND.has(s.egg.n)&&s.t0+s.dur>now);if(!L.length){toast('Aucun œuf à accélérer (les œufs légendaires ne sont pas concernés).');return}if(!invUse('incense'))return;L.forEach(s=>{const rem=s.t0+s.dur-now;s.dur-=rem/2});toast(`🔥 Encens Chauffant : ${L.length} œuf${L.length>1?'s':''} éclor${L.length>1?'ont':'a'} 2 fois plus vite`);saveGame();openInc(i);dirty=true},
   ovalUse:(t)=>{const n=SAVE.nests[+t.dataset.i];if(!n||n.oval||!invUse('ovalcharm'))return;n.oval=1;toast('Charme Ovale posé : ce nid pond 25 % plus vite');saveGame();renderAdv()},
   expNew:()=>openExpNew(),expBiome:(t)=>{expDraft.bi=+t.dataset.v;openExpNew()},expDur:(t)=>{expDraft.h=+t.dataset.v;openExpNew()},
   expPick:(t)=>{const u=+t.dataset.u;const k=expDraft.mons.indexOf(u);if(k>=0)expDraft.mons.splice(k,1);else if(expDraft.mons.length<3)expDraft.mons.push(u);openExpNew()},
@@ -2214,6 +2266,7 @@ const ACT={
     openModal(`<h2>Relâcher ${L.length} Pokémon ?</h2><p>Tu gagnes ${fmt(tot)} pièces. Ce choix est définitif.</p>${fav||shn?`<p style="color:#c0392b"><b>Attention :</b> ${fav?fav+' favori'+(fav>1?'s':''):''}${fav&&shn?' et ':''}${shn?shn+' shiny':''} dans la sélection.</p>`:''}<div class="pmons">${L.slice(0,40).map(m=>`<div class="pmon">${sprHTML(m.n,m.sh,40,true)}<span>${esc(DEX[m.n].name)} Nv ${m.lv}</span></div>`).join('')}</div><div class="flexr" style="margin-top:10px"><button class="go" data-act="tselReleaseOk">Relâcher</button><button data-act="closeModal">Annuler</button></div>`)},
   tselReleaseOk:()=>teamSelRelease(),
   optMusic:()=>{OPT.music=!OPT.music;saveOpt();MUS.ok=true;updateMusic();renderSettings()},
+  optLight:()=>{OPT.light=OPT.light===false;saveOpt();renderSettings()},
   optJingles:()=>{OPT.jingles=!OPT.jingles;saveOpt();renderSettings()},
   optShow:(t)=>{OPT.show=+t.dataset.v;saveOpt();renderSettings()},
   optSpeed:(t)=>{OPT.speed=+t.dataset.v;OPT.mspd=+t.dataset.v;saveOpt();renderSettings()},
@@ -2317,12 +2370,13 @@ function renderProfile(){const st=SAVE.st,sh=SAVE.mons.filter(m=>m.sh).length,mu
 
 /* réglages propres à cet appareil (localStorage) */
 const OPTKEY='pte_options';
-const OPT=Object.assign({music:true,vol:50,jingles:true,show:30,speed:1,lang:'fr'},(()=>{try{return JSON.parse(localStorage.getItem(OPTKEY)||'{}')}catch(e){return {}}})());
+const OPT=Object.assign({light:true,music:true,vol:50,jingles:true,show:30,speed:1,lang:'fr'},(()=>{try{return JSON.parse(localStorage.getItem(OPTKEY)||'{}')}catch(e){return {}}})());
 function saveOpt(){try{localStorage.setItem(OPTKEY,JSON.stringify(OPT))}catch(e){}}
 function renderSettings(){
   $('tab-settings').innerHTML=`<div class="panel"><h3>⚙ Réglages</h3>
    <div class="setrow"><label>Musique</label><button class="sm ${OPT.music?'go':''}" data-act="optMusic">${OPT.music?'Activée':'Coupée'}</button></div>
    <div class="setrow"><label>Volume de la musique : <span id="volV">${OPT.vol}</span> %</label><input type="range" min="0" max="100" step="5" value="${OPT.vol}" id="optVol"></div>
+   <div class="setrow"><label>Lumières et ombres en combat</label><button class="sm ${OPT.light!==false?'go':''}" data-act="optLight">${OPT.light!==false?'Activées':'Coupées'}</button> <span class="muted small">(coupe-les si le jeu rame sur ton téléphone)</span></div>
    <div class="setrow"><label>Jingles (victoire de boss, shiny, mutation)</label><button class="sm ${OPT.jingles?'go':''}" data-act="optJingles">${OPT.jingles?'Activés':'Coupés'}</button></div>
    <div class="setrow"><label>Pokémon affichés dans la salle de jeu</label>${[10,20,30].map(v=>`<button class="sm ${OPT.show===v?'go':''}" data-act="optShow" data-v="${v}">${v}</button>`).join('')}<span class="muted">Moins de Pokémon = jeu plus fluide.</span></div>
    <div class="setrow"><label>Langue / Language</label>${[['fr','🇫🇷 Français'],['en','🇬🇧 English']].map(([k,t])=>`<button class="sm ${OPT.lang===k?'go':''}" data-act="setLang" data-v="${k}">${t}</button>`).join('')}<span class="muted">${OPT.lang==='en'?'English: menus, buttons, home page and tutorial. Long descriptions are still in French.':''}</span></div>
@@ -2383,6 +2437,7 @@ function homeRender(){const h=$('home');if(!h||!HOME.on)return;const ok=cloudRea
    <button class="big" data-act="homeGuest">👤 ${tr2('Jouer en invité','Play as guest')}</button>
    <p class="muted small">${u?'':ok?(CLOUD.auth?tr2('Avec Google, ta partie est sauvegardée en ligne et tu as accès au classement, à l\'arène et à l\'hôtel des ventes. En invité, la partie reste dans ce navigateur.','With Google, your game is saved online and you get the ranking, the arena and the auction house. As a guest, your game stays in this browser.'):tr2('Connexion à Google en cours…','Connecting to Google…')):tr2('La connexion Google marche seulement sur le site en ligne. Ici, joue en invité.','Google sign-in only works on the online site. Here, play as a guest.')}</p>${gamesHTML()}</div>`}
 function homeEnter(){if(!SAVE.mailSeen&&!SAVE.mons.length&&typeof PATCH!=='undefined')SAVE.mailSeen=PATCH[1][0];setTimeout(()=>typeof msgBadge==='function'&&msgBadge(),300);HOME.on=false;const h=$('home');if(h)h.hidden=true;updateMusic();showTab(cur||'nursery');
+  const top=()=>{try{window.scrollTo(0,0);document.documentElement.scrollTop=0;document.body.scrollTop=0;document.querySelectorAll('main,.tab,.tabpane').forEach(e=>{if(e.scrollTop)e.scrollTop=0})}catch(e){}};top();requestAnimationFrame(top);[60,300,800].forEach(t=>setTimeout(top,t));
   if(!SAVE.mons.length)starterModal();else{if(SAVE.tuto>=1&&SAVE.tuto<6)setTip(TUTO[SAVE.tuto]);if(!SAVE.tour)setTimeout(tourStart,400)}}
 /* ---- traduction anglaise : textes exacts + quelques mots fréquents (le reste reste en français) ---- */
 const EN={"Nurserie":"Nursery","Pokémon":"Pokémon","Combat":"Battle","Boutique":"Shop","Pokédex":"Pokédex","Succès":"Achievements","🗺️ Aventures":"🗺️ Adventures","🌐 En ligne":"🌐 Online","Réglages":"Settings","⚙ Réglages":"⚙ Settings",
@@ -2535,6 +2590,8 @@ setTimeout(()=>infoScan(document.body),0);
    MESSAGES : courrier (nouveautés + avis), chat monde, messages privés (Firestore : chat, dm, feedback)
    ===================================================================== */
 const PATCH=[
+ ['V01.05.01','🏟️ Arène de l\'expert Feu : bassin de lave. Arène de l\'expert Vol : gouffres au milieu, avec un passage central pour les Pokémon qui ne volent pas.'],
+ ['V01.05','🔥 Encens Chauffant (Boutique) : divise par 2 le temps des œufs d\'un incubateur, sauf les légendaires. 🌊 Rivières horizontales (en haut, en bas ou au milieu avec des ponts) et bassins dans les arènes. 🐟 Les Pokémon marins (Magicarpe, Lokhlass, Wailord…) se posent et se déplacent seulement dans l\'eau. ☀️ Lumières et ombres en combat (réglable dans les Réglages).'],
  ['V01.04','💾 Sauvegardes renforcées : bouton Sauvegarder (en haut), sauvegardes de secours dans les Réglages (restaurer une ancienne version, télécharger ta partie), et protection quand le jeu est ouvert sur deux appareils ou onglets : le jeu te demande quelle version garder au lieu d\'écraser ta partie.'],
  ['V01.03','🧬 L\'ADN légendaire fait pondre un légendaire seul dans le nid (plus besoin de Métamorph). 🎵 Jingle quand tu obtiens un œuf légendaire (légendaire du jour, œufs surprise, cadeau d\'Arceus).'],
  ['V01.02','🎁 Cadeau d\'Arceus quotidien : 1 par jour dans chaque mode Maître (I à V), meilleures chances dans les modes hauts. Liens vers nos pages itch.io : laisse un avis, un j\'aime et abonne-toi !'],
@@ -2624,6 +2681,7 @@ Object.assign(ACT,{
 setInterval(()=>{if(CLOUD.user&&CLOUD.db)dmStart();msgBadge()},5000);
 
 /* ---------- démarrage ---------- */
+try{history.scrollRestoration='manual'}catch(e){}window.scrollTo(0,0);
 SAVE=loadSave();SV.sig=sigOf();
 tick();
 showTab('nursery');renderTop();
